@@ -1,4 +1,9 @@
 
-source 'https://api.berkshelf.com'
+site :opscode
 
 metadata
+
+cookbook 'preview', :path => '../preview/'
+cookbook 'cassandra', :github => 'michaelklishin/cassandra-chef-cookbook'
+cookbook 'haproxy'
+cookbook 'monit', :github => 'phlipper/chef-monit'

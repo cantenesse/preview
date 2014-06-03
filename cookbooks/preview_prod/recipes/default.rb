@@ -27,3 +27,4 @@
 
 include_recipe 'preview_prod::storage'
 include_recipe 'preview_prod::node'
+include_recipe 'preview_prod::proxy'

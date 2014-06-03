@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: preview_prod
-# Recipe:: node
+# Recipe:: proxy
 #
 # Copyright (C) 2014 Nick Gerakines
 # 
@@ -24,16 +24,19 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
+include_recipe 'haproxy::default'
 
-node.override[:preview][:config][:common][:nodeId] = node[:preview_prod][:node_id]
-node.override[:preview][:config][:storage][:engine] = 'cassandra'
-node.override[:preview][:config][:storage][:cassandraKeyspace] = 'preview'
-node.override[:preview][:config][:storage][:cassandraKeyspace] = node[:preview_prod][:cassandra_hosts]
-node.override[:preview][:config][:simpleApi][:edgeBaseUrl] = node[:preview_prod][:edge_host]
-node.override[:preview][:config][:uploader][:engine] = "s3"
-node.override[:preview][:config][:uploader][:s3Key] = node[:preview_prod][:s3Key]
-node.override[:preview][:config][:uploader][:s3Secret] = node[:preview_prod][:s3Secret]
-node.override[:preview][:config][:uploader][:s3Host] = node[:preview_prod][:s3Host]
-node.override[:preview][:config][:uploader][:s3Buckets] = node[:preview_prod][:s3Buckets]
+## NKG: At some point, this should be updated to either reference attribuites, serf/consul or nodes in an env that have preview_prod::node in their runlist.
+## http://docs.opscode.com/essentials_search.html
+# preview_nodes = partial_search('node', "role:preview_node AND chef_environment:#{node.chef_environment}", :keys => {'name' => ['name'], 'ip'   => ['ipaddress'],}) || []
 
-include_recipe 'preview::default'
+haproxy_lb 'preview' do
+  bind '0.0.0.0:80'
+  mode 'http'
+  {'node1' => '127.0.0.1' }.each do |name, ip|
+    "#{name} #{ip}:#{node[:preview][:port]}"
+  end
+  params({
+    'balance' => 'roundrobin'
+  })
+end

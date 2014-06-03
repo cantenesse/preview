@@ -23,3 +23,13 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
+
+node.default[:java][:install_flavor] = 'oracle'
+node.default[:java][:jdk_version] = 7
+node.default[:java][:oracle][:accept_oracle_download_terms] = true
+node.default[:cassandra][:version] = '2.0.7'
+node.default[:cassandra][:rpc_address] = '0.0.0.0'
+
+include_recipe 'yum::default'
+include_recipe 'java::default'
+include_recipe 'cassandra::default'

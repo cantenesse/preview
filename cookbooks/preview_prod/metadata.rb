@@ -7,11 +7,15 @@ long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          '0.2.2'
 
 depends 'preview'
+depends 'cassandra', '~> 0.2.4'
+depends 'haproxy', '~> 2.2.0'
+# depends 'partial_search'
 
 supports 'centos'
 
 recipe 'preview_prod::node', 'Configures and prepares a preview application node.'
 recipe 'preview_prod::storage', 'Configures and prepares a storage node.'
+recipe 'preview_prod::proxy', 'Configures and prepares haproxy.'
 
 attribute 'preview_prod/node_id',
   :display_name => 'The id of the preview node.',
