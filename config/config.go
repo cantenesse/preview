@@ -48,6 +48,10 @@ type StorageAppConfig interface {
 	Engine() string
 	CassandraNodes() ([]string, error)
 	CassandraKeyspace() (string, error)
+	MysqlHost() (string, error)
+	MysqlUser() (string, error)
+	MysqlPassword() (string, error)
+	MysqlDatabase() (string, error)
 }
 
 type ImageMagickRenderAgentAppConfig interface {

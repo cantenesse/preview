@@ -35,6 +35,10 @@ type userStorageAppConfig struct {
 	engine            string
 	cassandraNodes    []string
 	cassandraKeyspace string
+	mysqlHost         string
+	mysqlUser         string
+	mysqlPassword     string
+	mysqlDatabase     string
 }
 
 type userImageMagickRenderAgentAppConfig struct {
@@ -219,6 +223,25 @@ func newUserStorageAppConfig(m map[string]interface{}) (StorageAppConfig, error)
 		}
 
 		config.cassandraNodes, err = parseStringArray("storage", "cassandraNodes", data)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.engine == "mysql" {
+		config.mysqlHost, err = parseString("storage", "mysqlHost", data)
+		if err != nil {
+			return nil, err
+		}
+		config.mysqlUser, err = parseString("storage", "mysqlUser", data)
+		if err != nil {
+			return nil, err
+		}
+		config.mysqlPassword, err = parseString("storage", "mysqlPassword", data)
+		if err != nil {
+			return nil, err
+		}
+		config.mysqlDatabase, err = parseString("storage", "mysqlDatabase", data)
 		if err != nil {
 			return nil, err
 		}
@@ -455,6 +478,34 @@ func (c *userStorageAppConfig) CassandraKeyspace() (string, error) {
 		return c.cassandraKeyspace, nil
 	}
 	return "", appConfigError{"Cassandra storage engine is not enabled."}
+}
+
+func (c *userStorageAppConfig) MysqlHost() (string, error) {
+	if c.engine == "mysql" {
+		return c.mysqlHost, nil
+	}
+	return "", appConfigError{"Mysql storage engine is not enabled."}
+}
+
+func (c *userStorageAppConfig) MysqlUser() (string, error) {
+	if c.engine == "mysql" {
+		return c.mysqlUser, nil
+	}
+	return "", appConfigError{"Mysql storage engine is not enabled."}
+}
+
+func (c *userStorageAppConfig) MysqlPassword() (string, error) {
+	if c.engine == "mysql" {
+		return c.mysqlPassword, nil
+	}
+	return "", appConfigError{"Mysql storage engine is not enabled."}
+}
+
+func (c *userStorageAppConfig) MysqlDatabase() (string, error) {
+	if c.engine == "mysql" {
+		return c.mysqlDatabase, nil
+	}
+	return "", appConfigError{"Mysql storage engine is not enabled."}
 }
 
 func (c *userImageMagickRenderAgentAppConfig) Enabled() bool {
