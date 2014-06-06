@@ -22,8 +22,9 @@ platforms:
         - ["forwarded_port", {guest: 9160, host: 9160}]
         - ["forwarded_port", {guest: 9042, host: 9042}]
         - ["forwarded_port", {guest: 6050, host: 6050}]
-      synced_folders: 
-        - ["#{ENV['GOPATH']}", "/home/vagrant/go/"]
+        - ["forwarded_port", {guest: 3306, host: 3306}]
+      #synced_folders: 
+      #  - ["#{ENV['GOPATH']}", "/home/vagrant/go/"]
 
 suites:
   - name: default
@@ -32,3 +33,6 @@ suites:
       - recipe[preview_test::local]
       - recipe[preview_test::storage]
     attributes:
+      preview:
+        storage_cassandra: true
+        storage_mysql: true

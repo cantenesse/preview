@@ -1,46 +1,66 @@
 package common
 
 import (
-	"github.com/ziutek/mymysql/autorc"
-	"github.com/ziutek/mymysql/mysql"
-	_ "github.com/ziutek/mymysql/thrsafe" // You may also use the native engine
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"strings"
 	"time"
 )
 
-type mysqlManager struct {
-	connection *autorc.Conn
+/*
+CREATE DATABASE preview;
+USE preview;
+CREATE TABLE IF NOT EXISTS generated_assets (id varchar(80), source varchar(255), status varchar(80), template_id varchar(80), message blob, PRIMARY KEY (id));
+CREATE TABLE IF NOT EXISTS active_generated_assets (id varchar(80) PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS waiting_generated_assets (id varchar(80), source varchar(80), template varchar(80), PRIMARY KEY(template, id, source));
+CREATE INDEX IF NOT EXISTS ON generated_assets (source);
+CREATE INDEX IF NOT EXISTS ON generated_assets (status);
+CREATE INDEX IF NOT EXISTS ON generated_assets (template_id);
+CREATE TABLE IF NOT EXISTS source_assets (id varchar(80), type varchar(80), message blob, PRIMARY KEY (id, type));
+CREATE INDEX IF NOT EXISTS ON source_assets (type);
+
+TRUNCATE source_assets;
+TRUNCATE generated_assets;
+TRUNCATE active_generated_assets;
+TRUNCATE waiting_generated_assets;
+
+*/
+
+type MysqlManager struct {
+	host, user, password, database string
 }
 
-func newMysqlManager(host, user, password, database string) *mysqlManager {
-	conn := autorc.New("tcp", "", host, user, password, database)
-	return &mysqlManager{conn}
+func NewMysqlManager(host, user, password, database string) *MysqlManager {
+	return &MysqlManager{host, user, password, database}
 }
 
-func (manager *mysqlManager) db() *autorc.Conn {
-	return manager.connection
+func (manager *MysqlManager) db() *sql.DB {
+	url := fmt.Sprintf("%s:%s@tcp(%s)/%s", manager.user, manager.password, manager.host, manager.database)
+	db, _ := sql.Open("mysql", url)
+	return db
 }
 
 type mysqlSourceAssetStorageManager struct {
-	manager *mysqlManager
+	manager *MysqlManager
 	nodeId  string
 }
 
 type mysqlGeneratedAssetStorageManager struct {
-	manager         *mysqlManager
+	manager         *MysqlManager
 	templateManager TemplateManager
 	nodeId          string
 }
 
-func NewMysqlSourceAssetStorageManager(manager *mysqlManager, nodeId string) (SourceAssetStorageManager, error) {
+func NewMysqlSourceAssetStorageManager(manager *MysqlManager, nodeId string) (SourceAssetStorageManager, error) {
 	sasm := new(mysqlSourceAssetStorageManager)
 	sasm.manager = manager
 	sasm.nodeId = nodeId
 	return sasm, nil
 }
 
-func NewMysqlGeneratedAssetStorageManager(manager *mysqlManager, templateManager TemplateManager, nodeId string) (GeneratedAssetStorageManager, error) {
+func NewMysqlGeneratedAssetStorageManager(manager *MysqlManager, templateManager TemplateManager, nodeId string) (GeneratedAssetStorageManager, error) {
 	gasm := new(mysqlGeneratedAssetStorageManager)
 	gasm.manager = manager
 	gasm.templateManager = templateManager
@@ -63,7 +83,7 @@ func (sasm *mysqlSourceAssetStorageManager) Store(sourceAsset *SourceAsset) erro
 	if err != nil {
 		return err
 	}
-	_, _, err = statement.Exec(sourceAsset.Id, sourceAsset.IdType, payload)
+	_, err = statement.Exec(sourceAsset.Id, sourceAsset.IdType, payload)
 	if err != nil {
 		return err
 	}
@@ -74,19 +94,22 @@ func (sasm *mysqlSourceAssetStorageManager) Store(sourceAsset *SourceAsset) erro
 func (sasm *mysqlSourceAssetStorageManager) FindBySourceAssetId(id string) ([]*SourceAsset, error) {
 	db := sasm.manager.db()
 
-	rows, _, err := db.Query("SELECT message FROM source_assets WHERE id = ?", id)
+	rows, err := db.Query("SELECT message FROM source_assets WHERE id = ?", id)
 	if err != nil {
 		return nil, err
 	}
 	results := make([]*SourceAsset, 0, 0)
 
-	for _, row := range rows {
-		message := row[0].([]byte)
-		sourceAsset, err := newSourceAssetFromJson(message)
-		if err != nil {
-			return nil, err
+	for rows.Next() {
+		var message []byte
+		err := rows.Scan(&message)
+		if err == nil {
+			sourceAsset, err := newSourceAssetFromJson(message)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, sourceAsset)
 		}
-		results = append(results, sourceAsset)
 	}
 	return results, nil
 }
@@ -105,38 +128,34 @@ func (gasm *mysqlGeneratedAssetStorageManager) Store(generatedAsset *GeneratedAs
 
 	db := gasm.manager.db()
 
-	err = db.Begin(func(tr mysql.Transaction, args ...interface{}) error {
-		// This function will be called again if returns a recoverable error
-		generatedAssetInsert, err := db.Prepare(`INSERT INTO generated_assets (id, source, status, template_id, message) VALUES (?, ?, ?, ?, ?)`)
-		if err != nil {
-			return err
-		}
-		generatedAssetInsert.Bind(generatedAssetInsert, generatedAsset.Id, generatedAsset.SourceAssetId, generatedAsset.Status, generatedAsset.TemplateId, payload)
-		s1 := tr.Do(generatedAssetInsert.Raw)
-		if _, err := s1.Run(); err != nil {
-			return err
-		}
-
-		if generatedAsset.Status == GeneratedAssetStatusWaiting {
-			log.Println("generated asset status is", GeneratedAssetStatusWaiting)
-			templateGroup, err := gasm.templateGroup(generatedAsset.TemplateId)
-			if err != nil {
-				log.Println("error getting template group", templateGroup)
-				return err
-			}
-			waitingGeneratedAssetInsert, err := db.Prepare(`INSERT INTO waiting_generated_assets (id, source, template) VALUES (?, ?, ?)`)
-			waitingGeneratedAssetInsert.Bind(generatedAsset.Id, generatedAsset.SourceAssetId+generatedAsset.SourceAssetType, templateGroup)
-			s2 := tr.Do(waitingGeneratedAssetInsert.Raw)
-			if _, err := s2.Run(); err != nil {
-				return err
-			}
-		}
-
-		return tr.Commit()
-	})
-
+	transaction, err := db.Begin()
 	if err != nil {
-		log.Println("Error executing batch:", err)
+		return err
+	}
+
+	_, err = transaction.Exec(`INSERT INTO generated_assets (id, source, status, template_id, message) VALUES (?, ?, ?, ?, ?)`, generatedAsset.Id, generatedAsset.SourceAssetId, generatedAsset.Status, generatedAsset.TemplateId, payload)
+	if err != nil {
+		log.Println("Could not insert into generated_assets", err)
+		defer transaction.Rollback()
+		return err
+	}
+
+	if generatedAsset.Status == GeneratedAssetStatusWaiting {
+		templateGroup, err := gasm.templateGroup(generatedAsset.TemplateId)
+		if err != nil {
+			log.Println("error getting template group", templateGroup)
+			return err
+		}
+		_, err = transaction.Exec(`INSERT INTO waiting_generated_assets (id, source, template) VALUES (?, ?, ?)`, generatedAsset.Id, generatedAsset.SourceAssetId+generatedAsset.SourceAssetType, templateGroup)
+		if err != nil {
+			log.Println("Could not insert into waiting_generated_assets", err)
+			defer transaction.Rollback()
+			return err
+		}
+	}
+
+	err = transaction.Commit()
+	if err != nil {
 		return err
 	}
 
@@ -166,58 +185,50 @@ func (gasm *mysqlGeneratedAssetStorageManager) Update(generatedAsset *GeneratedA
 
 	db := gasm.manager.db()
 
-	err = db.Begin(func(tr mysql.Transaction, args ...interface{}) error {
-		// This function will be called again if returns a recoverable error
-		generatedAssetUpdate, err := db.Prepare(`UPDATE generated_assets SET status = ?, message = ? WHERE id = ?`)
+	transaction, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = transaction.Exec(`UPDATE generated_assets SET status = ?, message = ? WHERE id = ?`, generatedAsset.Status, payload, generatedAsset.Id)
+	if err != nil {
+		log.Println("Could not update generated_assets", err)
+		defer transaction.Rollback()
+		return err
+	}
+
+	if generatedAsset.Status == GeneratedAssetStatusScheduled || generatedAsset.Status == GeneratedAssetStatusProcessing {
+		templateGroup, err := gasm.templateGroup(generatedAsset.TemplateId)
 		if err != nil {
 			return err
 		}
-		generatedAssetUpdate.Bind(generatedAsset.Status, payload, generatedAsset.Id)
-		s1 := tr.Do(generatedAssetUpdate.Raw)
-		if _, err := s1.Run(); err != nil {
+		_, err = transaction.Exec(`DELETE FROM waiting_generated_assets WHERE id = ? AND template = ? AND source = ?`, generatedAsset.Id, templateGroup, generatedAsset.SourceAssetId+generatedAsset.SourceAssetType)
+		if err != nil {
+			log.Println("Could not delete from waiting_generated_assets", err)
+			defer transaction.Rollback()
 			return err
 		}
-
-		if generatedAsset.Status == GeneratedAssetStatusScheduled || generatedAsset.Status == GeneratedAssetStatusProcessing {
-			templateGroup, err := gasm.templateGroup(generatedAsset.TemplateId)
-			if err != nil {
-				return err
-			}
-			s3i, err := db.Prepare(`DELETE FROM waiting_generated_assets WHERE id = ? AND template = ? AND source = ?`)
-			if err != nil {
-				return err
-			}
-			s3i.Bind(generatedAsset.Id, templateGroup, generatedAsset.SourceAssetId+generatedAsset.SourceAssetType)
-			s3 := tr.Do(s3i.Raw)
-			if _, err := s3.Run(); err != nil {
-				return err
-			}
-			s4i, err := db.Prepare(`INSERT INTO active_generated_assets (id) VALUES (?)`)
-			s4i.Bind(generatedAsset.Id)
-			s4 := tr.Do(s4i.Raw)
-			if _, err := s4.Run(); err != nil {
-				return err
-			}
+		_, err = transaction.Exec(`INSERT INTO active_generated_assets (id) VALUES (?)`, generatedAsset.Id)
+		if err != nil {
+			log.Println("Could not insert into active_generated_assets", err)
+			defer transaction.Rollback()
+			return err
 		}
-		if generatedAsset.Status == GeneratedAssetStatusComplete || strings.HasPrefix(generatedAsset.Status, GeneratedAssetStatusFailed) {
-			s3i, err := db.Prepare(`DELETE FROM active_generated_assets WHERE id = ?`)
-			if err != nil {
-				return err
-			}
-			s3i.Bind(generatedAsset.Id)
-			s3 := tr.Do(s3i.Raw)
-			if _, err := s3.Run(); err != nil {
-				return err
-			}
+	}
+	if generatedAsset.Status == GeneratedAssetStatusComplete || strings.HasPrefix(generatedAsset.Status, GeneratedAssetStatusFailed) {
+		_, err = transaction.Exec(`DELETE FROM active_generated_assets WHERE id = ?`, generatedAsset.Id)
+		if err != nil {
+			log.Println("Could not delete from waiting_generated_assets", err)
+			defer transaction.Rollback()
+			return err
 		}
+	}
 
-		return tr.Commit()
-	})
-
+	err = transaction.Commit()
 	if err != nil {
-		log.Println("Error executing batch:", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -237,24 +248,14 @@ func (gasm *mysqlGeneratedAssetStorageManager) FindByIds(ids []string) ([]*Gener
 }
 
 func (gasm *mysqlGeneratedAssetStorageManager) FindBySourceAssetId(id string) ([]*GeneratedAsset, error) {
-	results := make([]*GeneratedAsset, 0, 0)
-
 	db := gasm.manager.db()
 
-	rows, _, err := db.Query("SELECT message FROM generated_assets WHERE source = ?", id)
+	rows, err := db.Query("SELECT message FROM generated_assets WHERE source = ?", id)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, row := range rows {
-		message := row[0].([]byte)
-		generatedAsset, err := newGeneratedAssetFromJson(message)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, generatedAsset)
-	}
-	return results, nil
+	return gasm.parseGeneratedAssetResults(rows)
 }
 
 func (gasm *mysqlGeneratedAssetStorageManager) FindWorkForService(serviceName string, workCount int) ([]*GeneratedAsset, error) {
@@ -273,24 +274,28 @@ func (gasm *mysqlGeneratedAssetStorageManager) FindWorkForService(serviceName st
 }
 
 func (gasm *mysqlGeneratedAssetStorageManager) getWaitingAssets(group string, count int) ([]string, error) {
-	results := make([]string, 0, 0)
-
 	db := gasm.manager.db()
 
-	rows, _, err := db.Query("SELECT id FROM waiting_generated_assets WHERE template = ? LIMIT ?", group, count)
+	rows, err := db.Query(`SELECT id FROM waiting_generated_assets WHERE template = ? LIMIT ?`, group, count)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, row := range rows {
-		generatedAssetId := row[0].(string)
-		results = append(results, generatedAssetId)
+	results := make([]string, 0, 0)
+	for rows.Next() {
+		var generatedAssetId string
+		err := rows.Scan(&generatedAssetId)
+		if err == nil {
+			results = append(results, generatedAssetId)
+		}
 	}
 	return results, nil
 }
 
 func (gasm *mysqlGeneratedAssetStorageManager) getIds(ids []string) ([]*GeneratedAsset, error) {
-	results := make([]*GeneratedAsset, 0, 0)
+	if len(ids) == 0 {
+		return make([]*GeneratedAsset, 0), nil
+	}
 
 	args := make([]interface{}, len(ids))
 	for i, v := range ids {
@@ -299,18 +304,26 @@ func (gasm *mysqlGeneratedAssetStorageManager) getIds(ids []string) ([]*Generate
 
 	db := gasm.manager.db()
 
-	rows, _, err := db.Query(`SELECT message FROM generated_assets WHERE id in (`+buildIn(len(ids))+`)`, args...)
+	rows, err := db.Query(`SELECT message FROM generated_assets WHERE id in (`+buildIn(len(ids))+`)`, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, row := range rows {
-		message := row[0].([]byte)
-		generatedAsset, err := newGeneratedAssetFromJson(message)
-		if err != nil {
-			return nil, err
+	return gasm.parseGeneratedAssetResults(rows)
+}
+
+func (gasm *mysqlGeneratedAssetStorageManager) parseGeneratedAssetResults(rows *sql.Rows) ([]*GeneratedAsset, error) {
+	results := make([]*GeneratedAsset, 0, 0)
+	for rows.Next() {
+		var message []byte
+		err := rows.Scan(&message)
+		if err == nil {
+			generatedAsset, err := newGeneratedAssetFromJson(message)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, generatedAsset)
 		}
-		results = append(results, generatedAsset)
 	}
 	return results, nil
 }

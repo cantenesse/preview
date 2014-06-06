@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: preview_test
-# Recipe:: storage
+# Recipe:: storage_cassandra
 #
 # Copyright (C) 2014 Nick Gerakines
 # 
@@ -24,10 +24,11 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-if node[:preview].attribute?(:storage_mysql) and node[:preview][:storage_mysql] then
-	include_recipe "preview_test::storage_mysql"
-end
+node.default[:java][:install_flavor] = 'oracle'
+node.default[:java][:jdk_version] = 7
+node.default[:java][:oracle][:accept_oracle_download_terms] = true
+node.default[:cassandra][:rpc_address] = '0.0.0.0'
 
-if node[:preview].attribute?(:storage_cassandra) and node[:preview][:storage_cassandra] then
-	include_recipe "preview_test::storage_cassandra"
-end
+include_recipe 'yum::default'
+include_recipe 'java::default'
+include_recipe 'cassandra::default'

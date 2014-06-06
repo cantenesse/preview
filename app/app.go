@@ -35,6 +35,7 @@ type AppContext struct {
 	listener                     *stoppableListener.StoppableListener
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager
+	mysqlManager                 *common.MysqlManager
 }
 
 func NewApp(appConfig config.AppConfig) (*AppContext, error) {
@@ -148,6 +149,17 @@ func (app *AppContext) initStorage() error {
 			app.generatedAssetStorageManager = common.NewGeneratedAssetStorageManager(app.templateManager)
 			return nil
 		}
+	case "mysql":
+		{
+			mysqlHost, _ := app.appConfig.Storage().MysqlHost()
+			mysqlUser, _ := app.appConfig.Storage().MysqlUser()
+			mysqlPassword, _ := app.appConfig.Storage().MysqlPassword()
+			mysqlDatabase, _ := app.appConfig.Storage().MysqlDatabase()
+			app.mysqlManager = common.NewMysqlManager(mysqlHost, mysqlUser, mysqlPassword, mysqlDatabase)
+			app.sourceAssetStorageManager, _ = common.NewMysqlSourceAssetStorageManager(app.mysqlManager, app.appConfig.Common().NodeId())
+			app.generatedAssetStorageManager, _ = common.NewMysqlGeneratedAssetStorageManager(app.mysqlManager, app.templateManager, app.appConfig.Common().NodeId())
+			return nil
+		}
 	case "cassandra":
 		{
 			log.Println("Using cassandra!")
@@ -235,6 +247,7 @@ func (app *AppContext) initApis() error {
 }
 
 func (app *AppContext) Stop() {
+	panic("ok")
 	app.agentManager.Stop()
 	if app.cassandraManager != nil {
 		app.cassandraManager.Stop()

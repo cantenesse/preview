@@ -4,3 +4,5 @@ metadata
 
 cookbook 'preview_build', :path => '../preview_build/'
 cookbook 'cassandra', :github => 'michaelklishin/cassandra-chef-cookbook'
+cookbook 'mysql'
+cookbook 'monit', :github => 'phlipper/chef-monit'

@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: preview_test
-# Recipe:: storage
+# Recipe:: storage_mysql
 #
 # Copyright (C) 2014 Nick Gerakines
 # 
@@ -24,10 +24,18 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-if node[:preview].attribute?(:storage_mysql) and node[:preview][:storage_mysql] then
-	include_recipe "preview_test::storage_mysql"
+
+include_recipe 'yum::default'
+include_recipe 'apt::default'
+
+mysql_service 'default' do
+  version '5.1'
+  port '3306'
+  allow_remote_root true
+  remove_anonymous_users false
+  remove_test_database false
+  server_root_password 'test'
+  action :create
 end
 
-if node[:preview].attribute?(:storage_cassandra) and node[:preview][:storage_cassandra] then
-	include_recipe "preview_test::storage_cassandra"
-end
+## grant all privileges on *.* to 'preview'@'%' identified by 'preview';

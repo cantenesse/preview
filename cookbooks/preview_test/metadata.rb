@@ -10,6 +10,7 @@ depends 'yum'
 depends 'yum-epel'
 depends 'java'
 depends 'cassandra', '~> 2.2.0'
+depends 'mysql', '~> 5.2.12'
 depends 'monit', '~> 1.5.3'
 depends 'preview_build'
 

@@ -1,6 +1,6 @@
 #
-# Cookbook Name:: preview_test
-# Recipe:: storage
+# Cookbook Name:: preview_prod
+# Recipe:: storage_mysql
 #
 # Copyright (C) 2014 Nick Gerakines
 # 
@@ -23,11 +23,3 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-
-if node[:preview].attribute?(:storage_mysql) and node[:preview][:storage_mysql] then
-	include_recipe "preview_test::storage_mysql"
-end
-
-if node[:preview].attribute?(:storage_cassandra) and node[:preview][:storage_cassandra] then
-	include_recipe "preview_test::storage_cassandra"
-end
