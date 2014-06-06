@@ -15,11 +15,7 @@ USE preview;
 CREATE TABLE IF NOT EXISTS generated_assets (id varchar(80), source varchar(255), status varchar(80), template_id varchar(80), message blob, PRIMARY KEY (id));
 CREATE TABLE IF NOT EXISTS active_generated_assets (id varchar(80) PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS waiting_generated_assets (id varchar(80), source varchar(80), template varchar(80), PRIMARY KEY(template, id, source));
-CREATE INDEX IF NOT EXISTS ON generated_assets (source);
-CREATE INDEX IF NOT EXISTS ON generated_assets (status);
-CREATE INDEX IF NOT EXISTS ON generated_assets (template_id);
 CREATE TABLE IF NOT EXISTS source_assets (id varchar(80), type varchar(80), message blob, PRIMARY KEY (id, type));
-CREATE INDEX IF NOT EXISTS ON source_assets (type);
 
 TRUNCATE source_assets;
 TRUNCATE generated_assets;
