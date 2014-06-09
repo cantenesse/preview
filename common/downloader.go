@@ -38,6 +38,8 @@ func NewDownloader(basePath, localStoragePath string, tfm TemporaryFileManager, 
 	downloader.tramEnabled = tramEnabled
 	downloader.s3Client = s3Client
 
+	log.Println("downloader", tramEnabled, tramHosts)
+
 	if downloader.tramEnabled {
 		hashRing := ketama.NewRing(180)
 		for _, tramHost := range tramHosts {
@@ -174,7 +176,7 @@ func (downloader *defaultDownloader) handleHttp(url, source string) (TemporaryFi
 	}
 	defer out.Close()
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(downloader.getHttpUrl(url, source))
 	if err != nil {
 		return nil, err
 	}
