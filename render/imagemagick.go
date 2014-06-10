@@ -211,6 +211,8 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 		}
 	})
 
+	log.Println("---- generated asset is at", destination, "can load file?", util.CanLoadFile(destination))
+
 	err = renderAgent.uploader.Upload(generatedAsset.Location, destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotUploadAsset), nil}

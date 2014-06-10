@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -69,7 +70,7 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 	headers["Date"] = date
 	headers["Content-Type"] = s3object.ContentType()
 	headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
-	url := fmt.Sprintf("%s/%s/%s", client.config.host, s3object.Bucket(), s3object.FileName())
+	url := fmt.Sprintf("%s/%s/%s", bucketizeUrl(client.config.host, s3object.Bucket()), s3object.Bucket(), s3object.FileName())
 	log.Println("Publishing objec to", url)
 	_, err := client.submitPutRequest(url, content, headers)
 	if err != nil {
@@ -79,6 +80,13 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 	return nil
 }
 
+func bucketizeUrl(url, bucket string) string {
+	if strings.Contains(url, "${bucket}") {
+		return strings.Replace(url, "${bucket}", bucket, -1)
+	}
+	return url
+}
+
 func (client *AmazonS3Client) Get(bucket, file string) (S3Object, error) {
 	resource := fmt.Sprintf("/%s/%s", bucket, file)
 	date, signature := client.createSignature("GET", "", resource)
@@ -86,7 +94,7 @@ func (client *AmazonS3Client) Get(bucket, file string) (S3Object, error) {
 	headers["Host"] = fmt.Sprintf("%s.s3.amazonaws.com", bucket)
 	headers["Date"] = date
 	headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
-	url := fmt.Sprintf("%s/%s/%s", client.config.host, bucket, file)
+	url := fmt.Sprintf("%s/%s/%s", bucketizeUrl(client.config.host, bucket), bucket, file)
 	body, contentType, err := client.submitGetRequest(url, headers)
 	if err != nil {
 		return nil, err

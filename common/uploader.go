@@ -51,15 +51,18 @@ func (uploader *s3Uploader) Upload(destination, path string) error {
 		log.Println("parts", parts)
 		object, err := uploader.s3Client.NewObject(parts[1], parts[0], "application/octet-stream")
 		if err != nil {
+			log.Println("Could not create object", err)
 			return err
 		}
 
 		payload, err := ioutil.ReadFile(path)
 		if err != nil {
+			log.Println("Could not read file", path, "because", err)
 			return err
 		}
 		err = uploader.s3Client.Put(object, payload)
 		if err != nil {
+			log.Println("Could not PUT file", err)
 			return err
 		}
 
