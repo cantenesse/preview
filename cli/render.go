@@ -134,6 +134,9 @@ func (command *RenderCommand) filesToSubmit() []string {
 			if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
 				files = append(files, path)
 			}
+			if strings.HasPrefix(file, "s3://") {
+				files = append(files, path)
+			}
 		}
 	}
 	return files
@@ -141,6 +144,9 @@ func (command *RenderCommand) filesToSubmit() []string {
 
 func (command *RenderCommand) absFilePath(file string) (bool, string) {
 	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+		return false, file
+	}
+	if strings.HasPrefix(file, "s3://") {
 		return false, file
 	}
 	if strings.HasPrefix(file, "file://") {
