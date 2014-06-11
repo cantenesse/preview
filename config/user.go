@@ -64,11 +64,12 @@ type userAssetApiAppConfig struct {
 }
 
 type userUploaderAppConfig struct {
-	engine    string
-	s3Key     string
-	s3Secret  string
-	s3Host    string
-	s3Buckets []string
+	engine      string
+	s3Key       string
+	s3Secret    string
+	s3Host      string
+	s3Buckets   []string
+	s3VerifySsl bool
 }
 
 type userDownloaderAppConfig struct {
@@ -386,6 +387,10 @@ func newUserUploaderAppConfig(m map[string]interface{}) (UploaderAppConfig, erro
 		if err != nil {
 			return nil, err
 		}
+		config.s3VerifySsl, err = parseBool("uploader", "s3VerifySsl", data)
+		if err != nil {
+			config.s3VerifySsl = true
+		}
 	}
 
 	return config, nil
@@ -578,6 +583,13 @@ func (c *userUploaderAppConfig) S3Buckets() ([]string, error) {
 		return c.s3Buckets, nil
 	}
 	return nil, appConfigError{"S3 uploader engine is not enabled."}
+}
+
+func (c *userUploaderAppConfig) S3VerifySsl() (bool, error) {
+	if c.engine == "s3" {
+		return c.s3VerifySsl, nil
+	}
+	return true, appConfigError{"S3 uploader engine is not enabled."}
 }
 
 func (c *userDownloaderAppConfig) BasePath() string {

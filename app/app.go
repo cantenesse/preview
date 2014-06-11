@@ -271,6 +271,7 @@ func (app *AppContext) buildS3Client() common.S3Client {
 	if err != nil {
 		panic(err)
 	}
+	verifySsl, _ := app.appConfig.Uploader().S3VerifySsl()
 	log.Println("Creating s3 client with host", awsHost, "key", awsKey, "and secret", awsSecret)
-	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost))
+	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl))
 }

@@ -82,6 +82,7 @@ type UploaderAppConfig interface {
 	S3Secret() (string, error)
 	S3Host() (string, error)
 	S3Buckets() ([]string, error)
+	S3VerifySsl() (bool, error)
 }
 
 type DownloaderAppConfig interface {

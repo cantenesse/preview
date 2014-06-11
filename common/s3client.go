@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"github.com/ngerakines/preview/util"
 	"io"
@@ -44,10 +45,11 @@ type AmazonS3Object struct {
 
 type AmazonS3ClientConfig struct {
 	key, secret, host string
+	verifySsl         bool
 }
 
-func NewBasicS3Config(key, secret, host string) *AmazonS3ClientConfig {
-	return &AmazonS3ClientConfig{key, secret, host}
+func NewBasicS3Config(key, secret, host string, verifySsl bool) *AmazonS3ClientConfig {
+	return &AmazonS3ClientConfig{key, secret, host, verifySsl}
 }
 
 func NewAmazonS3Client(config *AmazonS3ClientConfig) S3Client {
@@ -69,7 +71,9 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 	headers["Host"] = fmt.Sprintf("%s.s3.amazonaws.com", s3object.Bucket())
 	headers["Date"] = date
 	headers["Content-Type"] = s3object.ContentType()
-	headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
+	if len(client.config.key) > 0 {
+		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
+	}
 	url := fmt.Sprintf("%s/%s/%s", bucketizeUrl(client.config.host, s3object.Bucket()), s3object.Bucket(), s3object.FileName())
 	log.Println("Publishing objec to", url)
 	_, err := client.submitPutRequest(url, content, headers)
@@ -93,7 +97,9 @@ func (client *AmazonS3Client) Get(bucket, file string) (S3Object, error) {
 	headers := make(map[string]string)
 	headers["Host"] = fmt.Sprintf("%s.s3.amazonaws.com", bucket)
 	headers["Date"] = date
-	headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
+	if len(client.config.key) > 0 {
+		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
+	}
 	url := fmt.Sprintf("%s/%s/%s", bucketizeUrl(client.config.host, bucket), bucket, file)
 	body, contentType, err := client.submitGetRequest(url, headers)
 	if err != nil {
@@ -108,7 +114,9 @@ func (client *AmazonS3Client) Proxy(bucket, file string, rw http.ResponseWriter)
 	headers := make(map[string]string)
 	headers["Host"] = fmt.Sprintf("%s.s3.amazonaws.com", bucket)
 	headers["Date"] = date
-	headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
+	if len(client.config.key) > 0 {
+		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
+	}
 	url := fmt.Sprintf("%s/%s/%s", client.config.host, bucket, file)
 	return client.submitProxyGetRequest(url, headers, rw)
 }
@@ -184,6 +192,11 @@ func (client *AmazonS3Client) submitDeleteRequest(url string, headers map[string
 }
 
 func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: client.config.verifySsl},
+	}
+	httpClient := &http.Client{Transport: tr}
+
 	request, err := http.NewRequest(method, url, body)
 	if err != nil {
 		log.Println("Error creating request", request)
@@ -192,7 +205,6 @@ func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader,
 	for header, headerValue := range headers {
 		request.Header.Set(header, headerValue)
 	}
-	httpClient := &http.Client{}
 	response, err := httpClient.Do(request)
 	if err != nil {
 		log.Println("Error executing reqest", err)
