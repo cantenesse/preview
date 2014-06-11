@@ -6,10 +6,10 @@ description      'Installs/Configures preview_prod'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          '0.2.2'
 
+depends 'tram'
 depends 'preview'
 depends 'cassandra', '~> 0.2.4'
 depends 'haproxy', '~> 2.2.0'
-# depends 'partial_search'
 
 supports 'centos'
 
@@ -55,6 +55,12 @@ attribute 'preview_prod/s3Host',
 
 attribute 'preview_prod/s3Buckets',
   :display_name => 'The S3 buckets used to store generated assets.',
+  :required => 'required',
+  :type => 'array',
+  :recipes => ['preview_prod::node']
+
+attribute 'preview_prod/tramHosts',
+  :display_name => 'The tram hosts used to cache source assets.',
   :required => 'required',
   :type => 'array',
   :recipes => ['preview_prod::node']

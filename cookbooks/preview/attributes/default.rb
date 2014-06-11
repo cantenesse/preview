@@ -17,6 +17,7 @@ default[:preview][:config][:common][:placeholderGroups][:document] = ['pdf', 'do
 default[:preview][:config][:common][:placeholderGroups][:presentation] = ['ppt', 'pptx']
 default[:preview][:config][:common][:localAssetStoragePath] = "#{node[:preview][:basePath]}assets"
 default[:preview][:config][:common][:nodeId] = "E876F147E331"
+default[:preview][:config][:common][:workDispatcherEnabled] = true
 
 default[:preview][:config][:http] = {}
 default[:preview][:config][:http][:listen] = ":#{node[:preview][:port]}"

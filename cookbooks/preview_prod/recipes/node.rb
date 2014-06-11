@@ -24,16 +24,18 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-
 node.override[:preview][:config][:common][:nodeId] = node[:preview_prod][:node_id]
+node.override[:preview][:config][:common][:workDispatcherEnabled] = false
 node.override[:preview][:config][:storage][:engine] = 'cassandra'
 node.override[:preview][:config][:storage][:cassandraKeyspace] = 'preview'
 node.override[:preview][:config][:storage][:cassandraKeyspace] = node[:preview_prod][:cassandra_hosts]
 node.override[:preview][:config][:simpleApi][:edgeBaseUrl] = node[:preview_prod][:edge_host]
-node.override[:preview][:config][:uploader][:engine] = "s3"
+node.override[:preview][:config][:uploader][:engine] = 's3'
 node.override[:preview][:config][:uploader][:s3Key] = node[:preview_prod][:s3Key]
 node.override[:preview][:config][:uploader][:s3Secret] = node[:preview_prod][:s3Secret]
 node.override[:preview][:config][:uploader][:s3Host] = node[:preview_prod][:s3Host]
 node.override[:preview][:config][:uploader][:s3Buckets] = node[:preview_prod][:s3Buckets]
+node.override[:preview][:config][:downloader][:tramEnabled] = true
+node.override[:preview][:config][:downloader][:tramHosts] = node[:preview_prod][:tramHosts]
 
 include_recipe 'preview::default'

@@ -193,7 +193,7 @@ func (client *AmazonS3Client) submitDeleteRequest(url string, headers map[string
 
 func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: client.config.verifySsl},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: !client.config.verifySsl},
 	}
 	httpClient := &http.Client{Transport: tr}
 
