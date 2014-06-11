@@ -135,10 +135,10 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 			if status != ga.Status {
 				ga.Status = status
 			}
+			agentManager.generatedAssetStorageManager.Store(ga)
 			if dispatchFunc != nil {
 				defer dispatchFunc()
 			}
-			agentManager.generatedAssetStorageManager.Store(ga)
 		} else {
 			log.Println("error creating generated asset from source asset", err)
 			return
