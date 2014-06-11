@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -207,7 +208,7 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 		c1 := exec.Command("mkdir", destination)
 		log.Println(c1)
 		c1.Run()
-		c2 := exec.Command("cp", sourceFile.Path(), destination + ".pdf")
+		c2 := exec.Command("cp", sourceFile.Path(), destination + "/" + path.Base(sourceFile.Path()) + ".pdf")
 		log.Println(c2)
 		c2.Run()
 	} else {
