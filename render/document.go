@@ -201,15 +201,25 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	}
 	destinationTemporaryFile := renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
-
-	renderAgent.metrics.convertTime.Time(func() {
-		err = renderAgent.createPdf(sourceFile.Path(), destination)
-		if err != nil {
-			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
-			return
-		}
-	})
-
+	
+	if fileType == "pdf" {
+		// TODO: Use proper library functions for this
+		c1 := exec.Command("mkdir", destination)
+		log.Println(c1)
+		c1.Run()
+		c2 := exec.Command("cp", sourceFile.Path(), destination + ".pdf")
+		log.Println(c2)
+		c2.Run()
+	} else {
+		renderAgent.metrics.convertTime.Time(func() {
+			err = renderAgent.createPdf(sourceFile.Path(), destination)
+			if err != nil {
+				statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
+				return
+			}
+		})
+	}
+	
 	files, err := renderAgent.getRenderedFiles(destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
@@ -219,7 +229,7 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-
+	
 	pages, err := renderAgent.getPdfPageCount(files[0])
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
@@ -306,7 +316,7 @@ func (renderAgent *documentRenderAgent) createPdf(source, destination string) er
 		log.Println("soffice command not found")
 		return err
 	}
-
+	
 	// TODO: Make this path configurable.
 	cmd := exec.Command("soffice", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", source, "--outdir", destination)
 	log.Println(cmd)

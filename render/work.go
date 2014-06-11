@@ -118,13 +118,11 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
 		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
-		if err != nil {
-			log.Println("error getting placeholder size from template", err)
-			return
+		if err == nil {
+			placeholderSizes[template.Id] = placeholderSize
 		}
-		placeholderSizes[template.Id] = placeholderSize
 	}
-
+	
 	for _, template := range templates {
 		placeholderSize := placeholderSizes[template.Id]
 		location := agentManager.uploader.Url(sourceAssetId, template.Id, placeholderSize, 0)
@@ -180,7 +178,7 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(sourceAsset *common.So
 
 func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*common.Template, string, error) {
 	var templateIds []string
-	if fileType == "doc" || fileType == "docx" || fileType == "pptx" {
+	if fileType == "doc" || fileType == "docx" || fileType == "pptx"  || fileType == "pdf" {
 		templateIds = []string{common.DocumentConversionTemplateId}
 	} else {
 		templateIds = common.LegacyDefaultTemplates
