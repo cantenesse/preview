@@ -198,17 +198,17 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderSize), nil}
 		return
 	}
-	
+
 	renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ := renderAgent.getGeneratedAssetPage(generatedAsset)
-			
+
 			placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
 			if err != nil {
 				statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 				return
 			}
-			
+
 			if page == 0 && placeholderSize == common.PlaceholderSizeJumbo {
 				legacyDefaultTemplates, err := renderAgent.templateManager.FindByIds(common.LegacyDefaultTemplates)
 				if err != nil {
@@ -222,7 +222,7 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 				}
 				// Create derived work for all pages but first one
 				renderAgent.agentManager.CreateDerivedWork(sourceAsset, legacyDefaultTemplates, 1, pages)
-			} 
+			}
 			err = renderAgent.imageFromPdf(sourceFile.Path(), destination, size, page)
 		} else if fileType == "gif" {
 			err = renderAgent.firstGifFrame(sourceFile.Path(), destination, size)
