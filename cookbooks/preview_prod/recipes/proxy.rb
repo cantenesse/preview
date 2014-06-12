@@ -24,19 +24,26 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-include_recipe 'haproxy::default'
-
-## NKG: At some point, this should be updated to either reference attribuites, serf/consul or nodes in an env that have preview_prod::node in their runlist.
-## http://docs.opscode.com/essentials_search.html
-# preview_nodes = partial_search('node', "role:preview_node AND chef_environment:#{node.chef_environment}", :keys => {'name' => ['name'], 'ip'   => ['ipaddress'],}) || []
-
-haproxy_lb 'preview' do
-  bind '0.0.0.0:80'
-  mode 'http'
-  {'node1' => '127.0.0.1' }.each do |name, ip|
-    "#{name} #{ip}:#{node[:preview][:port]}"
-  end
-  params({
-    'balance' => 'roundrobin'
-  })
+haproxy_lb 'preview_backend' do
+	type 'backend'
+	mode 'http'
+	servers node[:preview_prod][:proxyApps].to_a.map {|kv| "#{kv[0]} #{kv[1]}:#{node[:preview][:port]} weight 1 check" }
+	params([
+		"option httpchk GET /admin/metrics",
+		"option httplog"
+	])
 end
+
+haproxy_lb 'preview_frontend' do
+	type 'frontend'
+	bind "0.0.0.0:#{node[:preview_prod][:proxy_port]}"
+	mode 'http'
+	params({
+		'default_backend' => 'preview_backend',
+		'option' => 'contstats'
+		})
+end
+
+node.override['haproxy']['enable_default_http'] = false
+
+include_recipe 'haproxy::default'

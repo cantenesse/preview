@@ -71,3 +71,11 @@ attribute 'preview_prod/tramHosts',
   :required => 'required',
   :type => 'array',
   :recipes => ['preview_prod::node']
+
+attribute 'preview_prod/proxyApps',
+  :display_name => 'A map of apps that the proxy distributes requests to.',
+  :required => 'required',
+  :type => 'hash',
+  :recipes => ['preview_prod::proxy']
+
+hash

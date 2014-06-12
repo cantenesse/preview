@@ -24,7 +24,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-
 include_recipe 'preview_prod::storage'
-include_recipe 'preview_prod::node'
 include_recipe 'preview_prod::proxy'
+include_recipe 'preview_prod::cache'
+include_recipe 'preview_prod::node'

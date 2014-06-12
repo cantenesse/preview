@@ -17,6 +17,11 @@ suites:
         node_id: testnode1
         cassandra_hosts: ["localhost"]
         edge_host: "http://localhost"
-        s3Key: foo
-        s3Secret: bar
+        s3Key: ""
+        s3Secret: ""
         s3Buckets: ["bucketa"]
+        s3Host: "http://localhost:9444/"
+        cacheS3Buckets: ["bucketb"]
+        tramHosts: ["localhost:7040"]
+        proxyApps:
+          local: 127.0.0.1

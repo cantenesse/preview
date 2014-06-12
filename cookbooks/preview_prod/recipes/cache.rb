@@ -29,5 +29,6 @@ node.override[:tram][:config][:storage][:s3Key] = node[:preview_prod][:s3Key]
 node.override[:tram][:config][:storage][:s3Secret] = node[:preview_prod][:s3Secret]
 node.override[:tram][:config][:storage][:s3Host] = node[:preview_prod][:s3Host]
 node.override[:tram][:config][:storage][:s3Buckets] = node[:preview_prod][:cacheS3Buckets]
+node.override[:tram][:package_source] = "https://github.com/ngerakines/tram/releases/download/1.0.0/tram-1.0.0.linux_amd64.zip"
 
 include_recipe 'tram::default'
