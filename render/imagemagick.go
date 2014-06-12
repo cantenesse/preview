@@ -20,6 +20,7 @@ type imageMagickRenderAgent struct {
 	sasm                 common.SourceAssetStorageManager
 	gasm                 common.GeneratedAssetStorageManager
 	templateManager      common.TemplateManager
+	agentManager         *RenderAgentManager
 	downloader           common.Downloader
 	uploader             common.Uploader
 	workChannel          RenderAgentWorkChannel
@@ -39,6 +40,7 @@ type imageMagickRenderAgentMetrics struct {
 
 func newImageMagickRenderAgent(
 	metrics *imageMagickRenderAgentMetrics,
+	agentManager *RenderAgentManager,
 	sasm common.SourceAssetStorageManager,
 	gasm common.GeneratedAssetStorageManager,
 	templateManager common.TemplateManager,
@@ -49,6 +51,7 @@ func newImageMagickRenderAgent(
 
 	renderAgent := new(imageMagickRenderAgent)
 	renderAgent.metrics = metrics
+	renderAgent.agentManager = agentManager
 	renderAgent.sasm = sasm
 	renderAgent.gasm = gasm
 	renderAgent.templateManager = templateManager
@@ -195,10 +198,31 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderSize), nil}
 		return
 	}
-
+	
 	renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ := renderAgent.getGeneratedAssetPage(generatedAsset)
+			
+			placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
+			if err != nil {
+				statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+				return
+			}
+			
+			if page == 0 && placeholderSize == common.PlaceholderSizeJumbo {
+				legacyDefaultTemplates, err := renderAgent.templateManager.FindByIds(common.LegacyDefaultTemplates)
+				if err != nil {
+					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+					return
+				}
+				pages, err := util.GetPdfPageCount(sourceFile.Path())
+				if err != nil {
+					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+					return
+				}
+				// Create derived work for all pages but first one
+				renderAgent.agentManager.CreateDerivedWork(sourceAsset, legacyDefaultTemplates, 1, pages)
+			} 
 			err = renderAgent.imageFromPdf(sourceFile.Path(), destination, size, page)
 		} else if fileType == "gif" {
 			err = renderAgent.firstGifFrame(sourceFile.Path(), destination, size)

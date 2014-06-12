@@ -1,7 +1,11 @@
 package util
 
 import (
-	"os"
+        "os"
+        "os/exec"
+	"log"
+        "regexp"
+        "strconv"
 )
 
 // CanLoadFile returns true if a file can be opened or false if otherwise.
@@ -35,4 +39,25 @@ func Cwd() string {
 		panic(err)
 	}
 	return pwd
+}
+
+var pdfPageCount = regexp.MustCompile(`Pages:\s+(\d+)`)
+
+// pdfinfo ~/Desktop/ChefConf2014schedule.pdf
+func GetPdfPageCount(file string) (int, error) {
+        _, err := exec.LookPath("pdfinfo")
+        if err != nil {
+                log.Println("pdfinfo command not found")
+                return 0, err
+        }
+        out, err := exec.Command("pdfinfo", file).Output()
+        if err != nil {
+                log.Fatal(err)
+                return 0, err
+        }
+        matches := pdfPageCount.FindStringSubmatch(string(out))
+        if len(matches) == 2 {
+                return strconv.Atoi(matches[1])
+        }
+        return 0, nil
 }
