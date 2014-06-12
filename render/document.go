@@ -204,10 +204,11 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	defer destinationTemporaryFile.Release()
 	
 	if fileType == "pdf" {
-		// TODO: Use proper library functions for this
-		c1 := exec.Command("mkdir", destination)
-		log.Println(c1)
-		c1.Run()
+		err = os.Mkdir(destination, 0777)
+		if err != nil {
+			log.Println("error making directory:", destination)
+		}
+		// Use Go library functions for this?
 		c2 := exec.Command("cp", sourceFile.Path(), destination + "/" + path.Base(sourceFile.Path()) + ".pdf")
 		log.Println(c2)
 		c2.Run()
