@@ -6,7 +6,16 @@ default[:preview][:package] = 'preview'
 default[:preview][:archive_source] = "https://github.com/ngerakines/preview/releases/download/v#{node[:preview][:version]}/preview-#{node[:preview][:version]}-linux_#{node[:preview][:platform]}.zip"
 
 default[:preview][:port] = 8080
-default[:preview][:basePath] = "/home/preview/data/"
+default[:preview][:basePath] = '/home/preview/data/'
+
+default[:preview][:placeholders][:install_type] = 'none'
+default[:preview][:placeholders][:package] = 'preview-placeholders'
+default[:preview][:placeholders][:base] = "#{node[:preview][:basePath]}placeholders"
+default[:preview][:placeholders][:source_location] = nil
+
+default[:preview][:libreoffice][:create_yum] = true
+default[:preview][:libreoffice][:rpm_source] = 'http://download.documentfoundation.org/libreoffice/stable/4.2.4/rpm/x86_64/LibreOffice_4.2.4_Linux_x86-64_rpm.tar.gz'
+
 default[:preview][:config] = {}
 
 default[:preview][:config][:common] = {}
