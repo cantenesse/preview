@@ -77,5 +77,3 @@ attribute 'preview_prod/proxyApps',
   :required => 'required',
   :type => 'hash',
   :recipes => ['preview_prod::proxy']
-
-hash
