@@ -12,6 +12,7 @@ node.set["monit"]["reload_on_change"] = false
 include_recipe 'apt::default'
 include_recipe 'yum::default'
 include_recipe 'monit::default'
+include_recipe 'logrotate::default'
 
 require 'json'
 
@@ -33,9 +34,9 @@ end
 preview_packages = %w{unzip curl ImageMagick poppler-utils createrepo}
 
 preview_packages.each do |pkg|
-    yum_package pkg do
-      action :install
-    end
+  yum_package pkg do
+    action :install
+  end
 end
 
 remote_file "#{Chef::Config[:file_cache_path]}/LibreOffice_4.2.4_Linux_x86-64_rpm.tar.gz" do
@@ -53,9 +54,9 @@ end
 bash 'unpack libreoffice' do
   cwd '/opt/yum/libreoffice/'
   code <<-EOH
-    tar zxvf #{Chef::Config[:file_cache_path]}/LibreOffice_4.2.4_Linux_x86-64_rpm.tar.gz
-    createrepo .
-    EOH
+  tar zxvf #{Chef::Config[:file_cache_path]}/LibreOffice_4.2.4_Linux_x86-64_rpm.tar.gz
+  createrepo .
+  EOH
 end
 
 yum_repository 'libreoffice-local' do
@@ -94,8 +95,8 @@ when 'archive'
   bash 'extract_app' do
     cwd '/home/preview/'
     code <<-EOH
-      unzip #{Chef::Config[:file_cache_path]}/preview.zip
-      EOH
+    unzip #{Chef::Config[:file_cache_path]}/preview.zip
+    EOH
     not_if { ::File.exists?('/home/preview/preview') }
   end
 
@@ -120,4 +121,15 @@ end
 
 monit_monitrc 'preview' do
   variables({ category: 'preview' })
+end
+
+logrotate_app 'preview' do
+  cookbook  'logrotate'
+  path      ['/var/log/preview.log']
+  options   ['missingok', 'delaycompress', 'copytruncate']
+  frequency 'daily'
+  size      1048576
+  maxsize   2097152
+  rotate    2
+  create    '644 root root'
 end
