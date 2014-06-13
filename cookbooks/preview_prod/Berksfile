@@ -4,7 +4,7 @@ site :opscode
 metadata
 
 cookbook 'preview', :path => '../preview/'
-cookbook 'cassandra', :github => 'michaelklishin/cassandra-chef-cookbook', tag: '2.4.0'
+cookbook 'cassandra', :github => 'michaelklishin/cassandra-chef-cookbook', tag: 'v2.4.0'
 cookbook 'haproxy'
 cookbook 'monit', :github => 'phlipper/chef-monit'
 cookbook 'tram', :github => 'ngerakines/tram', rel: 'cookbooks/tram'

@@ -3,6 +3,6 @@ site :opscode
 metadata
 
 cookbook 'preview_build', :path => '../preview_build/'
-cookbook 'cassandra', :github => 'michaelklishin/cassandra-chef-cookbook', tag: '2.4.0'
+cookbook 'cassandra', :github => 'michaelklishin/cassandra-chef-cookbook', tag: 'v2.4.0'
 cookbook 'mysql'
 cookbook 'monit', :github => 'phlipper/chef-monit'
