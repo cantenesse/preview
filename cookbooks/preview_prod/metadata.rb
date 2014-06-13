@@ -8,7 +8,7 @@ version          '1.0.0'
 
 depends 'tram', '~> 1.0.0'
 depends 'preview', '~> 1.0.0'
-depends 'cassandra', '~> 2.1.0'
+depends 'cassandra', '~> 2.4.0'
 depends 'haproxy', '~> 2.2.0'
 
 supports 'centos'
