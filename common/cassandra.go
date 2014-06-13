@@ -47,7 +47,7 @@ type cassandraGeneratedAssetStorageManager struct {
 func NewCassandraManager(hosts []string, keyspace string) (*CassandraManager, error) {
 	cm := new(CassandraManager)
 
-	cm.cluster = gocql.NewCluster("127.0.0.1:9042")
+	cm.cluster = gocql.NewCluster(hosts...)
 	cm.cluster.Consistency = gocql.One
 	cm.cluster.Keyspace = keyspace
 	cm.cluster.CQLVersion = "3.1.1"
