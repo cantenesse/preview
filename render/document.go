@@ -256,8 +256,8 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-
-	renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, pages)
+	// Only process first page because imageMagickRenderAgent will automatically create derived work for the other pages
+	renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, 1)
 
 	/*
 	   // TODO: Have the new source asset and generated assets be created in batch in the storage managers.
