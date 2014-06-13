@@ -8,5 +8,3 @@ cookbook 'cassandra', github: 'michaelklishin/cassandra-chef-cookbook', tag: 'v2
 cookbook 'haproxy'
 cookbook 'monit', :github => 'phlipper/chef-monit'
 cookbook 'tram', :github => 'ngerakines/tram', rel: 'cookbooks/tram'
-
-, :ref => "tags/1.0.8"
