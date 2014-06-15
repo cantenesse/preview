@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
 	"net/http"
+	"time"
 )
 
 type manageBlueprint struct {
@@ -30,6 +32,18 @@ func (blueprint *manageBlueprint) AddRoutes(p *pat.PatternServeMux) {
 }
 
 func (blueprint *manageBlueprint) getSourceAssetHandler(res http.ResponseWriter, req *http.Request) {
+	// NKG: This should return a collection of source asset records.
+	id := req.URL.Query().Get(":id")
+	// TODO[NKG]: Error checking
+	sourceAssets, _ := blueprint.sourceAssetStorageManager.FindBySourceAssetId(id)
+	if len(sourceAssets) > 0 {
+		for _, sourceAsset := range sourceAssets {
+			data, _ := sourceAsset.Serialize()
+			// TODO[NKG]: Error checking
+			http.ServeContent(res, req, "", time.Now(), bytes.NewReader(data))
+			return
+		}
+	}
 	http.NotFound(res, req)
 }
 
