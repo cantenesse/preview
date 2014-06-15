@@ -19,7 +19,7 @@ Options:
   --verify         Verify that a generate preview request completes
   --config=<file>  The configuration file to use.`
 
-	arguments, _ := docopt.Parse(usage, nil, true, "1.0.0", false)
+	arguments, _ := docopt.Parse(usage, nil, true, "0.0.1+feature.manage", false)
 
 	var command cli.PreviewCliCommand
 	switch cli.GetCommand(arguments) {
