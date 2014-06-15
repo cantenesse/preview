@@ -4,10 +4,10 @@ maintainer_email 'nick@gerakines.net'
 license          'MIT'
 description      'Installs/Configures preview_prod'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          '1.0.0'
+version          '0.0.1+develop'
 
 depends 'tram', '~> 1.0.0'
-depends 'preview', '~> 1.0.0'
+depends 'preview', '= 0.0.1+develop'
 depends 'cassandra', '~> 2.4.0'
 depends 'haproxy', '~> 1.6.4'
 
