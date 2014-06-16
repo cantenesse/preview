@@ -51,12 +51,12 @@ var (
 	DefaultPlaceholderType = "unknown"
 )
 
-func NewPlaceholderManager(appConfig config.AppConfig) PlaceholderManager {
+func NewPlaceholderManager(appConfig *config.AppConfig) PlaceholderManager {
 	pm := new(defaultPlaceholderManager)
-	pm.basePath = appConfig.Common().PlaceholderBasePath()
+	pm.basePath = appConfig.Common.PlaceholderBasePath
 	pm.groups = make(map[string]string)
 
-	for group, fileTypes := range appConfig.Common().PlaceholderGroups() {
+	for group, fileTypes := range appConfig.Common.PlaceholderGroups {
 		for _, fileType := range fileTypes {
 			pm.groups[fileType] = group
 		}
