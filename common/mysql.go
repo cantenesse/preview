@@ -110,6 +110,14 @@ func (sasm *mysqlSourceAssetStorageManager) FindBySourceAssetId(id string) ([]*S
 	return results, nil
 }
 
+func (sasm *mysqlSourceAssetStorageManager) Delete(id string, idType string) error {
+	return ErrorNotImplemented
+}
+
+func (gasm *mysqlGeneratedAssetStorageManager) Delete(id string) error {
+	return ErrorNotImplemented
+}
+
 func (gasm *mysqlGeneratedAssetStorageManager) Store(generatedAsset *GeneratedAsset) error {
 	log.Println("About to store generatedAsset", generatedAsset)
 	generatedAsset.CreatedBy = gasm.nodeId

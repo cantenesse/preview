@@ -8,6 +8,7 @@ import (
 type SourceAssetStorageManager interface {
 	Store(sourceAsset *SourceAsset) error
 	FindBySourceAssetId(id string) ([]*SourceAsset, error)
+	Delete(id string, idType string) error
 }
 
 type GeneratedAssetStorageManager interface {
@@ -17,6 +18,7 @@ type GeneratedAssetStorageManager interface {
 	FindByIds(ids []string) ([]*GeneratedAsset, error)
 	FindBySourceAssetId(id string) ([]*GeneratedAsset, error)
 	FindWorkForService(serviceName string, workCount int) ([]*GeneratedAsset, error)
+	Delete(id string) error
 }
 
 type TemplateManager interface {
@@ -70,6 +72,10 @@ func (sasm *inMemorySourceAssetStorageManager) FindBySourceAssetId(id string) ([
 		}
 	}
 	return results, nil
+}
+
+func (sasm *inMemorySourceAssetStorageManager) Delete(id string, idType string) error {
+	return ErrorNotImplemented
 }
 
 func (gasm *inMemoryGeneratedAssetStorageManager) Store(generatedAsset *GeneratedAsset) error {
@@ -149,6 +155,10 @@ func (gasm *inMemoryGeneratedAssetStorageManager) Update(givenGeneratedAsset *Ge
 
 	}
 	return ErrorGeneratedAssetCouldNotBeUpdated
+}
+
+func (gasm *inMemoryGeneratedAssetStorageManager) Delete(id string) error {
+	return ErrorNotImplemented
 }
 
 func (tm *inMemoryTemplateManager) Store(template *Template) error {

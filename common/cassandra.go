@@ -126,6 +126,38 @@ func (sasm *cassandraSourceAssetStorageManager) FindBySourceAssetId(id string) (
 	return results, nil
 }
 
+func (sasm *cassandraSourceAssetStorageManager) Delete(id string, idType string) error {
+	session, err := sasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	err = session.Query(`DELETE FROM `+sasm.keyspace+`.source_assets WHERE id = ?`, id).Exec()
+	if err != nil {
+		log.Println("Error deleting source asset:", err)
+		return err
+	}
+
+	return nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) Delete(id string) error {
+	session, err := gasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	err = session.Query(`DELETE FROM `+gasm.keyspace+`.generated_assets WHERE id = ?`, id).Exec()
+	if err != nil {
+		log.Println("Error deleting generated asset:", err)
+		return err
+	}
+
+	return nil
+}
+
 func (gasm *cassandraGeneratedAssetStorageManager) Store(generatedAsset *GeneratedAsset) error {
 	log.Println("About to store generatedAsset", generatedAsset)
 	generatedAsset.CreatedBy = gasm.nodeId
