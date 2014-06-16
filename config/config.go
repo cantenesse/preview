@@ -54,6 +54,7 @@ type AppConfig struct {
 		Enabled  bool   `json:"enabled"`
 		Count    int    `json:"count"`
 		BasePath string `json:"basePath"`
+		ZencoderKey   string `json:"zencoderKey"`
 	} `json:"videoRenderAgent"`
 
 	SimpleApi struct {
