@@ -13,6 +13,7 @@ type userAppConfig struct {
 	storageAppConfig                StorageAppConfig
 	imageMagickRenderAgentAppConfig ImageMagickRenderAgentAppConfig
 	documentRenderAgentAppConfig    DocumentRenderAgentAppConfig
+	videoRenderAgentAppConfig       VideoRenderAgentAppConfig
 	assetApiAppConfig               AssetApiAppConfig
 	simpleApiAppConfig              SimpleApiAppConfig
 	uploaderAppConfig               UploaderAppConfig
@@ -48,6 +49,12 @@ type userImageMagickRenderAgentAppConfig struct {
 }
 
 type userDocumentRenderAgentAppConfig struct {
+	enabled  bool
+	count    int
+	basePath string
+}
+
+type userVideoRenderAgentAppConfig struct {
 	enabled  bool
 	count    int
 	basePath string
@@ -111,6 +118,11 @@ func NewUserAppConfig(content []byte) (AppConfig, error) {
 	}
 
 	appConfig.documentRenderAgentAppConfig, err = newUserDocumentRenderAgentAppConfig(m)
+	if err != nil {
+		return nil, err
+	}
+
+	appConfig.videoRenderAgentAppConfig, err = newUserVideoRenderAgentAppConfig(m)
 	if err != nil {
 		return nil, err
 	}
@@ -315,6 +327,32 @@ func newUserDocumentRenderAgentAppConfig(m map[string]interface{}) (DocumentRend
 	return config, nil
 }
 
+func newUserVideoRenderAgentAppConfig(m map[string]interface{}) (VideoRenderAgentAppConfig, error) {
+	data, err := parseConfigGroup("videoRenderAgent", m)
+	if err != nil {
+		return nil, err
+	}
+
+	config := new(userVideoRenderAgentAppConfig)
+
+	config.enabled, err = parseBool("videoRenderAgent", "enabled", data)
+	if err != nil {
+		return nil, err
+	}
+
+	config.basePath, err = parseString("videoRenderAgent", "basePath", data)
+	if err != nil {
+		return nil, err
+	}
+
+	config.count, err = parseInt("videoRenderAgent", "count", data)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
 func newUserSimpleApiAppConfig(m map[string]interface{}) (SimpleApiAppConfig, error) {
 	data, err := parseConfigGroup("simpleApi", m)
 	if err != nil {
@@ -447,6 +485,10 @@ func (c *userAppConfig) DocumentRenderAgent() DocumentRenderAgentAppConfig {
 	return c.documentRenderAgentAppConfig
 }
 
+func (c *userAppConfig) VideoRenderAgent() VideoRenderAgentAppConfig {
+	return c.videoRenderAgentAppConfig
+}
+
 func (c *userAppConfig) SimpleApi() SimpleApiAppConfig {
 	return c.simpleApiAppConfig
 }
@@ -534,6 +576,18 @@ func (c *userDocumentRenderAgentAppConfig) Count() int {
 }
 
 func (c *userDocumentRenderAgentAppConfig) BasePath() string {
+	return c.basePath
+}
+
+func (c *userVideoRenderAgentAppConfig) Enabled() bool {
+	return c.enabled
+}
+
+func (c *userVideoRenderAgentAppConfig) Count() int {
+	return c.count
+}
+
+func (c *userVideoRenderAgentAppConfig) BasePath() string {
 	return c.basePath
 }
 

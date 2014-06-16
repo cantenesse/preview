@@ -24,6 +24,8 @@ type AppConfig interface {
 	ImageMagickRenderAgent() ImageMagickRenderAgentAppConfig
 	// DocumentRenderAgent returns Document render agent configuration.
 	DocumentRenderAgent() DocumentRenderAgentAppConfig
+	// VideoRenderAgent returns Video render agent configuration.
+	VideoRenderAgent() VideoRenderAgentAppConfig
 	// SimpleApi returns SimpleBlueprint configuration.
 	SimpleApi() SimpleApiAppConfig
 	AssetApi() AssetApiAppConfig
@@ -61,6 +63,12 @@ type ImageMagickRenderAgentAppConfig interface {
 }
 
 type DocumentRenderAgentAppConfig interface {
+	Enabled() bool
+	Count() int
+	BasePath() string
+}
+
+type VideoRenderAgentAppConfig interface {
 	Enabled() bool
 	Count() int
 	BasePath() string

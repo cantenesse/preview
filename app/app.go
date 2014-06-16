@@ -206,6 +206,11 @@ func (app *AppContext) initRenderers() error {
 			app.agentManager.AddDocumentRenderAgent(app.downloader, app.uploader, app.appConfig.DocumentRenderAgent().BasePath(), 5)
 		}
 	}
+	if app.appConfig.VideoRenderAgent().Enabled() {
+		for i := 0; i < app.appConfig.VideoRenderAgent().Count(); i++ {
+			app.agentManager.AddVideoRenderAgent(app.downloader, app.uploader, app.appConfig.VideoRenderAgent().BasePath(), 5)
+		}
+	}
 	return nil
 }
 

@@ -3,5 +3,6 @@ package common
 var (
 	RenderAgentImageMagick = "renderAgentImageMagick"
 	RenderAgentDocument    = "renderAgentDocument"
-	RenderAgents           = []string{RenderAgentImageMagick, RenderAgentDocument}
+	RenderAgentVideo       = "renderAgentVideo"
+	RenderAgents           = []string{RenderAgentImageMagick, RenderAgentDocument, RenderAgentVideo}
 )
