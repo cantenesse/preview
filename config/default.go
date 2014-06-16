@@ -2,16 +2,15 @@ package config
 
 import (
 	"github.com/ngerakines/preview/util"
-	"log"
 	"os"
 	"path/filepath"
 )
 
-func NewDefaultAppConfig() (AppConfig, error) {
+func NewDefaultAppConfig() []byte {
 	return buildDefaultConfig(defaultBasePath)
 }
 
-func NewDefaultAppConfigWithBaseDirectory(root string) (AppConfig, error) {
+func NewDefaultAppConfigWithBaseDirectory(root string) []byte {
 	return buildDefaultConfig(func(section string) string {
 		cacheDirectory := filepath.Join(root, ".cache", section)
 		os.MkdirAll(cacheDirectory, 00777)
@@ -19,8 +18,8 @@ func NewDefaultAppConfigWithBaseDirectory(root string) (AppConfig, error) {
 	})
 }
 
-func buildDefaultConfig(basePathFunc basePath) (AppConfig, error) {
-	config := `{
+func buildDefaultConfig(basePathFunc basePath) []byte {
+	return []byte(`{
    "common": {
       "placeholderBasePath":"` + basePathFunc("placeholders") + `",
       "placeholderGroups": {
@@ -74,9 +73,7 @@ func buildDefaultConfig(basePathFunc basePath) (AppConfig, error) {
       "basePath":"` + basePathFunc("cache") + `",
       "tramEnabled": false
    }
-}`
-	log.Println(config)
-	return NewUserAppConfig([]byte(config))
+}`)
 }
 
 type basePath func(string) string

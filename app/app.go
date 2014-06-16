@@ -18,7 +18,7 @@ import (
 
 type AppContext struct {
 	registry                     metrics.Registry
-	appConfig                    config.AppConfig
+	appConfig                    *config.AppConfig
 	agentManager                 *render.RenderAgentManager
 	sourceAssetStorageManager    common.SourceAssetStorageManager
 	generatedAssetStorageManager common.GeneratedAssetStorageManager
@@ -38,7 +38,7 @@ type AppContext struct {
 	mysqlManager                 *common.MysqlManager
 }
 
-func NewApp(appConfig config.AppConfig) (*AppContext, error) {
+func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	log.Println("Creating application with config", appConfig)
 	app := new(AppContext)
 	app.registry = metrics.NewRegistry()
@@ -68,7 +68,7 @@ func NewApp(appConfig config.AppConfig) (*AppContext, error) {
 }
 
 func (app *AppContext) Start() {
-	httpListener, err := net.Listen("tcp", app.appConfig.Http().Listen())
+	httpListener, err := net.Listen("tcp", app.appConfig.Http.Listen)
 	if err != nil {
 		panic(err)
 	}
@@ -105,29 +105,23 @@ func (app *AppContext) Start() {
 func (app *AppContext) initTrams() error {
 	app.placeholderManager = common.NewPlaceholderManager(app.appConfig)
 	app.temporaryFileManager = common.NewTemporaryFileManager()
-	if app.appConfig.Downloader().TramEnabled() {
-		tramHosts, err := app.appConfig.Downloader().TramHosts()
-		if err != nil {
-			panic(err)
-		}
-		app.downloader = common.NewDownloader(app.appConfig.Downloader().BasePath(), app.appConfig.Common().LocalAssetStoragePath(), app.temporaryFileManager, true, tramHosts, app.buildS3Client())
+	if app.appConfig.Downloader.TramEnabled {
+		tramHosts := app.appConfig.Downloader.TramHosts
+		app.downloader = common.NewDownloader(app.appConfig.Downloader.BasePath, app.appConfig.Common.LocalAssetStoragePath, app.temporaryFileManager, true, tramHosts, app.buildS3Client())
 	} else {
-		app.downloader = common.NewDownloader(app.appConfig.Downloader().BasePath(), app.appConfig.Common().LocalAssetStoragePath(), app.temporaryFileManager, false, []string{}, app.buildS3Client())
+		app.downloader = common.NewDownloader(app.appConfig.Downloader.BasePath, app.appConfig.Common.LocalAssetStoragePath, app.temporaryFileManager, false, []string{}, app.buildS3Client())
 	}
 
-	switch app.appConfig.Uploader().Engine() {
+	switch app.appConfig.Uploader.Engine {
 	case "s3":
 		{
 			s3Client := app.buildS3Client()
-			buckets, err := app.appConfig.Uploader().S3Buckets()
-			if err != nil {
-				panic(err)
-			}
+			buckets := app.appConfig.Uploader.S3Buckets
 			app.uploader = common.NewUploader(buckets, s3Client)
 		}
 	case "local":
 		{
-			app.uploader = common.NewLocalUploader(app.appConfig.Common().LocalAssetStoragePath())
+			app.uploader = common.NewLocalUploader(app.appConfig.Common.LocalAssetStoragePath)
 		}
 	}
 
@@ -142,7 +136,7 @@ func (app *AppContext) initStorage() error {
 
 	app.templateManager = common.NewTemplateManager()
 
-	switch app.appConfig.Storage().Engine() {
+	switch app.appConfig.Storage.Engine {
 	case "memory":
 		{
 			app.sourceAssetStorageManager = common.NewSourceAssetStorageManager()
@@ -151,36 +145,30 @@ func (app *AppContext) initStorage() error {
 		}
 	case "mysql":
 		{
-			mysqlHost, _ := app.appConfig.Storage().MysqlHost()
-			mysqlUser, _ := app.appConfig.Storage().MysqlUser()
-			mysqlPassword, _ := app.appConfig.Storage().MysqlPassword()
-			mysqlDatabase, _ := app.appConfig.Storage().MysqlDatabase()
+			mysqlHost := app.appConfig.Storage.MysqlHost
+			mysqlUser := app.appConfig.Storage.MysqlUser
+			mysqlPassword := app.appConfig.Storage.MysqlPassword
+			mysqlDatabase := app.appConfig.Storage.MysqlDatabase
 			app.mysqlManager = common.NewMysqlManager(mysqlHost, mysqlUser, mysqlPassword, mysqlDatabase)
-			app.sourceAssetStorageManager, _ = common.NewMysqlSourceAssetStorageManager(app.mysqlManager, app.appConfig.Common().NodeId())
-			app.generatedAssetStorageManager, _ = common.NewMysqlGeneratedAssetStorageManager(app.mysqlManager, app.templateManager, app.appConfig.Common().NodeId())
+			app.sourceAssetStorageManager, _ = common.NewMysqlSourceAssetStorageManager(app.mysqlManager, app.appConfig.Common.NodeId)
+			app.generatedAssetStorageManager, _ = common.NewMysqlGeneratedAssetStorageManager(app.mysqlManager, app.templateManager, app.appConfig.Common.NodeId)
 			return nil
 		}
 	case "cassandra":
 		{
 			log.Println("Using cassandra!")
-			cassandraNodes, err := app.appConfig.Storage().CassandraNodes()
-			if err != nil {
-				return err
-			}
-			keyspace, err := app.appConfig.Storage().CassandraKeyspace()
-			if err != nil {
-				return err
-			}
+			cassandraNodes := app.appConfig.Storage.CassandraNodes
+			keyspace := app.appConfig.Storage.CassandraKeyspace
 			cm, err := common.NewCassandraManager(cassandraNodes, keyspace)
 			if err != nil {
 				return err
 			}
 			app.cassandraManager = cm
-			app.sourceAssetStorageManager, err = common.NewCassandraSourceAssetStorageManager(cm, app.appConfig.Common().NodeId(), keyspace)
+			app.sourceAssetStorageManager, err = common.NewCassandraSourceAssetStorageManager(cm, app.appConfig.Common.NodeId, keyspace)
 			if err != nil {
 				return err
 			}
-			app.generatedAssetStorageManager, err = common.NewCassandraGeneratedAssetStorageManager(cm, app.templateManager, app.appConfig.Common().NodeId(), keyspace)
+			app.generatedAssetStorageManager, err = common.NewCassandraGeneratedAssetStorageManager(cm, app.templateManager, app.appConfig.Common.NodeId, keyspace)
 			if err != nil {
 				return err
 			}
@@ -193,22 +181,22 @@ func (app *AppContext) initStorage() error {
 func (app *AppContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common().WorkDispatcherEnabled())
-	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent().Enabled(), app.appConfig.ImageMagickRenderAgent().Count())
-	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent().Enabled(), app.appConfig.DocumentRenderAgent().Count())
-	if app.appConfig.ImageMagickRenderAgent().Enabled() {
-		for i := 0; i < app.appConfig.ImageMagickRenderAgent().Count(); i++ {
+	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled)
+	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent.Enabled, app.appConfig.ImageMagickRenderAgent.Count)
+	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent.Enabled, app.appConfig.DocumentRenderAgent.Count)
+	if app.appConfig.ImageMagickRenderAgent.Enabled {
+		for i := 0; i < app.appConfig.ImageMagickRenderAgent.Count; i++ {
 			app.agentManager.AddImageMagickRenderAgent(app.downloader, app.uploader, 5)
 		}
 	}
-	if app.appConfig.DocumentRenderAgent().Enabled() {
-		for i := 0; i < app.appConfig.DocumentRenderAgent().Count(); i++ {
-			app.agentManager.AddDocumentRenderAgent(app.downloader, app.uploader, app.appConfig.DocumentRenderAgent().BasePath(), 5)
+	if app.appConfig.DocumentRenderAgent.Enabled {
+		for i := 0; i < app.appConfig.DocumentRenderAgent.Count; i++ {
+			app.agentManager.AddDocumentRenderAgent(app.downloader, app.uploader, app.appConfig.DocumentRenderAgent.BasePath, 5)
 		}
 	}
-	if app.appConfig.VideoRenderAgent().Enabled() {
-		for i := 0; i < app.appConfig.VideoRenderAgent().Count(); i++ {
-			app.agentManager.AddVideoRenderAgent(app.downloader, app.uploader, app.appConfig.VideoRenderAgent().BasePath(), 5)
+	if app.appConfig.VideoRenderAgent.Enabled {
+		for i := 0; i < app.appConfig.VideoRenderAgent.Count; i++ {
+			app.agentManager.AddVideoRenderAgent(app.downloader, app.uploader, app.appConfig.VideoRenderAgent.BasePath, 5)
 		}
 	}
 	return nil
@@ -218,7 +206,7 @@ func (app *AppContext) initApis() error {
 	// NKG: This is where different APIs are configured and enabled.
 
 	allSupportedFileTypes := make(map[string]int64)
-	for fileType, maxFileSize := range app.appConfig.ImageMagickRenderAgent().SupportedFileTypes() {
+	for fileType, maxFileSize := range app.appConfig.ImageMagickRenderAgent.SupportedFileTypes {
 		allSupportedFileTypes[fileType] = maxFileSize
 	}
 
@@ -228,15 +216,15 @@ func (app *AppContext) initApis() error {
 
 	p := pat.New()
 
-	if app.appConfig.SimpleApi().Enabled() {
-		app.simpleBlueprint, err = api.NewSimpleBlueprint(app.registry, app.appConfig.SimpleApi().BaseUrl(), app.appConfig.SimpleApi().EdgeBaseUrl(), app.agentManager, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.signatureManager, allSupportedFileTypes)
+	if app.appConfig.SimpleApi.Enabled {
+		app.simpleBlueprint, err = api.NewSimpleBlueprint(app.registry, app.appConfig.SimpleApi.BaseUrl, app.appConfig.SimpleApi.EdgeBaseUrl, app.agentManager, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.signatureManager, allSupportedFileTypes)
 		if err != nil {
 			return err
 		}
 		app.simpleBlueprint.AddRoutes(p)
 	}
 
-	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common().LocalAssetStoragePath(), app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.buildS3Client(), app.signatureManager)
+	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.buildS3Client(), app.signatureManager)
 	app.assetBlueprint.AddRoutes(p)
 
 	app.adminBlueprint = api.NewAdminBlueprint(app.registry, app.appConfig, app.placeholderManager, app.temporaryFileManager, app.agentManager)
@@ -261,22 +249,13 @@ func (app *AppContext) Stop() {
 }
 
 func (app *AppContext) buildS3Client() common.S3Client {
-	if app.appConfig.Uploader().Engine() != "s3" {
+	if app.appConfig.Uploader.Engine != "s3" {
 		return nil
 	}
-	awsKey, err := app.appConfig.Uploader().S3Key()
-	if err != nil {
-		panic(err)
-	}
-	awsSecret, err := app.appConfig.Uploader().S3Secret()
-	if err != nil {
-		panic(err)
-	}
-	awsHost, err := app.appConfig.Uploader().S3Host()
-	if err != nil {
-		panic(err)
-	}
-	verifySsl, _ := app.appConfig.Uploader().S3VerifySsl()
+	awsKey := app.appConfig.Uploader.S3Key
+	awsSecret := app.appConfig.Uploader.S3Secret
+	awsHost := app.appConfig.Uploader.S3Host
+	verifySsl := app.appConfig.Uploader.S3VerifySsl
 	log.Println("Creating s3 client with host", awsHost, "key", awsKey, "and secret", awsSecret)
 	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl))
 }

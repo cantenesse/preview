@@ -15,7 +15,7 @@ import (
 type adminBlueprint struct {
 	base                 string
 	registry             metrics.Registry
-	appConfig            config.AppConfig
+	appConfig            *config.AppConfig
 	placeholderManager   common.PlaceholderManager
 	temporaryFileManager common.TemporaryFileManager
 	agentManager         *render.RenderAgentManager
@@ -49,7 +49,7 @@ type errorsView struct {
 }
 
 // NewAdminBlueprint creates a new adminBlueprint object.
-func NewAdminBlueprint(registry metrics.Registry, appConfig config.AppConfig, placeholderManager common.PlaceholderManager, temporaryFileManager common.TemporaryFileManager, agentManager *render.RenderAgentManager) *adminBlueprint {
+func NewAdminBlueprint(registry metrics.Registry, appConfig *config.AppConfig, placeholderManager common.PlaceholderManager, temporaryFileManager common.TemporaryFileManager, agentManager *render.RenderAgentManager) *adminBlueprint {
 	blueprint := new(adminBlueprint)
 	blueprint.base = "/admin"
 	blueprint.registry = registry
@@ -70,7 +70,7 @@ func (blueprint *adminBlueprint) AddRoutes(p *pat.PatternServeMux) {
 }
 
 func (blueprint *adminBlueprint) configHandler(res http.ResponseWriter, req *http.Request) {
-	content := blueprint.appConfig.Source()
+	content := blueprint.appConfig.Source
 	res.Header().Set("Content-Length", strconv.Itoa(len(content)))
 	res.Write([]byte(content))
 }
