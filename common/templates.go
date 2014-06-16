@@ -69,6 +69,17 @@ var (
 	}
 	DocumentConversionTemplateId = "9B17C6CE-7B09-4FD5-92AD-D85DD218D6D7"
 
+	VideoConversionTemplate = &Template{
+		"4128966B-9F69-4E56-AD5C-1FDB3C24F910",
+		RenderAgentVideo,
+		// TODO: determine whether this needs ot be generated in a specific manner
+		"?",
+		[]Attribute{
+			Attribute{TemplateAttributeOutput, []string{"pdf"}},
+		},
+	}
+	VideoConversionTemplateId = "4128966B-9F69-4E56-AD5C-1FDB3C24F910"
+
 	// TemplateAttributeHeight is a constant for the height attribute that can be set for templates.
 	TemplateAttributeHeight = "height"
 	// TemplateAttributeWidth is a constant for the width attribute that can be set for templates.

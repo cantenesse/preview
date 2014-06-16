@@ -26,6 +26,7 @@ type RenderAgentManager struct {
 
 	documentMetrics    *documentRenderAgentMetrics
 	imageMagickMetrics *imageMagickRenderAgentMetrics
+	videoMetrics       *videoRenderAgentMetrics
 
 	stop chan (chan bool)
 	mu   sync.Mutex
@@ -60,6 +61,7 @@ func NewRenderAgentManager(
 
 	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry)
 	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry)
+	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry)
 
 	agentManager.stop = make(chan (chan bool))
 	if workDispatcherEnabled {
@@ -182,6 +184,8 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 	var templateIds []string
 	if fileType == "doc" || fileType == "docx" || fileType == "pptx" {
 		templateIds = []string{common.DocumentConversionTemplateId}
+	} else if fileType == "mp4" {
+		templateIds = []string{common.VideoConversionTemplateId}
 	} else {
 		templateIds = common.LegacyDefaultTemplates
 	}
@@ -262,6 +266,13 @@ func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common
 	renderAgent := newDocumentRenderAgent(agentManager.documentMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentDocument])
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentDocument, renderAgent, maxWorkIncrease)
+	return renderAgent
+}
+
+func (agentManager *RenderAgentManager) AddVideoRenderAgent(downloader common.Downloader, uploader common.Uploader, docCachePath string, maxWorkIncrease int) RenderAgent {
+	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentDocument])
+	renderAgent.AddStatusListener(agentManager.workStatus)
+	agentManager.AddRenderAgent(common.RenderAgentVideo, renderAgent, maxWorkIncrease)
 	return renderAgent
 }
 
