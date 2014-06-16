@@ -120,11 +120,9 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
 		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
-		if err != nil {
-			log.Println("error getting placeholder size from template", err)
-			return
+		if err == nil {
+			placeholderSizes[template.Id] = placeholderSize
 		}
-		placeholderSizes[template.Id] = placeholderSize
 	}
 
 	for _, template := range templates {
@@ -148,7 +146,7 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 	}
 }
 
-func (agentManager *RenderAgentManager) CreateDerivedWork(sourceAsset *common.SourceAsset, derivedSourceAsset *common.SourceAsset, templates []*common.Template, pages int) error {
+func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *common.SourceAsset, templates []*common.Template, firstPage int, lastPage int) error {
 
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
@@ -159,10 +157,10 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(sourceAsset *common.So
 		placeholderSizes[template.Id] = placeholderSize
 	}
 
-	for page := 0; page < pages; page++ {
+	for page := firstPage; page < lastPage; page++ {
 		for _, template := range templates {
 			placeholderSize := placeholderSizes[template.Id]
-			location := agentManager.uploader.Url(sourceAsset.Id, template.Id, placeholderSize, int32(page))
+			location := agentManager.uploader.Url(derivedSourceAsset.Id, template.Id, placeholderSize, int32(page))
 			generatedAsset, err := common.NewGeneratedAssetFromSourceAsset(derivedSourceAsset, template, location)
 			if err == nil {
 				generatedAsset.AddAttribute(common.GeneratedAssetAttributePage, []string{strconv.Itoa(page)})
@@ -256,7 +254,7 @@ func (agentManager *RenderAgentManager) Stop() {
 }
 
 func (agentManager *RenderAgentManager) AddImageMagickRenderAgent(downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) RenderAgent {
-	renderAgent := newImageMagickRenderAgent(agentManager.imageMagickMetrics, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentImageMagick])
+	renderAgent := newImageMagickRenderAgent(agentManager.imageMagickMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentImageMagick])
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentImageMagick, renderAgent, maxWorkIncrease)
 	return renderAgent

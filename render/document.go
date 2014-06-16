@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -193,7 +192,7 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	}
 	defer sourceFile.Release()
 
-	// 	// 5. Create a temporary destination directory.
+	//      // 5. Create a temporary destination directory.
 	destination, err := renderAgent.createTemporaryDestinationDirectory()
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
@@ -220,7 +219,7 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 		return
 	}
 
-	pages, err := renderAgent.getPdfPageCount(files[0])
+	pages, err := util.GetPdfPageCount(files[0])
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
@@ -257,31 +256,31 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-
-	renderAgent.agentManager.CreateDerivedWork(sourceAsset, pdfSourceAsset, legacyDefaultTemplates, pages)
+	// Only process first page because imageMagickRenderAgent will automatically create derived work for the other pages
+	renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, 1)
 
 	/*
-		// TODO: Have the new source asset and generated assets be created in batch in the storage managers.
-		for page := 0; page < pages; page++ {
-			for _, legacyTemplate := range legacyDefaultTemplates {
-				// TODO: This can be put into a small lookup table create/set at the time of structure init.
-				placeholderSize, err := common.GetFirstAttribute(legacyTemplate, common.TemplateAttributePlaceholderSize)
-				if err != nil {
-					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-					return
-				}
-				// TODO: Update simple blueprint and image magick render agent to use this url structure.
-				location := renderAgent.uploader.Url(sourceAsset.Id, legacyTemplate.Id, placeholderSize, int32(page))
-				pdfGeneratedAsset, err := common.NewGeneratedAssetFromSourceAsset(pdfSourceAsset, legacyTemplate, location)
-				if err != nil {
-					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-					return
-				}
-				pdfGeneratedAsset.AddAttribute(common.GeneratedAssetAttributePage, []string{strconv.Itoa(page)})
-				log.Println("pdfGeneratedAsset", pdfGeneratedAsset)
-				renderAgent.gasm.Store(pdfGeneratedAsset)
-			}
-		}
+	   // TODO: Have the new source asset and generated assets be created in batch in the storage managers.
+	   for page := 0; page < pages; page++ {
+	           for _, legacyTemplate := range legacyDefaultTemplates {
+	                   // TODO: This can be put into a small lookup table create/set at the time of structure init.
+	                   placeholderSize, err := common.GetFirstAttribute(legacyTemplate, common.TemplateAttributePlaceholderSize)
+	                   if err != nil {
+	                           statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+	                           return
+	                   }
+	                   // TODO: Update simple blueprint and image magick render agent to use this url structure.
+	                   location := renderAgent.uploader.Url(sourceAsset.Id, legacyTemplate.Id, placeholderSize, int32(page))
+	                   pdfGeneratedAsset, err := common.NewGeneratedAssetFromSourceAsset(pdfSourceAsset, legacyTemplate, location)
+	                   if err != nil {
+	                           statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+	                           return
+	                   }
+	                   pdfGeneratedAsset.AddAttribute(common.GeneratedAssetAttributePage, []string{strconv.Itoa(page)})
+	                   log.Println("pdfGeneratedAsset", pdfGeneratedAsset)
+	                   renderAgent.gasm.Store(pdfGeneratedAsset)
+	           }
+	   }
 	*/
 
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, nil}
@@ -323,27 +322,6 @@ func (renderAgent *documentRenderAgent) createPdf(source, destination string) er
 	}
 
 	return nil
-}
-
-var pdfPageCount = regexp.MustCompile(`Pages:\s+(\d+)`)
-
-// pdfinfo ~/Desktop/ChefConf2014schedule.pdf
-func (renderAgent *documentRenderAgent) getPdfPageCount(file string) (int, error) {
-	_, err := exec.LookPath("pdfinfo")
-	if err != nil {
-		log.Println("pdfinfo command not found")
-		return 0, err
-	}
-	out, err := exec.Command("pdfinfo", file).Output()
-	if err != nil {
-		log.Fatal(err)
-		return 0, err
-	}
-	matches := pdfPageCount.FindStringSubmatch(string(out))
-	if len(matches) == 2 {
-		return strconv.Atoi(matches[1])
-	}
-	return 0, nil
 }
 
 func (renderAgent *documentRenderAgent) tryDownload(urls []string, source string) (common.TemporaryFile, error) {
