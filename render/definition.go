@@ -1,5 +1,7 @@
 package render
 
+import "github.com/ngerakines/preview/common"
+
 type RenderAgent interface {
 	Stop()
 	AddStatusListener(listener RenderStatusChannel)
@@ -14,4 +16,9 @@ type RenderStatus struct {
 	GeneratedAssetId string
 	Status           string
 	Service          string
+}
+
+type generatedAssetUpdate struct {
+	status     string
+	attributes []common.Attribute
 }

@@ -405,11 +405,6 @@ func (renderAgent *imageMagickRenderAgent) getSourceAssetFileType(sourceAsset *c
 	return "unknown", err
 }
 
-type generatedAssetUpdate struct {
-	status     string
-	attributes []common.Attribute
-}
-
 func (renderAgent *imageMagickRenderAgent) commitStatus(id string, existingAttributes []common.Attribute) chan generatedAssetUpdate {
 	commitChannel := make(chan generatedAssetUpdate, 10)
 
