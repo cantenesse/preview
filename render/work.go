@@ -69,6 +69,10 @@ func NewRenderAgentManager(
 	return agentManager
 }
 
+func (agentManager *RenderAgentManager) DispatchActiveWork(renderAgent, id string) error {
+	return common.ErrorNotImplemented
+}
+
 func (agentManager *RenderAgentManager) ActiveWorkForRenderAgent(renderAgent string) (bool, int, []string) {
 	activeWork, hasActiveWork := agentManager.activeWork[renderAgent]
 	if hasActiveWork {

@@ -228,7 +228,7 @@ func (app *AppContext) initApis() error {
 	app.staticBlueprint = api.NewStaticBlueprint(app.placeholderManager)
 	app.staticBlueprint.AddRoutes(p)
 
-	manage := api.NewManageBlueprint(app.sourceAssetStorageManager, app.generatedAssetStorageManager)
+	manage := api.NewManageBlueprint(app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.agentManager)
 	manage.AddRoutes(p)
 
 	app.negroni = negroni.Classic()

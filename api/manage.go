@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
+	"github.com/ngerakines/preview/render"
 	"net/http"
 	"time"
 )
@@ -14,6 +15,7 @@ type manageBlueprint struct {
 
 	sourceAssetStorageManager    common.SourceAssetStorageManager
 	generatedAssetStorageManager common.GeneratedAssetStorageManager
+	renderAgentManager           *render.RenderAgentManager
 }
 
 type expandedSourceAsset struct {
@@ -40,11 +42,12 @@ type deleteGeneratedAssetsView struct {
 	Id string
 }
 
-func NewManageBlueprint(sourceAssetStorageManager common.SourceAssetStorageManager, generatedAssetStorageManager common.GeneratedAssetStorageManager) Blueprint {
+func NewManageBlueprint(sourceAssetStorageManager common.SourceAssetStorageManager, generatedAssetStorageManager common.GeneratedAssetStorageManager, renderAgentManager *render.RenderAgentManager) Blueprint {
 	blueprint := new(manageBlueprint)
 	blueprint.base = "/manage"
 	blueprint.sourceAssetStorageManager = sourceAssetStorageManager
 	blueprint.generatedAssetStorageManager = generatedAssetStorageManager
+	blueprint.renderAgentManager = renderAgentManager
 	return blueprint
 }
 
@@ -53,7 +56,7 @@ func (blueprint *manageBlueprint) AddRoutes(p *pat.PatternServeMux) {
 	p.Get(blueprint.base+"/generatedAsset/:id", http.HandlerFunc(blueprint.getGeneratedAssetHandler))
 	p.Del(blueprint.base+"/sourceAsset/:id", http.HandlerFunc(blueprint.deleteSourceAssetHandler))
 	p.Del(blueprint.base+"/generatedAsset/:id", http.HandlerFunc(blueprint.deleteGeneratedAssetHandler))
-	p.Put(blueprint.base+"/activeWork", http.HandlerFunc(blueprint.createActiveWork))
+	p.Put(blueprint.base+"/activeWork/:renderAgent/:id", http.HandlerFunc(blueprint.createActiveWork))
 }
 
 func (blueprint *manageBlueprint) getSourceAssetHandler(res http.ResponseWriter, req *http.Request) {
@@ -122,6 +125,11 @@ func (blueprint *manageBlueprint) deleteGeneratedAssetHandler(res http.ResponseW
 }
 
 func (blueprint *manageBlueprint) createActiveWork(res http.ResponseWriter, req *http.Request) {
+
+	renderAgent := req.URL.Query().Get(":renderAgent")
+	id := req.URL.Query().Get(":id")
+	blueprint.renderAgentManager.DispatchActiveWork(renderAgent, id)
+
 	http.NotFound(res, req)
 }
 
