@@ -3,6 +3,7 @@ package render
 import (
 	"github.com/ngerakines/preview/common"
 	"github.com/rcrowley/go-metrics"
+	"github.com/brandscreen/zencoder"
 	"log"
 	"strconv"
 	"strings"
@@ -30,6 +31,10 @@ type RenderAgentManager struct {
 
 	stop chan (chan bool)
 	mu   sync.Mutex
+	// I feel like there should be a way to do this without giving RenderAgentManager a Zencoder
+	zencoder *zencoder.Zencoder
+	zencoderS3Bucket string
+	zencoderNotificationUrl string
 }
 
 func NewRenderAgentManager(
@@ -39,7 +44,10 @@ func NewRenderAgentManager(
 	templateManager common.TemplateManager,
 	temporaryFileManager common.TemporaryFileManager,
 	uploader common.Uploader,
-	workDispatcherEnabled bool) *RenderAgentManager {
+	workDispatcherEnabled bool,
+	zencoder *zencoder.Zencoder,
+	s3bucket string,
+	notificationUrl string) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
 	agentManager.sourceAssetStorageManager = sourceAssetStorageManager
@@ -62,6 +70,10 @@ func NewRenderAgentManager(
 	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry)
 	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry)
 	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry)
+
+	agentManager.zencoder = zencoder
+	agentManager.zencoderS3Bucket = s3bucket
+	agentManager.zencoderNotificationUrl = notificationUrl
 
 	agentManager.stop = make(chan (chan bool))
 	if workDispatcherEnabled {
@@ -116,7 +128,7 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 		log.Println("error determining which render agent to use", err)
 		return
 	}
-
+	
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
 		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
@@ -128,7 +140,6 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 	for _, template := range templates {
 		placeholderSize := placeholderSizes[template.Id]
 		location := agentManager.uploader.Url(sourceAssetId, template.Id, placeholderSize, 0)
-
 		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template, location)
 		if err == nil {
 			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
@@ -188,6 +199,9 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 		templateIds = common.LegacyDefaultTemplates
 	}
 	templates, err := agentManager.templateManager.FindByIds(templateIds)
+	for _, t := range templates {
+		log.Println(t.Id, t.Renderer)
+	}
 	if err != nil {
 		return nil, common.GeneratedAssetStatusFailed, err
 	}
@@ -268,7 +282,7 @@ func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common
 }
 
 func (agentManager *RenderAgentManager) AddVideoRenderAgent(downloader common.Downloader, uploader common.Uploader, docCachePath string, maxWorkIncrease int) RenderAgent {
-	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentDocument])
+	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentVideo], agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentVideo, renderAgent, maxWorkIncrease)
 	return renderAgent

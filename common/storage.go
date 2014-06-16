@@ -54,6 +54,7 @@ func NewTemplateManager() TemplateManager {
 	tm.Store(DefaultTemplateMedium)
 	tm.Store(DefaultTemplateSmall)
 	tm.Store(DocumentConversionTemplate)
+	tm.Store(VideoConversionTemplate)
 	return tm
 }
 

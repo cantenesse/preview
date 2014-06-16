@@ -55,6 +55,8 @@ type AppConfig struct {
 		Count    int    `json:"count"`
 		BasePath string `json:"basePath"`
 		ZencoderKey   string `json:"zencoderKey"`
+		ZencoderS3Bucket string `json:"zencoderS3Bucket"`
+		ZencoderNotificationUrl string `json:"zencoderNotificationUrl"`
 	} `json:"videoRenderAgent"`
 
 	SimpleApi struct {
@@ -69,12 +71,15 @@ type AppConfig struct {
 
 	Uploader struct {
 		Engine      string   `json:"engine"`
-		S3Key       string   `json:"s3Key"`
-		S3Secret    string   `json:"s3Secret"`
-		S3Host      string   `json:"s3Host"`
-		S3Buckets   []string `json:"s3Buckets"`
-		S3VerifySsl bool     `json:"s3VerifySsl"`
 	} `json:"uploader"`
+
+	S3 struct {
+		Key       string   `json:"key"`
+		Secret    string   `json:"secret"`
+		Host      string   `json:"host"`
+		Buckets   []string `json:"buckets"`
+		VerifySsl bool     `json:"verifySsl"`
+	} `json:"s3"`
 
 	Downloader struct {
 		BasePath    string   `json:"basePath"`

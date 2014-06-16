@@ -61,6 +61,8 @@ var (
 	GeneratedAssetStatusComplete = "complete"
 	// GeneratedAssetStatusFailed is the state of a generated asset that indicates that processing has completed, but failed. This value is just a prefix and is accompanied by a coded error.
 	GeneratedAssetStatusFailed = "failed"
+	// GeneratedAssetStatusDelegated means that the asset is processing in a 3rd party tool (Zencoder)
+	GeneratedAssetStatusDelegated = "delegated"
 	// DefaultGeneratedAssetStatus is the default state of a generated asset when it is created.
 	DefaultGeneratedAssetStatus = GeneratedAssetStatusWaiting
 

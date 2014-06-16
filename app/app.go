@@ -4,6 +4,7 @@ import (
 	"github.com/bmizerany/pat"
 	"github.com/codegangsta/negroni"
 	"github.com/etix/stoppableListener"
+	"github.com/brandscreen/zencoder"
 	"github.com/ngerakines/preview/api"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/config"
@@ -36,6 +37,7 @@ type AppContext struct {
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager
 	mysqlManager                 *common.MysqlManager
+	zencoder *zencoder.Zencoder
 }
 
 func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
@@ -56,6 +58,10 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = app.initZencoder()
+	if err != nil {
+		return nil, err
+	}
 	err = app.initRenderers()
 	if err != nil {
 		return nil, err
@@ -64,6 +70,9 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	
 	return app, nil
 }
 
@@ -116,7 +125,7 @@ func (app *AppContext) initTrams() error {
 	case "s3":
 		{
 			s3Client := app.buildS3Client()
-			buckets := app.appConfig.Uploader.S3Buckets
+			buckets := app.appConfig.S3.Buckets
 			app.uploader = common.NewUploader(buckets, s3Client)
 		}
 	case "local":
@@ -181,7 +190,7 @@ func (app *AppContext) initStorage() error {
 func (app *AppContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled)
+	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, app.appConfig.VideoRenderAgent.ZencoderS3Bucket, app.appConfig.VideoRenderAgent.ZencoderNotificationUrl)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent.Enabled, app.appConfig.ImageMagickRenderAgent.Count)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent.Enabled, app.appConfig.DocumentRenderAgent.Count)
 	if app.appConfig.ImageMagickRenderAgent.Enabled {
@@ -239,6 +248,17 @@ func (app *AppContext) initApis() error {
 	return nil
 }
 
+func (app *AppContext) initZencoder() error {
+	apikey := app.appConfig.VideoRenderAgent.ZencoderKey
+	app.zencoder = zencoder.NewZencoder(apikey)
+	_, err := app.zencoder.GetAccount()
+	if err != nil {
+		log.Println("Invalid Zencoder key")
+		return common.ErrorNotImplemented 
+	}
+	return nil
+}
+
 func (app *AppContext) Stop() {
 	panic("ok")
 	app.agentManager.Stop()
@@ -252,10 +272,10 @@ func (app *AppContext) buildS3Client() common.S3Client {
 	if app.appConfig.Uploader.Engine != "s3" {
 		return nil
 	}
-	awsKey := app.appConfig.Uploader.S3Key
-	awsSecret := app.appConfig.Uploader.S3Secret
-	awsHost := app.appConfig.Uploader.S3Host
-	verifySsl := app.appConfig.Uploader.S3VerifySsl
+	awsKey := app.appConfig.S3.Key
+	awsSecret := app.appConfig.S3.Secret
+	awsHost := app.appConfig.S3.Host
+	verifySsl := app.appConfig.S3.VerifySsl
 	log.Println("Creating s3 client with host", awsHost, "key", awsKey, "and secret", awsSecret)
 	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl))
 }

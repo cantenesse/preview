@@ -5,26 +5,20 @@ import(
 	"strings"
 )
 
-func BuildZencoderSettings(inputUrl, outputUrl, notificationListener, outfile string) *zencoder.EncodingSettings {
+func BuildZencoderSettings(inputUrl, outputUrl, outfile, notificationListener string) *zencoder.EncodingSettings {
 	out600 := outfile + "_hls_600.m3u8"
 	out1200 := outfile + "_hls_1200.m3u8"
 	outPlaylist := outfile + ".m3u8"
-	
-	not600 := notificationListener
-	if !strings.HasSuffix(not600, "/") {
-		not600 += "/"
+
+	if !strings.HasSuffix(notificationListener, "/") {
+		notificationListener += "/"
 	}
-	not600 += out600
-	
-	not1200 := notificationListener
-	if !strings.HasSuffix(not1200, "/") {
-		not1200 += "/"
-	}
-	not1200 += out1200
-	
+	notificationListener += outfile
+
 	zcsettings := &zencoder.EncodingSettings{
 		Input: inputUrl,
 		Test: false,
+
 		Outputs: []*zencoder.OutputSettings {
 			&zencoder.OutputSettings{
 				Label: "hls_600",
@@ -39,7 +33,7 @@ func BuildZencoderSettings(inputUrl, outputUrl, notificationListener, outfile st
 				},
 				Notifications: []*zencoder.NotificationSettings {
 					&zencoder.NotificationSettings {
-						Url: not600,
+						Url: notificationListener,
 					},
 				},
 			},
@@ -53,11 +47,6 @@ func BuildZencoderSettings(inputUrl, outputUrl, notificationListener, outfile st
 				Format: "ts",
 				Headers: map[string]string{
 					"x-amz-acl": "public-read",
-				},
-				Notifications: []*zencoder.NotificationSettings {
-					&zencoder.NotificationSettings {
-						Url: not1200,
-					},
 				},
 			},
 			&zencoder.OutputSettings{
