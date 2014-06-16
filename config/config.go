@@ -79,16 +79,16 @@ type AppConfig struct {
 func LoadAppConfig(givenPath string) (*AppConfig, error) {
 	configPath := determineConfigPath(givenPath)
 	if configPath == "" {
-		return newAppConfig(NewDefaultAppConfig())
+		return NewAppConfig(NewDefaultAppConfig())
 	}
 	data, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
-	return newAppConfig(data)
+	return NewAppConfig(data)
 }
 
-func newAppConfig(data []byte) (*AppConfig, error) {
+func NewAppConfig(data []byte) (*AppConfig, error) {
 	var appConfig AppConfig
 	err := json.Unmarshal(data, &appConfig)
 	if err != nil {

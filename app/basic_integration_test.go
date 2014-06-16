@@ -135,8 +135,8 @@ func TestBasicIntegration(t *testing.T) {
 
 }
 
-func cassandraConfig(tmpFilePath string) (config.AppConfig, error) {
-	return config.NewUserAppConfig([]byte(`{
+func cassandraConfig(tmpFilePath string) (*config.AppConfig, error) {
+	return config.NewAppConfig([]byte(`{
 		"common": {"nodeId": "foo", "localAssetStoragePath": "` + tmpFilePath + `", "placeholderBasePath": "` + filepath.Join(util.Cwd(), "../test-data/placeholders/") + `", "placeholderGroups": {"image": ["jpg"]} },
 		"http": {"listen": ":8081"},
 		"storage": {"engine": "cassandra", "cassandraNodes": ["localhost"], "cassandraKeyspace": "preview"},
