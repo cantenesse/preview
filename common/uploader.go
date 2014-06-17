@@ -12,7 +12,7 @@ import (
 
 type Uploader interface {
 	Upload(destination string, path string) error
-	Url(sourceAssetId, templateId, placeholderSize string, page int32) string
+	Url(sourceAsset *SourceAsset, template *Template, page int32) string
 }
 
 type s3Uploader struct {
@@ -71,12 +71,13 @@ func (uploader *s3Uploader) Upload(destination, path string) error {
 	return ErrorUploaderDoesNotSupportUrl
 }
 
-func (uploader *s3Uploader) Url(sourceAssetId, templateId, placeholderSize string, page int32) string {
-	bucket := uploader.bucketRing.Hash(sourceAssetId)
-	if templateId == DocumentConversionTemplateId {
-		return fmt.Sprintf("s3://%s/%s-pdf", bucket, sourceAssetId)
+func (uploader *s3Uploader) Url(sourceAsset *SourceAsset, template *Template, page int32) string {
+	bucket := uploader.bucketRing.Hash(sourceAsset.Id)
+	if template.Id == DocumentConversionTemplateId {
+		return fmt.Sprintf("s3://%s/%s-pdf", bucket, sourceAsset.Id)
 	}
-	return fmt.Sprintf("s3://%s/%s-%s-%d", bucket, sourceAssetId, placeholderSize, page)
+	placeholderSize := template.GetAttribute(TemplateAttributePlaceholderSize)[0]
+	return fmt.Sprintf("s3://%s/%s-%s-%d", bucket, sourceAsset.Id, placeholderSize, page)
 }
 
 func (uploader *localUploader) Upload(destination, existingFile string) error {
@@ -96,9 +97,10 @@ func (uploader *localUploader) Upload(destination, existingFile string) error {
 	return ErrorUploaderDoesNotSupportUrl
 }
 
-func (uploader *localUploader) Url(sourceAssetId, templateId, placeholderSize string, page int32) string {
-	if templateId == DocumentConversionTemplateId {
-		return fmt.Sprintf("local:///%s/pdf", sourceAssetId)
+func (uploader *localUploader) Url(sourceAsset *SourceAsset, template *Template, page int32) string {
+	if template.Id == DocumentConversionTemplateId {
+		return fmt.Sprintf("local:///%s/pdf", sourceAsset.Id)
 	}
-	return fmt.Sprintf("local:///%s/%s/%d", sourceAssetId, placeholderSize, page)
+	placeholderSize := template.GetAttribute(TemplateAttributePlaceholderSize)[0]
+	return fmt.Sprintf("local:///%s/%s/%d", sourceAsset.Id, placeholderSize, page)
 }

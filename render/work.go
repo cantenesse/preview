@@ -113,6 +113,56 @@ func (agentManager *RenderAgentManager) getRenderAgentCount(name string) int {
 	return 0
 }
 
+func (agentManager *RenderAgentManager) CreateWorkFromTemplates(sourceAssetId, url string, attributes map[string][]string, templateIds []string) {
+	sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
+	if err != nil {
+		return
+	}
+	size, hasSize := attributes["size"]
+	if hasSize {
+		sourceAsset.AddAttribute(common.SourceAssetAttributeSize, size)
+	}
+	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{url})
+	
+	fileType, hasType := attributes["type"]
+	if hasType {
+		sourceAsset.AddAttribute(common.SourceAssetAttributeType, fileType)
+	}
+	
+	agentManager.sourceAssetStorageManager.Store(sourceAsset)
+	
+	templates, err := agentManager.templateManager.FindByIds(templateIds)
+	if err != nil {
+		return
+	}
+	
+	status := common.DefaultGeneratedAssetStatus
+	for _, template := range templates {
+		var location string
+		if template.Id == common.VideoConversionTemplateId {
+			// Zencoder has to use S3 for an output
+			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
+		} else {
+			location = agentManager.uploader.Url(sourceAsset, template, 0)
+		}
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, location)
+		
+		if err == nil {
+			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
+			if status != ga.Status {
+				ga.Status = status
+			}
+			agentManager.generatedAssetStorageManager.Store(ga)
+			if dispatchFunc != nil {
+				defer dispatchFunc()
+			}
+		} else {
+			log.Println("error creating generated asset from source asset", err)
+			return
+		}
+	}
+}
+
 func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType string, size int64) {
 	sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
 	if err != nil {
@@ -139,15 +189,14 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 	}
 
 	for _, template := range templates {
-		placeholderSize := placeholderSizes[template.Id]
 		var location string
 		if template.Id == common.VideoConversionTemplateId {
 			// Zencoder has to use S3 for an output
 			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
 		} else {
-			location = agentManager.uploader.Url(sourceAssetId, template.Id, placeholderSize, 0)
+			location = agentManager.uploader.Url(sourceAsset, template, 0)
 		}
-		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template, location)
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, location)
 
 		if err == nil {
 			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
@@ -178,9 +227,8 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 
 	for page := firstPage; page < lastPage; page++ {
 		for _, template := range templates {
-			placeholderSize := placeholderSizes[template.Id]
-			location := agentManager.uploader.Url(derivedSourceAsset.Id, template.Id, placeholderSize, int32(page))
-			generatedAsset, err := common.NewGeneratedAssetFromSourceAsset(derivedSourceAsset, template, location)
+			location := agentManager.uploader.Url(derivedSourceAsset, template, int32(page))
+			generatedAsset, err := common.NewGeneratedAssetFromSourceAsset(derivedSourceAsset, template.Id, location)
 			if err == nil {
 				generatedAsset.AddAttribute(common.GeneratedAssetAttributePage, []string{strconv.Itoa(page)})
 				status, dispatchFunc := agentManager.canDispatch(generatedAsset.Id, generatedAsset.Status, template)

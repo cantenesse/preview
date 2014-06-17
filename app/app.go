@@ -34,6 +34,7 @@ type AppContext struct {
 	adminBlueprint               api.Blueprint
 	staticBlueprint              api.Blueprint
 	webHookBlueprint             api.Blueprint
+	apiV2Blueprint api.Blueprint
 	listener                     *stoppableListener.StoppableListener
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager
@@ -233,6 +234,9 @@ func (app *AppContext) initApis() error {
 		}
 		app.simpleBlueprint.AddRoutes(p)
 	}
+	// TODO: proper config
+	app.apiV2Blueprint = api.NewApiV2Blueprint(app.appConfig.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager)
+	app.apiV2Blueprint.AddRoutes(p)
 
 	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.buildS3Client(), app.signatureManager)
 	app.assetBlueprint.AddRoutes(p)
