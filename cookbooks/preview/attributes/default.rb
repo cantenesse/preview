@@ -1,12 +1,15 @@
 
 default[:preview][:platform] = 'amd64'
-default[:preview][:version] = '1.0.0'
+default[:preview][:version] = '1.0.1'
 default[:preview][:install_type] = 'archive'
 default[:preview][:package] = 'preview'
 default[:preview][:archive_source] = "https://github.com/ngerakines/preview/releases/download/v#{node[:preview][:version]}/preview-#{node[:preview][:version]}-linux_#{node[:preview][:platform]}.zip"
 
 default[:preview][:port] = 8080
 default[:preview][:basePath] = '/home/preview/data/'
+
+default[:preview][:enable_monit] = true
+default[:preview][:enable_logrotate] = true
 
 default[:preview][:placeholders][:install_type] = 'none'
 default[:preview][:placeholders][:package] = 'preview-placeholders'
