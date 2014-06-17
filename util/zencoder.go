@@ -31,11 +31,6 @@ func BuildZencoderSettings(inputUrl, outputUrl, outfile, notificationListener st
 				Headers: map[string]string{
 					"x-amz-acl": "public-read",
 				},
-				Notifications: []*zencoder.NotificationSettings{
-					&zencoder.NotificationSettings{
-						Url: notificationListener,
-					},
-				},
 			},
 			&zencoder.OutputSettings{
 				Label:        "hls_1200",
@@ -47,6 +42,11 @@ func BuildZencoderSettings(inputUrl, outputUrl, outfile, notificationListener st
 				Format:       "ts",
 				Headers: map[string]string{
 					"x-amz-acl": "public-read",
+				},
+				Notifications: []*zencoder.NotificationSettings{
+					&zencoder.NotificationSettings{
+						Url: notificationListener,
+					},
 				},
 			},
 			&zencoder.OutputSettings{
