@@ -281,8 +281,8 @@ func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common
 	return renderAgent
 }
 
-func (agentManager *RenderAgentManager) AddVideoRenderAgent(downloader common.Downloader, uploader common.Uploader, docCachePath string, maxWorkIncrease int) RenderAgent {
-	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentVideo], agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
+func (agentManager *RenderAgentManager) AddVideoRenderAgent(maxWorkIncrease int) RenderAgent {
+	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.workChannels[common.RenderAgentVideo], agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentVideo, renderAgent, maxWorkIncrease)
 	return renderAgent

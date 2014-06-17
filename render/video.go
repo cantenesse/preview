@@ -1,21 +1,12 @@
 package render
 
 import (
-//	"bytes"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
 	"github.com/brandscreen/zencoder"
-//	"io/ioutil"
 	"log"
-	"os"
-//	"os/exec"
-	"path/filepath"
-//	"regexp"
-//	"strconv"
-//	"strings"
 	"time"
-	"encoding/json"
 )
 
 type videoRenderAgent struct {
@@ -23,13 +14,9 @@ type videoRenderAgent struct {
 	sasm                 common.SourceAssetStorageManager
 	gasm                 common.GeneratedAssetStorageManager
 	templateManager      common.TemplateManager
-	downloader           common.Downloader
-	uploader             common.Uploader
 	workChannel          RenderAgentWorkChannel
 	statusListeners      []RenderStatusChannel
-	temporaryFileManager common.TemporaryFileManager
 	agentManager         *RenderAgentManager
-	tempFileBasePath     string
 	stop                 chan (chan bool)
 	zencoder *zencoder.Zencoder
 	zencoderS3Bucket string
@@ -51,10 +38,6 @@ func newVideoRenderAgent(
 	sasm common.SourceAssetStorageManager,
 	gasm common.GeneratedAssetStorageManager,
 	templateManager common.TemplateManager,
-	temporaryFileManager common.TemporaryFileManager,
-	downloader common.Downloader,
-	uploader common.Uploader,
-	tempFileBasePath string,
 	workChannel RenderAgentWorkChannel,
 	zencoder *zencoder.Zencoder,
 	s3Bucket string,
@@ -66,11 +49,7 @@ func newVideoRenderAgent(
 	renderAgent.sasm = sasm
 	renderAgent.gasm = gasm
 	renderAgent.templateManager = templateManager
-	renderAgent.temporaryFileManager = temporaryFileManager
-	renderAgent.downloader = downloader
-	renderAgent.uploader = uploader
 	renderAgent.workChannel = workChannel
-	renderAgent.tempFileBasePath = tempFileBasePath
 	renderAgent.statusListeners = make([]RenderStatusChannel, 0, 0)
 	renderAgent.stop = make(chan (chan bool))
 	
@@ -141,7 +120,6 @@ func (renderAgent *videoRenderAgent) Dispatch() RenderAgentWorkChannel {
 func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {	
 	renderAgent.metrics.workProcessed.Mark(1)
 
-	// 1. Get the generated asset
 	generatedAsset, err := renderAgent.gasm.FindById(id)
 	if err != nil {
 		log.Fatal("No Generated Asset with that ID can be retreived from storage: ", id)
@@ -154,7 +132,6 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 	generatedAsset.Status = common.GeneratedAssetStatusProcessing
 	renderAgent.gasm.Update(generatedAsset)
 
-	// 2. Get the source asset
 	sourceAsset, err := renderAgent.getSourceAsset(generatedAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
@@ -172,38 +149,22 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 		}
 	}
 
-	// 3. Get the template... not needed yet
-
-	// 4. Fetch the source asset file
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
-	// Dont need to download it; Zencoder downloads it for us
-	// sourceFile, err := renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
-	// if err != nil {
-	// 	statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNoDownloadUrlsWork), nil}
-	// 	return
-	// }
-	// defer sourceFile.Release()
-
-	// TODO: Determine what to do here
-	// 	// 5. Create a temporary destination directory.
-	// destination, err := renderAgent.createTemporaryDestinationDirectory()
-	// if err != nil {
-	// 	statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-	// 	return
-	// }
-	// destinationTemporaryFile := renderAgent.temporaryFileManager.Create(destination)
-	// defer destinationTemporaryFile.Release()
 	input := urls[0]
-	outputFileName := id
-
-	settings := util.BuildZencoderSettings(input, "s3://" + renderAgent.zencoderS3Bucket + "/" + outputFileName, outputFileName, renderAgent.zencoderNotificationUrl)
-	arr, _ := json.MarshalIndent(settings, "", "	")
-	log.Println(string(arr))
+	// Zencoder will put the files the folder generatedAsset.Location
+	// The filename for the HLS playlist will be generatedAsset.Id with .m3u8 extension 
+	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, renderAgent.zencoderNotificationUrl)
+	//arr, _ := json.MarshalIndent(settings, "", "	")
+	//log.Println(string(arr))
 	job, err := renderAgent.zencoder.CreateJob(settings)
 	if err != nil {
 		log.Println("Zencoder error:", err)
+	     statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
+	     return
 	}
 	log.Println("Created Zencoder job", job)
+
+	// The webhook API will mark the GA as completed once Zencoder sends back a notification
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusDelegated, nil}
 }
 
@@ -218,16 +179,6 @@ func (renderAgent *videoRenderAgent) getSourceAsset(generatedAsset *common.Gener
 		}
 	}
 	return nil, common.ErrorNoSourceAssetsFoundForId
-}
-
-func (renderAgent *videoRenderAgent) tryDownload(urls []string, source string) (common.TemporaryFile, error) {
-	for _, url := range urls {
-		tempFile, err := renderAgent.downloader.Download(url, source)
-		if err == nil {
-			return tempFile, nil
-		}
-	}
-	return nil, common.ErrorNoDownloadUrlsWork
 }
 
 func (renderAgent *videoRenderAgent) commitStatus(id string, existingAttributes []common.Attribute) chan generatedAssetUpdate {
@@ -269,18 +220,4 @@ func (renderAgent *videoRenderAgent) commitStatus(id string, existingAttributes 
 		}
 	}()
 	return commitChannel
-}
-
-func (renderAgent *videoRenderAgent) createTemporaryDestinationDirectory() (string, error) {
-	uuid, err := util.NewUuid()
-	if err != nil {
-		return "", err
-	}
-	tmpPath := filepath.Join(renderAgent.tempFileBasePath, uuid)
-	err = os.MkdirAll(tmpPath, 0777)
-	if err != nil {
-		log.Println("error creating tmp dir", err)
-		return "", err
-	}
-	return tmpPath, nil
 }

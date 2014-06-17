@@ -33,6 +33,7 @@ type AppContext struct {
 	assetBlueprint               api.Blueprint
 	adminBlueprint               api.Blueprint
 	staticBlueprint              api.Blueprint
+	webHookBlueprint             api.Blueprint
 	listener                     *stoppableListener.StoppableListener
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager
@@ -205,7 +206,7 @@ func (app *AppContext) initRenderers() error {
 	}
 	if app.appConfig.VideoRenderAgent.Enabled {
 		for i := 0; i < app.appConfig.VideoRenderAgent.Count; i++ {
-			app.agentManager.AddVideoRenderAgent(app.downloader, app.uploader, app.appConfig.VideoRenderAgent.BasePath, 5)
+			app.agentManager.AddVideoRenderAgent(5)
 		}
 	}
 	return nil
@@ -241,6 +242,9 @@ func (app *AppContext) initApis() error {
 
 	app.staticBlueprint = api.NewStaticBlueprint(app.placeholderManager)
 	app.staticBlueprint.AddRoutes(p)
+
+	app.webHookBlueprint = api.NewWebHookBlueprint(app.generatedAssetStorageManager)
+	app.webHookBlueprint.AddRoutes(p)
 
 	app.negroni = negroni.Classic()
 	app.negroni.UseHandler(p)
