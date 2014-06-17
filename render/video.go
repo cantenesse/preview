@@ -1,25 +1,26 @@
 package render
 
 import (
+	"encoding/json"
+	"github.com/brandscreen/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
-	"github.com/brandscreen/zencoder"
 	"log"
 	"time"
 )
 
 type videoRenderAgent struct {
-	metrics              *videoRenderAgentMetrics
-	sasm                 common.SourceAssetStorageManager
-	gasm                 common.GeneratedAssetStorageManager
-	templateManager      common.TemplateManager
-	workChannel          RenderAgentWorkChannel
-	statusListeners      []RenderStatusChannel
-	agentManager         *RenderAgentManager
-	stop                 chan (chan bool)
-	zencoder *zencoder.Zencoder
-	zencoderS3Bucket string
+	metrics                 *videoRenderAgentMetrics
+	sasm                    common.SourceAssetStorageManager
+	gasm                    common.GeneratedAssetStorageManager
+	templateManager         common.TemplateManager
+	workChannel             RenderAgentWorkChannel
+	statusListeners         []RenderStatusChannel
+	agentManager            *RenderAgentManager
+	stop                    chan (chan bool)
+	zencoder                *zencoder.Zencoder
+	zencoderS3Bucket        string
 	zencoderNotificationUrl string
 }
 
@@ -27,7 +28,7 @@ type videoRenderAgentMetrics struct {
 	workProcessed metrics.Meter
 	convertTime   metrics.Timer
 	// TODO: finish metrics
-	mp4Count     metrics.Counter
+	mp4Count metrics.Counter
 }
 
 func newVideoRenderAgent(
@@ -40,7 +41,7 @@ func newVideoRenderAgent(
 	zencoder *zencoder.Zencoder,
 	s3Bucket string,
 	notificationUrl string) RenderAgent {
-	
+
 	renderAgent := new(videoRenderAgent)
 	renderAgent.metrics = metrics
 	renderAgent.agentManager = agentManager
@@ -50,10 +51,10 @@ func newVideoRenderAgent(
 	renderAgent.workChannel = workChannel
 	renderAgent.statusListeners = make([]RenderStatusChannel, 0, 0)
 	renderAgent.stop = make(chan (chan bool))
-	
+
 	renderAgent.zencoder = zencoder
 	renderAgent.zencoderS3Bucket = s3Bucket
-	renderAgent.zencoderNotificationUrl = notificationUrl	
+	renderAgent.zencoderNotificationUrl = notificationUrl
 	go renderAgent.start()
 
 	return renderAgent
@@ -115,7 +116,7 @@ func (renderAgent *videoRenderAgent) Dispatch() RenderAgentWorkChannel {
 	return renderAgent.workChannel
 }
 
-func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {	
+func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 	renderAgent.metrics.workProcessed.Mark(1)
 
 	generatedAsset, err := renderAgent.gasm.FindById(id)
@@ -123,7 +124,7 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 		log.Fatal("No Generated Asset with that ID can be retreived from storage: ", id)
 		return
 	}
-	
+
 	statusCallback := renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
@@ -148,17 +149,17 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
 	input := urls[0]
 	// Zencoder will put the files the folder generatedAsset.Location
-	// The filename for the HLS playlist will be generatedAsset.Id with .m3u8 extension 
+	// The filename for the HLS playlist will be generatedAsset.Id with .m3u8 extension
 	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, renderAgent.zencoderNotificationUrl)
-	//arr, _ := json.MarshalIndent(settings, "", "	")
-	//log.Println(string(arr))
-	job, err := renderAgent.zencoder.CreateJob(settings)
-	if err != nil {
-		log.Println("Zencoder error:", err)
-	     statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
-	     return
-	}
-	log.Println("Created Zencoder job", job)
+	arr, _ := json.MarshalIndent(settings, "", "	")
+	log.Println(string(arr))
+	// job, err := renderAgent.zencoder.CreateJob(settings)
+	// if err != nil {
+	// 	log.Println("Zencoder error:", err)
+	// 	statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
+	// 	return
+	// }
+	// log.Println("Created Zencoder job", job)
 
 	// The webhook API will mark the GA as completed once Zencoder sends back a notification
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusDelegated, nil}

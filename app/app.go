@@ -2,9 +2,9 @@ package app
 
 import (
 	"github.com/bmizerany/pat"
+	"github.com/brandscreen/zencoder"
 	"github.com/codegangsta/negroni"
 	"github.com/etix/stoppableListener"
-	"github.com/brandscreen/zencoder"
 	"github.com/ngerakines/preview/api"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/config"
@@ -38,7 +38,7 @@ type AppContext struct {
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager
 	mysqlManager                 *common.MysqlManager
-	zencoder *zencoder.Zencoder
+	zencoder                     *zencoder.Zencoder
 }
 
 func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
@@ -71,9 +71,9 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	
+
 	return app, nil
 }
 
@@ -258,7 +258,7 @@ func (app *AppContext) initZencoder() error {
 	_, err := app.zencoder.GetAccount()
 	if err != nil {
 		log.Println("Invalid Zencoder key")
-		return common.ErrorNotImplemented 
+		return common.ErrorNotImplemented
 	}
 	return nil
 }

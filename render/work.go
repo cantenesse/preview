@@ -1,9 +1,10 @@
 package render
 
 import (
+	"fmt"
+	"github.com/brandscreen/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/rcrowley/go-metrics"
-	"github.com/brandscreen/zencoder"
 	"log"
 	"strconv"
 	"strings"
@@ -32,8 +33,8 @@ type RenderAgentManager struct {
 	stop chan (chan bool)
 	mu   sync.Mutex
 	// I feel like there should be a way to do this without giving RenderAgentManager a Zencoder
-	zencoder *zencoder.Zencoder
-	zencoderS3Bucket string
+	zencoder                *zencoder.Zencoder
+	zencoderS3Bucket        string
 	zencoderNotificationUrl string
 }
 
@@ -128,7 +129,7 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 		log.Println("error determining which render agent to use", err)
 		return
 	}
-	
+
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
 		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
@@ -139,8 +140,15 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 
 	for _, template := range templates {
 		placeholderSize := placeholderSizes[template.Id]
-		location := agentManager.uploader.Url(sourceAssetId, template.Id, placeholderSize, 0)
+		var location string
+		if template.Id == common.VideoConversionTemplateId {
+			// Zencoder has to use S3 for an output
+			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
+		} else {
+			location = agentManager.uploader.Url(sourceAssetId, template.Id, placeholderSize, 0)
+		}
 		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template, location)
+
 		if err == nil {
 			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
 			if status != ga.Status {

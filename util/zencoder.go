@@ -1,6 +1,6 @@
 package util
 
-import(
+import (
 	"github.com/brandscreen/zencoder"
 	"strings"
 )
@@ -17,50 +17,50 @@ func BuildZencoderSettings(inputUrl, outputUrl, outfile, notificationListener st
 
 	zcsettings := &zencoder.EncodingSettings{
 		Input: inputUrl,
-		Test: false,
+		Test:  false,
 
-		Outputs: []*zencoder.OutputSettings {
+		Outputs: []*zencoder.OutputSettings{
 			&zencoder.OutputSettings{
-				Label: "hls_600",
-				Size: "640x360",
+				Label:        "hls_600",
+				Size:         "640x360",
 				VideoBitrate: 600,
-				BaseUrl: outputUrl,
-				Filename: out600,
-				Type: "segmented",
-				Format: "ts",
+				BaseUrl:      outputUrl,
+				Filename:     out600,
+				Type:         "segmented",
+				Format:       "ts",
 				Headers: map[string]string{
 					"x-amz-acl": "public-read",
 				},
-				Notifications: []*zencoder.NotificationSettings {
-					&zencoder.NotificationSettings {
+				Notifications: []*zencoder.NotificationSettings{
+					&zencoder.NotificationSettings{
 						Url: notificationListener,
 					},
 				},
 			},
 			&zencoder.OutputSettings{
-				Label: "hls_1200",
-				Size: "1280x720",
+				Label:        "hls_1200",
+				Size:         "1280x720",
 				VideoBitrate: 1200,
-				BaseUrl: outputUrl,
-				Filename: out1200,
-				Type: "segmented",
-				Format: "ts",
+				BaseUrl:      outputUrl,
+				Filename:     out1200,
+				Type:         "segmented",
+				Format:       "ts",
 				Headers: map[string]string{
 					"x-amz-acl": "public-read",
 				},
 			},
 			&zencoder.OutputSettings{
-				BaseUrl: outputUrl,
+				BaseUrl:  outputUrl,
 				Filename: outPlaylist,
-				Type: "playlist",
-				Streams: []*zencoder.StreamSettings {
+				Type:     "playlist",
+				Streams: []*zencoder.StreamSettings{
 					&zencoder.StreamSettings{
 						Bandwidth: 600,
-						Path: out600,
+						Path:      out600,
 					},
 					&zencoder.StreamSettings{
 						Bandwidth: 1200,
-						Path: out1200,
+						Path:      out1200,
 					},
 				},
 				Headers: map[string]string{

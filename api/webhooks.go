@@ -1,10 +1,10 @@
 package api
 
-import(
+import (
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 type webHookBlueprint struct {

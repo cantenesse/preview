@@ -51,11 +51,11 @@ type AppConfig struct {
 	} `json:"documentRenderAgent"`
 
 	VideoRenderAgent struct {
-		Enabled  bool   `json:"enabled"`
-		Count    int    `json:"count"`
-		BasePath string `json:"basePath"`
-		ZencoderKey   string `json:"zencoderKey"`
-		ZencoderS3Bucket string `json:"zencoderS3Bucket"`
+		Enabled                 bool   `json:"enabled"`
+		Count                   int    `json:"count"`
+		BasePath                string `json:"basePath"`
+		ZencoderKey             string `json:"zencoderKey"`
+		ZencoderS3Bucket        string `json:"zencoderS3Bucket"`
 		ZencoderNotificationUrl string `json:"zencoderNotificationUrl"`
 	} `json:"videoRenderAgent"`
 
@@ -70,7 +70,7 @@ type AppConfig struct {
 	} `json:"assetApi"`
 
 	Uploader struct {
-		Engine      string   `json:"engine"`
+		Engine string `json:"engine"`
 	} `json:"uploader"`
 
 	S3 struct {
