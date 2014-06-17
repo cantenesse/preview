@@ -3,20 +3,23 @@ package api
 import (
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
+	"github.com/ngerakines/preview/render"
 	"log"
 	"net/http"
 )
 
 type webHookBlueprint struct {
-	base string
-	gasm common.GeneratedAssetStorageManager
+	base               string
+	gasm               common.GeneratedAssetStorageManager
+	renderAgentManager *render.RenderAgentManager
 }
 
-func NewWebHookBlueprint(gasm common.GeneratedAssetStorageManager) *webHookBlueprint {
+func NewWebHookBlueprint(gasm common.GeneratedAssetStorageManager, ram *render.RenderAgentManager) *webHookBlueprint {
 	blueprint := new(webHookBlueprint)
 	// TODO: Abstract this so WebHookBlueprint can apply to non-Zencoder web hooks as well
 	blueprint.base = "/zencoder"
 	blueprint.gasm = gasm
+	blueprint.renderAgentManager = ram
 	return blueprint
 }
 
@@ -36,5 +39,8 @@ func (blueprint *webHookBlueprint) zencoderApiHandler(res http.ResponseWriter, r
 		return
 	}
 	ga.Status = common.GeneratedAssetStatusComplete
+	log.Println("Updating", ga)
+	blueprint.gasm.Update(ga)
+	blueprint.renderAgentManager.RemoveWork(common.RenderAgentVideo, id)
 	log.Println("Transcoding complete for", id)
 }

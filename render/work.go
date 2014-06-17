@@ -377,12 +377,22 @@ func (agentManager *RenderAgentManager) dispatchMoreWork() {
 func (agentManager *RenderAgentManager) handleStatus(renderStatus RenderStatus) {
 	agentManager.mu.Lock()
 	defer agentManager.mu.Unlock()
-
 	if renderStatus.Status == common.GeneratedAssetStatusComplete || strings.HasPrefix(renderStatus.Status, common.GeneratedAssetStatusFailed) {
 		activeWork, hasActiveWork := agentManager.activeWork[renderStatus.Service]
 		if hasActiveWork {
 			agentManager.activeWork[renderStatus.Service] = listWithout(activeWork, renderStatus.GeneratedAssetId)
 		}
+	}
+}
+
+func (agentManager *RenderAgentManager) RemoveWork(service, id string) {
+	agentManager.mu.Lock()
+	defer agentManager.mu.Unlock()
+	activeWork, hasActiveWork := agentManager.activeWork[service]
+	if hasActiveWork {
+		agentManager.activeWork[service] = listWithout(activeWork, id)
+	} else {
+		log.Println("Warning: Called RemoveWork without any work to remove")
 	}
 }
 

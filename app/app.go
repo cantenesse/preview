@@ -243,7 +243,7 @@ func (app *AppContext) initApis() error {
 	app.staticBlueprint = api.NewStaticBlueprint(app.placeholderManager)
 	app.staticBlueprint.AddRoutes(p)
 
-	app.webHookBlueprint = api.NewWebHookBlueprint(app.generatedAssetStorageManager)
+	app.webHookBlueprint = api.NewWebHookBlueprint(app.generatedAssetStorageManager, app.agentManager)
 	app.webHookBlueprint.AddRoutes(p)
 
 	app.negroni = negroni.Classic()
