@@ -280,6 +280,7 @@ func (app *AppContext) buildS3Client() common.S3Client {
 	awsSecret := app.appConfig.S3.Secret
 	awsHost := app.appConfig.S3.Host
 	verifySsl := app.appConfig.S3.VerifySsl
+	urlCompatMode := app.appConfig.S3.UrlCompatMode
 	log.Println("Creating s3 client with host", awsHost, "key", awsKey, "and secret", awsSecret)
-	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl))
+	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl, urlCompatMode))
 }

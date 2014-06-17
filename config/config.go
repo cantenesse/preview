@@ -74,11 +74,12 @@ type AppConfig struct {
 	} `json:"uploader"`
 
 	S3 struct {
-		Key       string   `json:"key"`
-		Secret    string   `json:"secret"`
-		Host      string   `json:"host"`
-		Buckets   []string `json:"buckets"`
-		VerifySsl bool     `json:"verifySsl"`
+		Key           string   `json:"key"`
+		Secret        string   `json:"secret"`
+		Host          string   `json:"host"`
+		Buckets       []string `json:"buckets"`
+		VerifySsl     bool     `json:"verifySsl"`
+		UrlCompatMode bool     `json:"urlCompatMode"`
 	} `json:"s3"`
 
 	Downloader struct {
