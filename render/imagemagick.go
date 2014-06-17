@@ -334,7 +334,7 @@ func (renderAgent *imageMagickRenderAgent) imageFromPdf(source, destination stri
 		return err
 	}
 
-	cmd := exec.Command("convert", "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin",  destination)
+	cmd := exec.Command("convert", "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
 	log.Println(cmd)
 
 	var buf bytes.Buffer
