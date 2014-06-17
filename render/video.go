@@ -26,10 +26,8 @@ type videoRenderAgent struct {
 type videoRenderAgentMetrics struct {
 	workProcessed metrics.Meter
 	convertTime   metrics.Timer
-	docCount      metrics.Counter
-	docxCount     metrics.Counter
-	pptCount      metrics.Counter
-	pptxCount     metrics.Counter
+	// TODO: finish metrics
+	mp4Count     metrics.Counter
 }
 
 func newVideoRenderAgent(
@@ -66,11 +64,11 @@ func newVideoRenderAgentMetrics(registry metrics.Registry) *videoRenderAgentMetr
 	videoMetrics.workProcessed = metrics.NewMeter()
 	videoMetrics.convertTime = metrics.NewTimer()
 	// TODO: determine file types
-	// documentMetrics.pptxCount = metrics.NewCounter()
+	videoMetrics.mp4Count = metrics.NewCounter()
 
 	registry.Register("videoRenderAgent.workProcessed", videoMetrics.workProcessed)
 	registry.Register("videoRenderAgent.convertTime", videoMetrics.convertTime)
-	// registry.Register("documentRenderAgent.pptxCount", documentMetrics.pptxCount)
+	registry.Register("videoRenderAgent.mp4Count", videoMetrics.mp4Count)
 
 	return videoMetrics
 }
@@ -142,10 +140,8 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 	if err == nil {
 		switch fileType {
 		// TODO: Complete metrics
-		/*
-		case "pptx":
-			renderAgent.metrics.pptxCount.Inc(1)
-                */
+		case "mp4":
+			renderAgent.metrics.mp4Count.Inc(1)
 		}
 	}
 
