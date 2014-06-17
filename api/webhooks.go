@@ -24,7 +24,7 @@ func NewWebHookBlueprint(gasm common.GeneratedAssetStorageManager, ram *render.R
 }
 
 func (blueprint *webHookBlueprint) AddRoutes(p *pat.PatternServeMux) {
-	p.Get(blueprint.buildUrl("/:id"), http.HandlerFunc(blueprint.zencoderApiHandler))
+	p.Post(blueprint.buildUrl("/:id"), http.HandlerFunc(blueprint.zencoderApiHandler))
 }
 
 func (blueprint *webHookBlueprint) buildUrl(path string) string {
