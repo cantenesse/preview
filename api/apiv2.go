@@ -26,6 +26,8 @@ type apiV2Blueprint struct {
 	previewQueriesMeter           metrics.Meter
 	previewInfoRequestsMeter      metrics.Meter
 	previewAttributeRequestsMeter metrics.Meter
+	previewGADataRequestsMeter    metrics.Meter
+	previewGAInfoRequestsMeter    metrics.Meter
 }
 
 type generatePreviewRequestV2 struct {
@@ -55,10 +57,14 @@ func NewApiV2Blueprint(
 	bp.previewQueriesMeter = metrics.NewMeter()
 	bp.previewInfoRequestsMeter = metrics.NewMeter()
 	bp.previewAttributeRequestsMeter = metrics.NewMeter()
+	bp.previewGADataRequestsMeter = metrics.NewMeter()
+	bp.previewGAInfoRequestsMeter = metrics.NewMeter()
 	registry.Register("apiV2.generatePreviewRequests", bp.generatePreviewRequestsMeter)
 	registry.Register("apiV2.previewQueries", bp.previewQueriesMeter)
 	registry.Register("apiV2.previewInfoRequests", bp.previewInfoRequestsMeter)
 	registry.Register("apiV2.previewAttributeRequests", bp.previewAttributeRequestsMeter)
+	registry.Register("apiV2.previewGADataRequests", bp.previewGADataRequestsMeter)
+	registry.Register("apiV2.previewGAInfoRequests", bp.previewGAInfoRequestsMeter)
 
 	return bp
 }
@@ -93,6 +99,7 @@ func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req
 }
 
 func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, req *http.Request) {
+	blueprint.previewGADataRequestsMeter.Mark(1)
 	id := req.URL.Query().Get(":id")
 	templateId := req.URL.Query().Get(":templateid")
 	page := req.URL.Query().Get(":page")
@@ -165,6 +172,7 @@ func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (asse
 }
 
 func (blueprint *apiV2Blueprint) PreviewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
+	blueprint.previewGAInfoRequestsMeter.Mark(1)
 	id := req.URL.Query().Get(":id")
 	templateId := req.URL.Query().Get(":templateid")
 	jsonData, err := blueprint.marshalGeneratedAsset(id, templateId)
