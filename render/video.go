@@ -3,7 +3,7 @@ package render
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brandscreen/zencoder"
+	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"

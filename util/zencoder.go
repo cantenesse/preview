@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/brandscreen/zencoder"
+	"github.com/jherman3/zencoder"
 	"strings"
 )
 
@@ -18,7 +18,11 @@ func BuildZencoderSettings(inputUrl, outputUrl, outfile, notificationListener st
 	zcsettings := &zencoder.EncodingSettings{
 		Input: inputUrl,
 		Test:  false,
-
+		Notifications: []*zencoder.NotificationSettings{
+			&zencoder.NotificationSettings{
+				Url: notificationListener,
+			},
+		},
 		Outputs: []*zencoder.OutputSettings{
 			&zencoder.OutputSettings{
 				Label:        "hls_600",
@@ -42,11 +46,6 @@ func BuildZencoderSettings(inputUrl, outputUrl, outfile, notificationListener st
 				Format:       "ts",
 				Headers: map[string]string{
 					"x-amz-acl": "public-read",
-				},
-				Notifications: []*zencoder.NotificationSettings{
-					&zencoder.NotificationSettings{
-						Url: notificationListener,
-					},
 				},
 			},
 			&zencoder.OutputSettings{

@@ -2,9 +2,9 @@ package app
 
 import (
 	"github.com/bmizerany/pat"
-	"github.com/brandscreen/zencoder"
 	"github.com/codegangsta/negroni"
 	"github.com/etix/stoppableListener"
+	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/api"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/config"

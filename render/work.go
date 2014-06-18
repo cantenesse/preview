@@ -2,7 +2,7 @@ package render
 
 import (
 	"fmt"
-	"github.com/brandscreen/zencoder"
+	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/rcrowley/go-metrics"
 	"log"
