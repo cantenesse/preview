@@ -5,11 +5,14 @@ import (
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/render"
+	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type apiV2Blueprint struct {
@@ -17,6 +20,8 @@ type apiV2Blueprint struct {
 	agentManager                  *render.RenderAgentManager
 	gasm                          common.GeneratedAssetStorageManager
 	sasm                          common.SourceAssetStorageManager
+	s3Client                      common.S3Client
+	localAssetStoragePath         string
 	generatePreviewRequestsMeter  metrics.Meter
 	previewQueriesMeter           metrics.Meter
 	previewInfoRequestsMeter      metrics.Meter
@@ -35,12 +40,16 @@ func NewApiV2Blueprint(
 	agentManager *render.RenderAgentManager,
 	gasm common.GeneratedAssetStorageManager,
 	sasm common.SourceAssetStorageManager,
-	registry metrics.Registry) *apiV2Blueprint {
+	registry metrics.Registry,
+	s3Client common.S3Client,
+	storagePath string) *apiV2Blueprint {
 	bp := new(apiV2Blueprint)
 	bp.base = base
 	bp.agentManager = agentManager
 	bp.gasm = gasm
 	bp.sasm = sasm
+	bp.s3Client = s3Client
+	bp.localAssetStoragePath = storagePath
 
 	bp.generatePreviewRequestsMeter = metrics.NewMeter()
 	bp.previewQueriesMeter = metrics.NewMeter()
@@ -56,9 +65,10 @@ func NewApiV2Blueprint(
 
 func (blueprint *apiV2Blueprint) AddRoutes(p *pat.PatternServeMux) {
 	p.Put(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
-	p.Get(blueprint.buildUrl("/v2/preview/:id/:attribute"), http.HandlerFunc(blueprint.PreviewAttributeHandler)) // Specific attribute - /preview/123/data
-	p.Get(blueprint.buildUrl("/v2/preview/:id"), http.HandlerFunc(blueprint.PreviewInfoHandler))                 // Get specific asset - /preview/12345
-	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.PreviewQueryHandler))                   // Search - /preview/?id=1234?id=5678
+	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/data/:page"), http.HandlerFunc(blueprint.PreviewGADataHandler))
+	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid"), http.HandlerFunc(blueprint.PreviewGAInfoHandler)) // Specific generated asset - /preview/123/456
+	p.Get(blueprint.buildUrl("/v2/preview/:id"), http.HandlerFunc(blueprint.PreviewInfoHandler))               // Get specific source asset - /preview/12345
+	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.PreviewQueryHandler))                 // Search - /preview/?id=1234&id=5678
 }
 
 func (blueprint *apiV2Blueprint) buildUrl(path string) string {
@@ -67,11 +77,11 @@ func (blueprint *apiV2Blueprint) buildUrl(path string) string {
 
 func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Processing info request")
-
 	blueprint.previewInfoRequestsMeter.Mark(1)
-
 	id := req.URL.Query().Get(":id")
+
 	jsonData, err := blueprint.marshalSourceAssetsFromIds([]string{id})
+
 	if err != nil {
 		log.Println("Marshalling error", err)
 		res.Header().Set("Content-Length", "0")
@@ -81,6 +91,93 @@ func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req
 	res.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
 	res.Write(jsonData)
 }
+
+func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, req *http.Request) {
+	id := req.URL.Query().Get(":id")
+	templateId := req.URL.Query().Get(":templateid")
+	page := req.URL.Query().Get(":page")
+	action, path := blueprint.getAsset(id, templateId, page)
+	switch action {
+	case assetActionServeFile:
+		{
+			http.ServeFile(res, req, path)
+			return
+		}
+	case assetActionRedirect:
+		{
+			http.Redirect(res, req, path, 302)
+			return
+		}
+	case assetActionS3Proxy:
+		{
+			bucket, file := blueprint.splitS3Url(path)
+			err := blueprint.s3Client.Proxy(bucket, file, res)
+			if err != nil {
+				return
+			}
+		}
+	}
+	http.NotFound(res, req)
+}
+
+func (blueprint *apiV2Blueprint) splitS3Url(url string) (string, string) {
+	usableData := url[5:]
+	// NKG: The url will have the following format: `s3://[bucket][path]`
+	// where path will begin with a `/` character.
+	parts := strings.SplitN(usableData, "/", 2)
+	return parts[0], parts[1]
+}
+
+func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (assetAction, string) {
+	generatedAssets, err := blueprint.gasm.FindBySourceAssetId(fileId)
+	if err != nil {
+		log.Println("Error finding generated asset")
+		return assetAction404, ""
+	}
+	if len(generatedAssets) == 0 {
+		log.Println("Error finding generated asset")
+		return assetAction404, ""
+	}
+	var generatedAsset *common.GeneratedAsset
+	for _, ga := range generatedAssets {
+		pageVal, _ := common.GetFirstAttribute(ga, common.GeneratedAssetAttributePage)
+		if len(pageVal) == 0 {
+			pageVal = "0"
+		}
+		if pageVal == page {
+			generatedAsset = ga
+			break
+		}
+	}
+	if strings.HasPrefix(generatedAsset.Location, "local://") {
+
+		fullPath := filepath.Join(blueprint.localAssetStoragePath, generatedAsset.Location[8:])
+		if util.CanLoadFile(fullPath) {
+			return assetActionServeFile, fullPath
+		} else {
+			return assetAction404, ""
+		}
+	}
+	if strings.HasPrefix(generatedAsset.Location, "s3://") {
+		return assetActionS3Proxy, generatedAsset.Location
+	}
+	return assetAction404, ""
+}
+
+func (blueprint *apiV2Blueprint) PreviewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
+	id := req.URL.Query().Get(":id")
+	templateId := req.URL.Query().Get(":templateid")
+	jsonData, err := blueprint.marshalGeneratedAsset(id, templateId)
+	if err != nil {
+		log.Println("Marshalling error", err)
+		res.Header().Set("Content-Length", "0")
+		res.WriteHeader(500)
+		return
+	}
+	res.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
+	res.Write(jsonData)
+}
+
 func (blueprint *apiV2Blueprint) PreviewAttributeHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewAttributeRequestsMeter.Mark(1)
 	//id := req.URL.Query().Get(":id")
@@ -177,6 +274,31 @@ func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byt
 		}
 	}
 	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return jsonData, nil
+}
+
+func (blueprint *apiV2Blueprint) marshalGeneratedAsset(said string, templateId string) ([]byte, error) {
+	gas, err := blueprint.gasm.FindBySourceAssetId(said)
+	if err != nil {
+		return nil, err
+	}
+
+	var arr []*common.GeneratedAsset
+	for _, g := range gas {
+		if g.TemplateId == templateId {
+			arr = append(arr, g)
+		}
+	}
+
+	if len(arr) == 0 {
+		log.Println("Could not find GeneratedAssets with source and template id", err)
+		return nil, common.ErrorNotImplemented
+	}
+
+	jsonData, err := json.Marshal(arr)
 	if err != nil {
 		return nil, err
 	}

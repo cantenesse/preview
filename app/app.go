@@ -234,11 +234,13 @@ func (app *AppContext) initApis() error {
 		}
 		app.simpleBlueprint.AddRoutes(p)
 	}
+	s3Client := app.buildS3Client()
+
 	// TODO: proper config
-	app.apiV2Blueprint = api.NewApiV2Blueprint(app.appConfig.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry)
+	app.apiV2Blueprint = api.NewApiV2Blueprint(app.appConfig.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry, s3Client, app.appConfig.Common.LocalAssetStoragePath)
 	app.apiV2Blueprint.AddRoutes(p)
 
-	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.buildS3Client(), app.signatureManager)
+	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, s3Client, app.signatureManager)
 	app.assetBlueprint.AddRoutes(p)
 
 	app.adminBlueprint = api.NewAdminBlueprint(app.registry, app.appConfig, app.placeholderManager, app.temporaryFileManager, app.agentManager)
