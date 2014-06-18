@@ -7,8 +7,8 @@ func (uploader *mockUploader) Upload(destination string, path string) error {
 	return nil
 }
 
-func (uploader *mockUploader) Url(sourceAssetId, templateId, placeholderSize string, page int32) string {
-	return "mock://" + sourceAssetId
+func (uploader *mockUploader) Url(sa *SourceAsset, temp *Template, page int32) string {
+	return "mock://" + sa.Id
 }
 
 func newMockUploader() Uploader {
