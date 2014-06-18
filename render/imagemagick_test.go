@@ -67,7 +67,7 @@ func TestRenderJpegPreview(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template, fmt.Sprintf("local:///%s/%s", sourceAssetId, placeholderSize))
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, fmt.Sprintf("local:///%s/%s", sourceAssetId, placeholderSize))
 		if err != nil {
 			t.Errorf("Unexpected error returned: %s", err)
 			return

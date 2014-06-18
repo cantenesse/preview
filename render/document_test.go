@@ -54,7 +54,7 @@ func TestConvertDocxToPdf(t *testing.T) {
 	}
 	for _, template := range templates {
 		log.Println("Found template", template.Id, "with service", template.Renderer)
-		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template, fmt.Sprintf("local:///%s/pdf", sourceAssetId))
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, fmt.Sprintf("local:///%s/pdf", sourceAssetId))
 		if err != nil {
 			t.Errorf("Unexpected error returned: %s", err)
 			return
