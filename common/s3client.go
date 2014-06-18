@@ -128,7 +128,7 @@ func (client *AmazonS3Client) Proxy(bucket, file string, rw http.ResponseWriter)
 	if len(client.config.key) > 0 {
 		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
 	}
-	url := fmt.Sprintf("%s/%s/%s", client.config.host, bucket, file)
+	url := fmt.Sprintf("%s/%s", processUrl(client.config.host, bucket, client.config.urlCompatMode), file)
 	return client.submitProxyGetRequest(url, headers, rw)
 }
 
