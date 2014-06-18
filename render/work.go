@@ -123,19 +123,19 @@ func (agentManager *RenderAgentManager) CreateWorkFromTemplates(sourceAssetId, u
 		sourceAsset.AddAttribute(common.SourceAssetAttributeSize, size)
 	}
 	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{url})
-	
+
 	fileType, hasType := attributes["type"]
 	if hasType {
 		sourceAsset.AddAttribute(common.SourceAssetAttributeType, fileType)
 	}
-	
+
 	agentManager.sourceAssetStorageManager.Store(sourceAsset)
-	
+
 	templates, err := agentManager.templateManager.FindByIds(templateIds)
 	if err != nil {
 		return
 	}
-	
+
 	status := common.DefaultGeneratedAssetStatus
 	for _, template := range templates {
 		var location string
@@ -146,7 +146,7 @@ func (agentManager *RenderAgentManager) CreateWorkFromTemplates(sourceAssetId, u
 			location = agentManager.uploader.Url(sourceAsset, template, 0)
 		}
 		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, location)
-		
+
 		if err == nil {
 			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
 			if status != ga.Status {

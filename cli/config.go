@@ -47,6 +47,8 @@ func getConfigInt(arguments map[string]interface{}, key string) int {
 func GetCommand(arguments map[string]interface{}) string {
 	if getConfigBool(arguments, "render") {
 		return "render"
+	} else if getConfigBool(arguments, "renderV2") {
+		return "renderV2"
 	}
 	return "daemon"
 }

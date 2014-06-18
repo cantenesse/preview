@@ -34,7 +34,7 @@ type AppContext struct {
 	adminBlueprint               api.Blueprint
 	staticBlueprint              api.Blueprint
 	webHookBlueprint             api.Blueprint
-	apiV2Blueprint api.Blueprint
+	apiV2Blueprint               api.Blueprint
 	listener                     *stoppableListener.StoppableListener
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager

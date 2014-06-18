@@ -11,6 +11,7 @@ func main() {
 Usage: preview [--help --version --config=<file>]
        preview daemon [--help --version --config <file>]
        preview render [--verbose... --verify] <host> <file>...
+       preview renderV2 [--verbose...] <host> <templateId> <file>...
 
 Options:
   --help           Show this screen.
@@ -30,6 +31,10 @@ Options:
 	case "daemon":
 		{
 			command = cli.NewDaemonCommand(arguments)
+		}
+	case "renderV2":
+		{
+			command = cli.NewRenderV2Command(arguments)
 		}
 	}
 	command.Execute()
