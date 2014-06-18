@@ -31,9 +31,11 @@ The configuration object has the following top level sections:
 * storage
 * imageMagickRenderAgent
 * documentRenderAgent
+* videoRenderAgent
 * simpleApi
 * assetApi
 * uploader
+* s3
 * downloader
 
 The "common" group has the following keys:
@@ -52,6 +54,21 @@ The "storage" group has the following keys:
 * "engine" - The storage engine to use to persist source assets and group assets.
 * "cassandraNodes" - An array of strings representing cassandra nodes to interact with. Only available when the engine is "cassandra".
 * "cassandraKeyspace" - The cassandra keyspace that queries are executed against. Only available when the engine is "cassandra".
+
+The "documentRenderAgent" group has the following keys:
+
+* "enabled" - Used to determine if the document rendering agent should be started with the application.
+* "count" - The number of agents to run concurrently.
+* "basePath" - The path of the temporary directory to be used by the agent.
+
+The "videoRenderAgent" group has the following keys:
+
+* "enabled" - Used to determine if the document rendering agent should be started with the application.
+* "count" - The number of agents to run concurrently.
+* "basePath" - The path of the temporary directory to be used by the agent.
+* "zencoderKey" - The Zencoder API key of an account to be used for the transcoding process.
+* "zencoderNotificationUrl" - The URL of the server to listen for updates from Zencoder.
+* "zencoderS3Bucket" - The S3 bucket for Zencoder to use as output.
 
 The "imageMagickRenderAgent" group has the following keys:
 
@@ -72,14 +89,21 @@ The "assetApi" group has the following keys:
 The "uploader" group has the following keys:
 
 * "engine" - The engine to use when uploading rendered images.
-* "s3Key" - The AWS key to use when uploading rendered images to S3. Only available when the engine is "s3".
-* "s3Secret" - The AWS secret to use when uploading rendered images to S3. Only available when the engine is "s3".
-* "s3Buckets" - A list of buckets used to distribute rendered images to when uploading rendered images to S3. Only available when the engine is "s3".
-* "s3Host" - The host and base URL used to submit requests to when uploading rendered images to S3. Only available when the engine is "s3".
+
+The "s3" group is only available when the uploader engine is "s3". It has the following keys:
+
+* "key" - The AWS key to use when uploading rendered images to S3. 
+* "secret" - The AWS secret to use when uploading rendered images to S3. 
+* "host" - The host and base URL used to submit requests to when uploading rendered images to S3. Required to be of format "https://#{bucket}.s3.amazonaws.com" unless "urlCompatMode" is true. 
+* "buckets" - A list of buckets used to distribute rendered images to when uploading rendered images to S3.
+* "verifySsl"
+* "urlCompatMode" - Allows "host" to be of format: "s3://#{bucket}".
 
 The "downloader" group has the following keys:
 
 * "basePath" - The directory that downloaded files are stored to.
+* "tramEnabled"
+* "tramHosts"
 
 ## Default Configuration
 
@@ -209,6 +233,12 @@ This render agent requires the following executables be available on the path:
 
 * soffice
 * pdfinfo
+
+## Video Render Agent
+
+By default, the video render agent is disabled.
+
+This render agent will upload videos to Zencoder to be transcoded into HLS streams, which will then be uploaded to S3.
 
 ## Uploader
 
