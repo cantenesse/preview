@@ -215,7 +215,6 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 }
 
 func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *common.SourceAsset, templates []*common.Template, firstPage int, lastPage int) error {
-
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
 		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
