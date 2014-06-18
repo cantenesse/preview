@@ -16,3 +16,11 @@ func splitText(input string) map[string]string {
 	}
 	return vals
 }
+
+func splitS3Url(url string) (string, string) {
+	usableData := url[5:]
+	// NKG: The url will have the following format: `s3://[bucket][path]`
+	// where path will begin with a `/` character.
+	parts := strings.SplitN(usableData, "/", 2)
+	return parts[0], parts[1]
+}

@@ -117,7 +117,7 @@ func (blueprint *assetBlueprint) assetHandler(res http.ResponseWriter, req *http
 		}
 	case assetActionS3Proxy:
 		{
-			bucket, file := blueprint.splitS3Url(path)
+			bucket, file := splitS3Url(path)
 			err := blueprint.s3Client.Proxy(bucket, file, res)
 			if err != nil {
 				return
@@ -126,14 +126,6 @@ func (blueprint *assetBlueprint) assetHandler(res http.ResponseWriter, req *http
 	}
 	blueprint.emptyRequestsMeter.Mark(1)
 	http.NotFound(res, req)
-}
-
-func (blueprint *assetBlueprint) splitS3Url(url string) (string, string) {
-	usableData := url[5:]
-	// NKG: The url will have the following format: `s3://[bucket][path]`
-	// where path will begin with a `/` character.
-	parts := strings.SplitN(usableData, "/", 2)
-	return parts[0], parts[1]
 }
 
 func (blueprint *assetBlueprint) getAsset(fileId, placeholderSize, page string) (assetAction, string) {
