@@ -43,7 +43,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
       "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
    },
    "videoRenderAgent":{
-      "enabled":true,
+      "enabled":false,
       "count":16,
       "basePath":"` + basePathFunc("videoRenderAgentTmp") + `"
    },
