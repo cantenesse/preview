@@ -149,6 +149,11 @@ func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, r
 				return
 			}
 		}
+	case assetActionVideoURL:
+		{
+			res.Header().Set("Content-Length", strconv.Itoa(len(path)))
+			res.Write([]byte(path))
+		}
 	}
 	http.NotFound(res, req)
 }
@@ -209,6 +214,8 @@ func (blueprint *apiV2Blueprint) splitS3Url(url string) (string, string) {
 	return parts[0], parts[1]
 }
 
+var assetActionVideoURL = assetAction(5)
+
 func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (assetAction, string) {
 	generatedAssets, err := blueprint.gasm.FindBySourceAssetId(fileId)
 	if err != nil {
@@ -229,6 +236,10 @@ func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (asse
 			generatedAsset = ga
 			break
 		}
+	}
+	surl := generatedAsset.GetAttribute("streamingUrl")
+	if len(surl) > 0 && len(surl[0]) > 0 {
+		return assetActionVideoURL, surl[0]
 	}
 	if strings.HasPrefix(generatedAsset.Location, "local://") {
 
@@ -317,8 +328,13 @@ func (blueprint *apiV2Blueprint) marshalGeneratedAssets(said, templateId, page s
 		log.Println("Could not find GeneratedAssets with source and template id", err)
 		return nil, common.ErrorNotImplemented
 	}
+	var jsonData []byte
+	if len(page) > 0 {
+		jsonData, err = json.Marshal(arr[0])
+	} else {
+		jsonData, err = json.Marshal(arr)
+	}
 
-	jsonData, err := json.Marshal(arr)
 	if err != nil {
 		return nil, err
 	}

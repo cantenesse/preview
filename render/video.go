@@ -2,6 +2,7 @@ package render
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/brandscreen/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
@@ -125,12 +126,13 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 		return
 	}
 
+	surl := fmt.Sprintf("%s/%s.m3u8", generatedAsset.Location, id)
+	generatedAsset.AddAttribute("streamingUrl", []string{surl})
 	statusCallback := renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
 	generatedAsset.Status = common.GeneratedAssetStatusProcessing
 	renderAgent.gasm.Update(generatedAsset)
-
 	sourceAsset, err := renderAgent.getSourceAsset(generatedAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
