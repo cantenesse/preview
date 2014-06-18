@@ -5,6 +5,7 @@ import (
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/render"
+	"github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,10 +13,14 @@ import (
 )
 
 type apiV2Blueprint struct {
-	base         string
-	agentManager *render.RenderAgentManager
-	gasm         common.GeneratedAssetStorageManager
-	sasm         common.SourceAssetStorageManager
+	base                          string
+	agentManager                  *render.RenderAgentManager
+	gasm                          common.GeneratedAssetStorageManager
+	sasm                          common.SourceAssetStorageManager
+	generatePreviewRequestsMeter  metrics.Meter
+	previewQueriesMeter           metrics.Meter
+	previewInfoRequestsMeter      metrics.Meter
+	previewAttributeRequestsMeter metrics.Meter
 }
 
 type generatePreviewRequestV2 struct {
@@ -29,12 +34,23 @@ func NewApiV2Blueprint(
 	base string,
 	agentManager *render.RenderAgentManager,
 	gasm common.GeneratedAssetStorageManager,
-	sasm common.SourceAssetStorageManager) *apiV2Blueprint {
+	sasm common.SourceAssetStorageManager,
+	registry metrics.Registry) *apiV2Blueprint {
 	bp := new(apiV2Blueprint)
 	bp.base = base
 	bp.agentManager = agentManager
 	bp.gasm = gasm
 	bp.sasm = sasm
+
+	bp.generatePreviewRequestsMeter = metrics.NewMeter()
+	bp.previewQueriesMeter = metrics.NewMeter()
+	bp.previewInfoRequestsMeter = metrics.NewMeter()
+	bp.previewAttributeRequestsMeter = metrics.NewMeter()
+	registry.Register("apiV2.generatePreviewRequests", bp.generatePreviewRequestsMeter)
+	registry.Register("apiV2.previewQueries", bp.previewQueriesMeter)
+	registry.Register("apiV2.previewInfoRequests", bp.previewInfoRequestsMeter)
+	registry.Register("apiV2.previewAttributeRequests", bp.previewAttributeRequestsMeter)
+
 	return bp
 }
 
@@ -51,6 +67,9 @@ func (blueprint *apiV2Blueprint) buildUrl(path string) string {
 
 func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Processing info request")
+
+	blueprint.previewInfoRequestsMeter.Mark(1)
+
 	id := req.URL.Query().Get(":id")
 	jsonData, err := blueprint.marshalSourceAssetsFromIds([]string{id})
 	if err != nil {
@@ -63,11 +82,11 @@ func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req
 	res.Write(jsonData)
 }
 func (blueprint *apiV2Blueprint) PreviewAttributeHandler(res http.ResponseWriter, req *http.Request) {
-
+	blueprint.previewAttributeRequestsMeter.Mark(1)
 }
 
 func (blueprint *apiV2Blueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
-	//TODO: metrics
+	blueprint.generatePreviewRequestsMeter.Mark(1)
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		res.Header().Set("Content-Length", "0")
@@ -111,6 +130,9 @@ type generatedAssetView struct {
 
 func (blueprint *apiV2Blueprint) PreviewQueryHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Processing query request")
+
+	blueprint.previewQueriesMeter.Mark(1)
+
 	ids, hasIds := req.URL.Query()["id"]
 	log.Println(ids)
 	if !hasIds {
