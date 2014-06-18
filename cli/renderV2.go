@@ -43,6 +43,7 @@ func NewRenderV2Command(arguments map[string]interface{}) PreviewCliCommand {
 
 func (command *RenderV2Command) Execute() {
 	var arr []sourceAssetRequest
+	saids := make([]string, 0, 0)
 	for _, file := range command.filesToSubmit() {
 		if command.verbose > 0 {
 			log.Println("Adding file to request:", file)
@@ -50,6 +51,7 @@ func (command *RenderV2Command) Execute() {
 		attrs := make(map[string][]string)
 		attrs["type"] = []string{filepath.Ext(file[5:])[1:]}
 		uuid, _ := util.NewUuid()
+		saids = append(saids, uuid)
 		req := sourceAssetRequest{
 			Id:         uuid,
 			Url:        file,
@@ -81,10 +83,23 @@ func (command *RenderV2Command) Execute() {
 		fmt.Println(err.Error())
 		return
 	}
-
-	log.Println("Response body:")
-	b, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(b))
+	target := url
+	for idx, i := range saids {
+		if idx != 0 {
+			target += "&"
+		} else {
+			target += "?"
+		}
+		target += "id=" + i
+	}
+	if command.verbose > 0 {
+		log.Println("Response found at:", target)
+	}
+	if command.verbose > 1 {
+		log.Println("Response body:")
+		b, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(b))
+	}
 }
 
 func (command *RenderV2Command) filesToSubmit() []string {

@@ -83,6 +83,7 @@ func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req
 }
 func (blueprint *apiV2Blueprint) PreviewAttributeHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewAttributeRequestsMeter.Mark(1)
+	//id := req.URL.Query().Get(":id")
 }
 
 func (blueprint *apiV2Blueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
@@ -204,7 +205,6 @@ func newGeneratePreviewRequestV2(body string) ([]*generatePreviewRequestV2, erro
 		gpr.templateIds = data.TemplateIds
 		gprs = append(gprs, gpr)
 	}
-	log.Println("GPRS:", gprs)
 	return gprs, nil
 }
 
