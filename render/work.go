@@ -25,6 +25,7 @@ type RenderAgentManager struct {
 	maxWork                      map[string]int
 	enabledRenderAgents          map[string]bool
 	renderAgentCount             map[string]int
+	videoSupportedFileTypes      []string
 
 	documentMetrics    *documentRenderAgentMetrics
 	imageMagickMetrics *imageMagickRenderAgentMetrics
@@ -48,7 +49,8 @@ func NewRenderAgentManager(
 	workDispatcherEnabled bool,
 	zencoder *zencoder.Zencoder,
 	s3bucket string,
-	notificationUrl string) *RenderAgentManager {
+	notificationUrl string,
+	videoSupportedFileTypes []string) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
 	agentManager.sourceAssetStorageManager = sourceAssetStorageManager
@@ -70,11 +72,13 @@ func NewRenderAgentManager(
 
 	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry)
 	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry)
-	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry)
+	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry, videoSupportedFileTypes)
 
 	agentManager.zencoder = zencoder
 	agentManager.zencoderS3Bucket = s3bucket
 	agentManager.zencoderNotificationUrl = notificationUrl
+
+	agentManager.videoSupportedFileTypes = videoSupportedFileTypes
 
 	agentManager.stop = make(chan (chan bool))
 	if workDispatcherEnabled {
@@ -248,7 +252,7 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 	var templateIds []string
 	if fileType == "doc" || fileType == "docx" || fileType == "pptx" {
 		templateIds = []string{common.DocumentConversionTemplateId}
-	} else if fileType == "mp4" {
+	} else if contains(agentManager.videoSupportedFileTypes, fileType) {
 		templateIds = []string{common.VideoConversionTemplateId}
 	} else {
 		templateIds = common.LegacyDefaultTemplates
@@ -261,6 +265,15 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 		return nil, common.GeneratedAssetStatusFailed, err
 	}
 	return templates, common.DefaultGeneratedAssetStatus, nil
+}
+
+func contains(container []string, key string) bool {
+	for _, s := range container {
+		if s == key {
+			return true
+		}
+	}
+	return false
 }
 
 func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status string, template *common.Template) (string, func()) {

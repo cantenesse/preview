@@ -29,7 +29,7 @@ type videoRenderAgentMetrics struct {
 	workProcessed metrics.Meter
 	convertTime   metrics.Timer
 	// TODO: finish metrics
-	mp4Count metrics.Counter
+	fileTypeCount map[string]metrics.Counter
 }
 
 func newVideoRenderAgent(
@@ -61,16 +61,20 @@ func newVideoRenderAgent(
 	return renderAgent
 }
 
-func newVideoRenderAgentMetrics(registry metrics.Registry) *videoRenderAgentMetrics {
+func newVideoRenderAgentMetrics(registry metrics.Registry, supportedFileTypes []string) *videoRenderAgentMetrics {
 	videoMetrics := new(videoRenderAgentMetrics)
 	videoMetrics.workProcessed = metrics.NewMeter()
 	videoMetrics.convertTime = metrics.NewTimer()
-	// TODO: determine file types
-	videoMetrics.mp4Count = metrics.NewCounter()
+
+	videoMetrics.fileTypeCount = make(map[string]metrics.Counter)
+
+	for _, filetype := range supportedFileTypes {
+		videoMetrics.fileTypeCount[filetype] = metrics.NewCounter()
+		registry.Register(fmt.Sprintf("videoRenderAgent.%sCount", filetype), videoMetrics.fileTypeCount[filetype])
+	}
 
 	registry.Register("videoRenderAgent.workProcessed", videoMetrics.workProcessed)
 	registry.Register("videoRenderAgent.convertTime", videoMetrics.convertTime)
-	registry.Register("videoRenderAgent.mp4Count", videoMetrics.mp4Count)
 
 	return videoMetrics
 }
@@ -141,11 +145,7 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 
 	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
 	if err == nil {
-		switch fileType {
-		// TODO: Complete metrics
-		case "mp4":
-			renderAgent.metrics.mp4Count.Inc(1)
-		}
+		renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 	}
 
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)

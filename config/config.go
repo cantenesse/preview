@@ -51,12 +51,13 @@ type AppConfig struct {
 	} `json:"documentRenderAgent"`
 
 	VideoRenderAgent struct {
-		Enabled                 bool   `json:"enabled"`
-		Count                   int    `json:"count"`
-		BasePath                string `json:"basePath"`
-		ZencoderKey             string `json:"zencoderKey"`
-		ZencoderS3Bucket        string `json:"zencoderS3Bucket"`
-		ZencoderNotificationUrl string `json:"zencoderNotificationUrl"`
+		Enabled                 bool     `json:"enabled"`
+		Count                   int      `json:"count"`
+		BasePath                string   `json:"basePath"`
+		ZencoderKey             string   `json:"zencoderKey"`
+		ZencoderS3Bucket        string   `json:"zencoderS3Bucket"`
+		ZencoderNotificationUrl string   `json:"zencoderNotificationUrl"`
+		SupportedFileTypes      []string `json:"supportedFileTypes"`
 	} `json:"videoRenderAgent"`
 
 	SimpleApi struct {
