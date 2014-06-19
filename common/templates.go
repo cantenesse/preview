@@ -72,10 +72,9 @@ var (
 	VideoConversionTemplate = &Template{
 		"4128966B-9F69-4E56-AD5C-1FDB3C24F910",
 		RenderAgentVideo,
-		// TODO: determine whether this needs ot be generated in a specific manner
-		"?",
+		"7A69",
 		[]Attribute{
-			Attribute{TemplateAttributeOutput, []string{"pdf"}},
+			Attribute{TemplateAttributeOutput, []string{"m3u8"}},
 		},
 	}
 	VideoConversionTemplateId = "4128966B-9F69-4E56-AD5C-1FDB3C24F910"
