@@ -160,13 +160,13 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, renderAgent.zencoderNotificationUrl)
 	arr, _ := json.MarshalIndent(settings, "", "	")
 	log.Println(string(arr))
-	// job, err := renderAgent.zencoder.CreateJob(settings)
-	// if err != nil {
-	// 	log.Println("Zencoder error:", err)
-	// 	statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
-	// 	return
-	// }
-	// log.Println("Created Zencoder job", job)
+	job, err := renderAgent.zencoder.CreateJob(settings)
+	if err != nil {
+		log.Println("Zencoder error:", err)
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
+		return
+	}
+	log.Println("Created Zencoder job", job)
 
 	// The webhook API will mark the GA as completed once Zencoder sends back a notification
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusDelegated, nil}
