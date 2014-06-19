@@ -45,10 +45,11 @@ type AmazonS3Object struct {
 type AmazonS3ClientConfig struct {
 	key, secret, host string
 	verifySsl         bool
+	urlCompatMode     bool
 }
 
-func NewBasicS3Config(key, secret, host string, verifySsl bool) *AmazonS3ClientConfig {
-	return &AmazonS3ClientConfig{key, secret, host, verifySsl}
+func NewBasicS3Config(key, secret, host string, verifySsl, urlCompatMode bool) *AmazonS3ClientConfig {
+	return &AmazonS3ClientConfig{key, secret, host, verifySsl, urlCompatMode}
 }
 
 func NewAmazonS3Client(config *AmazonS3ClientConfig) S3Client {
@@ -73,7 +74,7 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 	if len(client.config.key) > 0 {
 		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
 	}
-	url := fmt.Sprintf("%s/%s/%s", bucketizeUrl(client.config.host, s3object.Bucket()), s3object.Bucket(), s3object.FileName())
+	url := fmt.Sprintf("%s/%s", processUrl(client.config.host, s3object.Bucket(), client.config.urlCompatMode), s3object.FileName())
 	log.Println("Publishing objec to", url)
 	_, err := client.submitPutRequest(url, content, headers)
 	if err != nil {
@@ -83,11 +84,21 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 	return nil
 }
 
-func bucketizeUrl(url, bucket string) string {
+func processUrl(url, bucket string, compatMode bool) string {
+	if compatMode {
+		url = convertToNewUrl(url)
+	}
 	if strings.Contains(url, "${bucket}") {
 		return strings.Replace(url, "${bucket}", bucket, -1)
 	}
 	return url
+}
+
+// Input:  s3://${bucket}
+// Output: https://${bucket}.s3.amazonaws.com
+func convertToNewUrl(url string) string {
+	bucket := url[5:]
+	return "https://" + bucket + ".s3.amazonaws.com"
 }
 
 func (client *AmazonS3Client) Get(bucket, file string) (S3Object, error) {
@@ -99,7 +110,7 @@ func (client *AmazonS3Client) Get(bucket, file string) (S3Object, error) {
 	if len(client.config.key) > 0 {
 		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
 	}
-	url := fmt.Sprintf("%s/%s/%s", bucketizeUrl(client.config.host, bucket), bucket, file)
+	url := fmt.Sprintf("%s/%s", processUrl(client.config.host, bucket, client.config.urlCompatMode), file)
 	body, contentType, err := client.submitGetRequest(url, headers)
 	if err != nil {
 		return nil, err
@@ -116,7 +127,7 @@ func (client *AmazonS3Client) Proxy(bucket, file string, rw http.ResponseWriter)
 	if len(client.config.key) > 0 {
 		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
 	}
-	url := fmt.Sprintf("%s/%s/%s", client.config.host, bucket, file)
+	url := fmt.Sprintf("%s/%s", processUrl(client.config.host, bucket, client.config.urlCompatMode), file)
 	return client.submitProxyGetRequest(url, headers, rw)
 }
 
@@ -171,6 +182,7 @@ func (client *AmazonS3Client) submitPutRequest(url string, payload []byte, heade
 	log.Println("Got a response", response)
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
+	log.Println(string(body), err)
 	if err != nil {
 		return nil, err
 	}
@@ -197,11 +209,13 @@ func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader,
 		log.Println("Error creating request", request)
 		return nil, err
 	}
+	log.Println(request)
 	for header, headerValue := range headers {
 		request.Header.Set(header, headerValue)
 	}
 	httpClient := NewHttpClient(client.config.verifySsl, 30*time.Second)
 	response, err := httpClient.Do(request)
+	log.Println(response)
 	if err != nil {
 		log.Println("Error executing reqest", err)
 		return nil, err

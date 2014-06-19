@@ -4,6 +4,7 @@ import (
 	"github.com/bmizerany/pat"
 	"github.com/codegangsta/negroni"
 	"github.com/etix/stoppableListener"
+	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/api"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/config"
@@ -32,10 +33,13 @@ type AppContext struct {
 	assetBlueprint               api.Blueprint
 	adminBlueprint               api.Blueprint
 	staticBlueprint              api.Blueprint
+	webHookBlueprint             api.Blueprint
+	apiV2Blueprint               api.Blueprint
 	listener                     *stoppableListener.StoppableListener
 	negroni                      *negroni.Negroni
 	cassandraManager             *common.CassandraManager
 	mysqlManager                 *common.MysqlManager
+	zencoder                     *zencoder.Zencoder
 }
 
 func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
@@ -56,6 +60,12 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
+	if appConfig.VideoRenderAgent.Enabled {
+		err = app.initZencoder()
+		if err != nil {
+			return nil, err
+		}
+	}
 	err = app.initRenderers()
 	if err != nil {
 		return nil, err
@@ -64,6 +74,9 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	return app, nil
 }
 
@@ -116,7 +129,7 @@ func (app *AppContext) initTrams() error {
 	case "s3":
 		{
 			s3Client := app.buildS3Client()
-			buckets := app.appConfig.Uploader.S3Buckets
+			buckets := app.appConfig.S3.Buckets
 			app.uploader = common.NewUploader(buckets, s3Client)
 		}
 	case "local":
@@ -181,7 +194,7 @@ func (app *AppContext) initStorage() error {
 func (app *AppContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled)
+	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, app.appConfig.VideoRenderAgent.ZencoderS3Bucket, app.appConfig.VideoRenderAgent.ZencoderNotificationUrl, app.appConfig.VideoRenderAgent.SupportedFileTypes)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent.Enabled, app.appConfig.ImageMagickRenderAgent.Count)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent.Enabled, app.appConfig.DocumentRenderAgent.Count)
 	if app.appConfig.ImageMagickRenderAgent.Enabled {
@@ -192,6 +205,11 @@ func (app *AppContext) initRenderers() error {
 	if app.appConfig.DocumentRenderAgent.Enabled {
 		for i := 0; i < app.appConfig.DocumentRenderAgent.Count; i++ {
 			app.agentManager.AddDocumentRenderAgent(app.downloader, app.uploader, app.appConfig.DocumentRenderAgent.BasePath, 5)
+		}
+	}
+	if app.appConfig.VideoRenderAgent.Enabled {
+		for i := 0; i < app.appConfig.VideoRenderAgent.Count; i++ {
+			app.agentManager.AddVideoRenderAgent(5)
 		}
 	}
 	return nil
@@ -218,8 +236,13 @@ func (app *AppContext) initApis() error {
 		}
 		app.simpleBlueprint.AddRoutes(p)
 	}
+	s3Client := app.buildS3Client()
 
-	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, app.buildS3Client(), app.signatureManager)
+	// TODO: proper config
+	app.apiV2Blueprint = api.NewApiV2Blueprint(app.appConfig.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry, s3Client, app.appConfig.Common.LocalAssetStoragePath)
+	app.apiV2Blueprint.AddRoutes(p)
+
+	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, s3Client, app.signatureManager)
 	app.assetBlueprint.AddRoutes(p)
 
 	app.adminBlueprint = api.NewAdminBlueprint(app.registry, app.appConfig, app.placeholderManager, app.temporaryFileManager, app.agentManager)
@@ -228,9 +251,23 @@ func (app *AppContext) initApis() error {
 	app.staticBlueprint = api.NewStaticBlueprint(app.placeholderManager)
 	app.staticBlueprint.AddRoutes(p)
 
+	app.webHookBlueprint = api.NewWebHookBlueprint(app.generatedAssetStorageManager, app.agentManager)
+	app.webHookBlueprint.AddRoutes(p)
+
 	app.negroni = negroni.Classic()
 	app.negroni.UseHandler(p)
 
+	return nil
+}
+
+func (app *AppContext) initZencoder() error {
+	apikey := app.appConfig.VideoRenderAgent.ZencoderKey
+	app.zencoder = zencoder.NewZencoder(apikey)
+	_, err := app.zencoder.GetAccount()
+	if err != nil {
+		log.Println("Invalid Zencoder key")
+		return common.ErrorNotImplemented
+	}
 	return nil
 }
 
@@ -247,10 +284,11 @@ func (app *AppContext) buildS3Client() common.S3Client {
 	if app.appConfig.Uploader.Engine != "s3" {
 		return nil
 	}
-	awsKey := app.appConfig.Uploader.S3Key
-	awsSecret := app.appConfig.Uploader.S3Secret
-	awsHost := app.appConfig.Uploader.S3Host
-	verifySsl := app.appConfig.Uploader.S3VerifySsl
+	awsKey := app.appConfig.S3.Key
+	awsSecret := app.appConfig.S3.Secret
+	awsHost := app.appConfig.S3.Host
+	verifySsl := app.appConfig.S3.VerifySsl
+	urlCompatMode := app.appConfig.S3.UrlCompatMode
 	log.Println("Creating s3 client with host", awsHost, "key", awsKey, "and secret", awsSecret)
-	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl))
+	return common.NewAmazonS3Client(common.NewBasicS3Config(awsKey, awsSecret, awsHost, verifySsl, urlCompatMode))
 }

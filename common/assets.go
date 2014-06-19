@@ -61,6 +61,8 @@ var (
 	GeneratedAssetStatusComplete = "complete"
 	// GeneratedAssetStatusFailed is the state of a generated asset that indicates that processing has completed, but failed. This value is just a prefix and is accompanied by a coded error.
 	GeneratedAssetStatusFailed = "failed"
+	// GeneratedAssetStatusDelegated means that the asset is processing in a 3rd party tool (Zencoder)
+	GeneratedAssetStatusDelegated = "delegated"
 	// DefaultGeneratedAssetStatus is the default state of a generated asset when it is created.
 	DefaultGeneratedAssetStatus = GeneratedAssetStatusWaiting
 
@@ -107,7 +109,7 @@ func newSourceAssetFromJson(payload []byte) (*SourceAsset, error) {
 }
 
 // NewGeneratedAssetFromSourceAsset creates a new generated asset from a given source asset and template, filling in everything but location.
-func NewGeneratedAssetFromSourceAsset(sourceAsset *SourceAsset, template *Template, location string) (*GeneratedAsset, error) {
+func NewGeneratedAssetFromSourceAsset(sourceAsset *SourceAsset, templateId, location string) (*GeneratedAsset, error) {
 	uuid, err := util.NewUuid()
 	if err != nil {
 		return nil, err
@@ -117,7 +119,7 @@ func NewGeneratedAssetFromSourceAsset(sourceAsset *SourceAsset, template *Templa
 	ga.Id = uuid
 	ga.SourceAssetId = sourceAsset.Id
 	ga.SourceAssetType = sourceAsset.IdType
-	ga.TemplateId = template.Id
+	ga.TemplateId = templateId
 	ga.Location = location
 	ga.Status = DefaultGeneratedAssetStatus
 	ga.CreatedAt = now

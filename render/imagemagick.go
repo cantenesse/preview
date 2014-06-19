@@ -202,26 +202,14 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 	renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ := renderAgent.getGeneratedAssetPage(generatedAsset)
-
-			placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
-			if err != nil {
-				statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-				return
-			}
-
-			if page == 0 && placeholderSize == common.PlaceholderSizeJumbo {
-				legacyDefaultTemplates, err := renderAgent.templateManager.FindByIds(common.LegacyDefaultTemplates)
-				if err != nil {
-					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-					return
-				}
+			if page == 0 {
 				pages, err := util.GetPdfPageCount(sourceFile.Path())
 				if err != nil {
 					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 					return
 				}
 				// Create derived work for all pages but first one
-				renderAgent.agentManager.CreateDerivedWork(sourceAsset, legacyDefaultTemplates, 1, pages)
+				renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
 			}
 			err = renderAgent.imageFromPdf(sourceFile.Path(), destination, size, page)
 		} else if fileType == "gif" {
@@ -334,7 +322,7 @@ func (renderAgent *imageMagickRenderAgent) imageFromPdf(source, destination stri
 		return err
 	}
 
-	cmd := exec.Command("convert", "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "+adjoin", destination)
+	cmd := exec.Command("convert", "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
 	log.Println(cmd)
 
 	var buf bytes.Buffer
@@ -403,11 +391,6 @@ func (renderAgent *imageMagickRenderAgent) getSourceAssetFileType(sourceAsset *c
 		return fileType, nil
 	}
 	return "unknown", err
-}
-
-type generatedAssetUpdate struct {
-	status     string
-	attributes []common.Attribute
 }
 
 func (renderAgent *imageMagickRenderAgent) commitStatus(id string, existingAttributes []common.Attribute) chan generatedAssetUpdate {

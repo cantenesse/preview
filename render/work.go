@@ -1,6 +1,8 @@
 package render
 
 import (
+	"fmt"
+	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/rcrowley/go-metrics"
 	"log"
@@ -23,12 +25,18 @@ type RenderAgentManager struct {
 	maxWork                      map[string]int
 	enabledRenderAgents          map[string]bool
 	renderAgentCount             map[string]int
+	videoSupportedFileTypes      []string
 
 	documentMetrics    *documentRenderAgentMetrics
 	imageMagickMetrics *imageMagickRenderAgentMetrics
+	videoMetrics       *videoRenderAgentMetrics
 
 	stop chan (chan bool)
 	mu   sync.Mutex
+	// I feel like there should be a way to do this without giving RenderAgentManager a Zencoder
+	zencoder                *zencoder.Zencoder
+	zencoderS3Bucket        string
+	zencoderNotificationUrl string
 }
 
 func NewRenderAgentManager(
@@ -38,7 +46,11 @@ func NewRenderAgentManager(
 	templateManager common.TemplateManager,
 	temporaryFileManager common.TemporaryFileManager,
 	uploader common.Uploader,
-	workDispatcherEnabled bool) *RenderAgentManager {
+	workDispatcherEnabled bool,
+	zencoder *zencoder.Zencoder,
+	s3bucket string,
+	notificationUrl string,
+	videoSupportedFileTypes []string) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
 	agentManager.sourceAssetStorageManager = sourceAssetStorageManager
@@ -60,6 +72,13 @@ func NewRenderAgentManager(
 
 	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry)
 	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry)
+	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry, videoSupportedFileTypes)
+
+	agentManager.zencoder = zencoder
+	agentManager.zencoderS3Bucket = s3bucket
+	agentManager.zencoderNotificationUrl = notificationUrl
+
+	agentManager.videoSupportedFileTypes = videoSupportedFileTypes
 
 	agentManager.stop = make(chan (chan bool))
 	if workDispatcherEnabled {
@@ -98,6 +117,56 @@ func (agentManager *RenderAgentManager) getRenderAgentCount(name string) int {
 	return 0
 }
 
+func (agentManager *RenderAgentManager) CreateWorkFromTemplates(sourceAssetId, url string, attributes map[string][]string, templateIds []string) {
+	sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
+	if err != nil {
+		return
+	}
+	size, hasSize := attributes["size"]
+	if hasSize {
+		sourceAsset.AddAttribute(common.SourceAssetAttributeSize, size)
+	}
+	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{url})
+
+	fileType, hasType := attributes["type"]
+	if hasType {
+		sourceAsset.AddAttribute(common.SourceAssetAttributeType, fileType)
+	}
+
+	agentManager.sourceAssetStorageManager.Store(sourceAsset)
+
+	templates, err := agentManager.templateManager.FindByIds(templateIds)
+	if err != nil {
+		return
+	}
+
+	status := common.DefaultGeneratedAssetStatus
+	for _, template := range templates {
+		var location string
+		if template.Id == common.VideoConversionTemplateId {
+			// Zencoder has to use S3 for an output
+			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
+		} else {
+			location = agentManager.uploader.Url(sourceAsset, template, 0)
+		}
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, location)
+
+		if err == nil {
+			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
+			if status != ga.Status {
+				ga.Status = status
+			}
+			agentManager.generatedAssetStorageManager.Store(ga)
+			if dispatchFunc != nil {
+				defer dispatchFunc()
+			}
+		} else {
+			log.Println("error creating generated asset from source asset", err)
+			return
+		}
+	}
+}
+
 func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType string, size int64) {
 	sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
 	if err != nil {
@@ -124,10 +193,15 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 	}
 
 	for _, template := range templates {
-		placeholderSize := placeholderSizes[template.Id]
-		location := agentManager.uploader.Url(sourceAssetId, template.Id, placeholderSize, 0)
+		var location string
+		if template.Id == common.VideoConversionTemplateId {
+			// Zencoder has to use S3 for an output
+			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
+		} else {
+			location = agentManager.uploader.Url(sourceAsset, template, 0)
+		}
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, location)
 
-		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template, location)
 		if err == nil {
 			status, dispatchFunc := agentManager.canDispatch(ga.Id, status, template)
 			if status != ga.Status {
@@ -145,7 +219,6 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 }
 
 func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *common.SourceAsset, templates []*common.Template, firstPage int, lastPage int) error {
-
 	placeholderSizes := make(map[string]string)
 	for _, template := range templates {
 		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
@@ -157,9 +230,8 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 
 	for page := firstPage; page < lastPage; page++ {
 		for _, template := range templates {
-			placeholderSize := placeholderSizes[template.Id]
-			location := agentManager.uploader.Url(derivedSourceAsset.Id, template.Id, placeholderSize, int32(page))
-			generatedAsset, err := common.NewGeneratedAssetFromSourceAsset(derivedSourceAsset, template, location)
+			location := agentManager.uploader.Url(derivedSourceAsset, template, int32(page))
+			generatedAsset, err := common.NewGeneratedAssetFromSourceAsset(derivedSourceAsset, template.Id, location)
 			if err == nil {
 				generatedAsset.AddAttribute(common.GeneratedAssetAttributePage, []string{strconv.Itoa(page)})
 				status, dispatchFunc := agentManager.canDispatch(generatedAsset.Id, generatedAsset.Status, template)
@@ -180,14 +252,28 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 	var templateIds []string
 	if fileType == "doc" || fileType == "docx" || fileType == "pptx" {
 		templateIds = []string{common.DocumentConversionTemplateId}
+	} else if contains(agentManager.videoSupportedFileTypes, fileType) {
+		templateIds = []string{common.VideoConversionTemplateId}
 	} else {
 		templateIds = common.LegacyDefaultTemplates
 	}
 	templates, err := agentManager.templateManager.FindByIds(templateIds)
+	for _, t := range templates {
+		log.Println(t.Id, t.Renderer)
+	}
 	if err != nil {
 		return nil, common.GeneratedAssetStatusFailed, err
 	}
 	return templates, common.DefaultGeneratedAssetStatus, nil
+}
+
+func contains(container []string, key string) bool {
+	for _, s := range container {
+		if s == key {
+			return true
+		}
+	}
+	return false
 }
 
 func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status string, template *common.Template) (string, func()) {
@@ -260,6 +346,13 @@ func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common
 	renderAgent := newDocumentRenderAgent(agentManager.documentMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentDocument])
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentDocument, renderAgent, maxWorkIncrease)
+	return renderAgent
+}
+
+func (agentManager *RenderAgentManager) AddVideoRenderAgent(maxWorkIncrease int) RenderAgent {
+	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.workChannels[common.RenderAgentVideo], agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
+	renderAgent.AddStatusListener(agentManager.workStatus)
+	agentManager.AddRenderAgent(common.RenderAgentVideo, renderAgent, maxWorkIncrease)
 	return renderAgent
 }
 
@@ -344,12 +437,22 @@ func (agentManager *RenderAgentManager) dispatchMoreWork() {
 func (agentManager *RenderAgentManager) handleStatus(renderStatus RenderStatus) {
 	agentManager.mu.Lock()
 	defer agentManager.mu.Unlock()
-
 	if renderStatus.Status == common.GeneratedAssetStatusComplete || strings.HasPrefix(renderStatus.Status, common.GeneratedAssetStatusFailed) {
 		activeWork, hasActiveWork := agentManager.activeWork[renderStatus.Service]
 		if hasActiveWork {
 			agentManager.activeWork[renderStatus.Service] = listWithout(activeWork, renderStatus.GeneratedAssetId)
 		}
+	}
+}
+
+func (agentManager *RenderAgentManager) RemoveWork(service, id string) {
+	agentManager.mu.Lock()
+	defer agentManager.mu.Unlock()
+	activeWork, hasActiveWork := agentManager.activeWork[service]
+	if hasActiveWork {
+		agentManager.activeWork[service] = listWithout(activeWork, id)
+	} else {
+		log.Println("Warning: Called RemoveWork without any work to remove")
 	}
 }
 
