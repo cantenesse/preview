@@ -71,7 +71,7 @@ func (blueprint *apiV2Blueprint) AddRoutes(p *pat.PatternServeMux) {
 	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/:page/data"), http.HandlerFunc(blueprint.PreviewGADataHandler))
 	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/:page"), http.HandlerFunc(blueprint.PreviewGAInfoHandler))
 	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid"), http.HandlerFunc(blueprint.PreviewGAInfoHandler)) // Generated assets with template ID - /preview/123/456
-	p.Get(blueprint.buildUrl("/v2/preview/:id"), http.HandlerFunc(blueprint.PreviewInfoHandler))               // Get specific source asset - /preview/12345
+	p.Get(blueprint.buildUrl("/v2/preview/:id"), http.HandlerFunc(blueprint.PreviewInfoHandler))               // Get specific source assets with ID - /preview/12345
 	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.PreviewQueryHandler))                 // Search - /preview/?id=1234&id=5678
 }
 
@@ -83,7 +83,6 @@ func (blueprint *apiV2Blueprint) PreviewQueryHandler(res http.ResponseWriter, re
 	blueprint.previewQueriesMeter.Mark(1)
 
 	ids, hasIds := req.URL.Query()["id"]
-	log.Println(ids)
 	if !hasIds {
 		res.Header().Set("Content-Length", "0")
 		res.WriteHeader(400)
