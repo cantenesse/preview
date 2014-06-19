@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/ngerakines/preview/common"
 	"io"
 	"log"
 	"net"
@@ -91,7 +92,8 @@ var hopHeaders = []string{
 func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request, location string) {
 	transport := p.Transport
 	if transport == nil {
-		transport = http.DefaultTransport
+		httpClient := common.NewHttpClient(false, 30*time.Second)
+		transport = httpClient.Transport
 	}
 
 	outreq := new(http.Request)
