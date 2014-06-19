@@ -49,26 +49,6 @@ func initTempFileManager(path string) *tempFileManager {
 	return fm
 }
 
-func TestDefaultConfig(t *testing.T) {
-	dm := testutils.NewDirectoryManager()
-	defer dm.Close()
-
-	appConfig, err := NewDefaultAppConfig()
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-
-	if appConfig.Http().Listen() != ":8080" {
-		t.Error("Invalid default for appConfig.Http().Listen()", appConfig.Http().Listen())
-		return
-	}
-	if appConfig.Storage().Engine() != "memory" {
-		t.Error("Invalid default for appConfig.Storage().Engine()", appConfig.Storage().Engine())
-		return
-	}
-}
-
 func TestBasicConfig(t *testing.T) {
 	dm := testutils.NewDirectoryManager()
 	defer dm.Close()
@@ -85,29 +65,29 @@ func TestBasicConfig(t *testing.T) {
 		return
 	}
 
-	if appConfig.Http().Listen() != ":8081" {
-		t.Error("appConfig.Http().Listen()", appConfig.Http().Listen())
+	if appConfig.Http.Listen != ":8081" {
+		t.Error("appConfig.Http().Listen()", appConfig.Http.Listen)
 	}
 
-	if appConfig.Storage().Engine() != "cassandra" {
-		t.Error("appConfig.Storage().Engine()", appConfig.Storage().Engine())
+	if appConfig.Storage.Engine != "cassandra" {
+		t.Error("appConfig.Storage().Engine()", appConfig.Storage.Engine)
 	}
-	cassandraNodes, err := appConfig.Storage().CassandraNodes()
+	cassandraNodes := appConfig.Storage.CassandraNodes
 	if strings.Join(cassandraNodes, ",") != "localhost" {
 		t.Error("appConfig.Storage().CassandraNodes()", cassandraNodes)
 	}
 
-	if appConfig.ImageMagickRenderAgent().Enabled() != true {
-		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().Enabled()", appConfig.ImageMagickRenderAgent().Enabled())
+	if appConfig.ImageMagickRenderAgent.Enabled != true {
+		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().Enabled()", appConfig.ImageMagickRenderAgent.Enabled)
 	}
-	if len(appConfig.ImageMagickRenderAgent().SupportedFileTypes()) != 1 {
-		t.Error("Invalid count for appConfig.ImageMagickRenderAgent().SupportedFileTypes()", len(appConfig.ImageMagickRenderAgent().SupportedFileTypes()))
+	if len(appConfig.ImageMagickRenderAgent.SupportedFileTypes) != 1 {
+		t.Error("Invalid count for appConfig.ImageMagickRenderAgent().SupportedFileTypes()", len(appConfig.ImageMagickRenderAgent.SupportedFileTypes))
 	}
-	if appConfig.ImageMagickRenderAgent().SupportedFileTypes()["jpg"] != 123456 {
-		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().SupportedFileTypes()[\"jpg\"]", appConfig.ImageMagickRenderAgent().SupportedFileTypes()["jpg"])
+	if appConfig.ImageMagickRenderAgent.SupportedFileTypes["jpg"] != 123456 {
+		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().SupportedFileTypes()[\"jpg\"]", appConfig.ImageMagickRenderAgent.SupportedFileTypes["jpg"])
 	}
 
-	if appConfig.SimpleApi().Enabled() != true {
-		t.Error("Invalid default for appConfig.SimpleApi().Enabled()", appConfig.SimpleApi().Enabled())
+	if appConfig.SimpleApi.Enabled != true {
+		t.Error("Invalid default for appConfig.SimpleApi().Enabled()", appConfig.SimpleApi.Enabled)
 	}
 }

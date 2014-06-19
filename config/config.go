@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"os"
@@ -12,95 +13,89 @@ type appConfigError struct {
 	message string
 }
 
-// AppConfig represents the configuration collections for the preview application.
-type AppConfig interface {
-	// Common returns common configuration.
-	Common() CommonAppConfig
-	// Http returns HTTP configuration.
-	Http() HttpAppConfig
-	// Storage returns storage configuration.
-	Storage() StorageAppConfig
-	// ImageMagickRenderer returns ImageMagick render agent configuration.
-	ImageMagickRenderAgent() ImageMagickRenderAgentAppConfig
-	// DocumentRenderAgent returns Document render agent configuration.
-	DocumentRenderAgent() DocumentRenderAgentAppConfig
-	// SimpleApi returns SimpleBlueprint configuration.
-	SimpleApi() SimpleApiAppConfig
-	AssetApi() AssetApiAppConfig
-	Uploader() UploaderAppConfig
-	Downloader() DownloaderAppConfig
-	Source() string
+type AppConfig struct {
+	Source string `json:"-"`
+
+	Common struct {
+		PlaceholderBasePath   string              `json:"placeholderBasePath"`
+		PlaceholderGroups     map[string][]string `json:"placeholderGroups"`
+		LocalAssetStoragePath string              `json:"localAssetStoragePath"`
+		NodeId                string              `json:"nodeId"`
+		WorkDispatcherEnabled bool                `json:"workDispatcherEnabled"`
+	} `json:"common"`
+
+	Http struct {
+		Listen string `json:"listen"`
+	} `json:"http"`
+
+	Storage struct {
+		Engine            string   `json:"engine"`
+		CassandraNodes    []string `json:"cassandraNodes"`
+		CassandraKeyspace string   `json:"cassandraKeyspace"`
+		MysqlHost         string   `json:"mysqlHost"`
+		MysqlUser         string   `json:"mysqlUser"`
+		MysqlPassword     string   `json:"mysqlPassword"`
+		MysqlDatabase     string   `json:"mysqlDatabase"`
+	} `json:"storage"`
+
+	ImageMagickRenderAgent struct {
+		Enabled            bool             `json:"enabled"`
+		Count              int              `json:"count"`
+		SupportedFileTypes map[string]int64 `json:"supportedFileTypes"`
+	} `json:"imageMagickRenderAgent"`
+
+	DocumentRenderAgent struct {
+		Enabled  bool   `json:"enabled"`
+		Count    int    `json:"count"`
+		BasePath string `json:"basePath"`
+	} `json:"documentRenderAgent"`
+
+	SimpleApi struct {
+		Enabled     bool   `json:"enabled"`
+		EdgeBaseUrl string `json:"edgeBaseUrl"`
+		BaseUrl     string `json:"baseUrl"`
+	} `json:"simpleApi"`
+
+	AssetApi struct {
+		Enabled bool `json:"enabled"`
+	} `json:"assetApi"`
+
+	Uploader struct {
+		Engine      string   `json:"engine"`
+		S3Key       string   `json:"s3Key"`
+		S3Secret    string   `json:"s3Secret"`
+		S3Host      string   `json:"s3Host"`
+		S3Buckets   []string `json:"s3Buckets"`
+		S3VerifySsl bool     `json:"s3VerifySsl"`
+	} `json:"uploader"`
+
+	Downloader struct {
+		BasePath    string   `json:"basePath"`
+		TramEnabled bool     `json:"tramEnabled"`
+		TramHosts   []string `json:"tramHosts"`
+	} `json:"downloader"`
 }
 
-type CommonAppConfig interface {
-	PlaceholderBasePath() string
-	PlaceholderGroups() map[string][]string
-	LocalAssetStoragePath() string
-	NodeId() string
-	WorkDispatcherEnabled() bool
-}
-
-type HttpAppConfig interface {
-	Listen() string
-}
-
-type StorageAppConfig interface {
-	Engine() string
-	CassandraNodes() ([]string, error)
-	CassandraKeyspace() (string, error)
-	MysqlHost() (string, error)
-	MysqlUser() (string, error)
-	MysqlPassword() (string, error)
-	MysqlDatabase() (string, error)
-}
-
-type ImageMagickRenderAgentAppConfig interface {
-	Enabled() bool
-	Count() int
-	SupportedFileTypes() map[string]int64
-}
-
-type DocumentRenderAgentAppConfig interface {
-	Enabled() bool
-	Count() int
-	BasePath() string
-}
-
-type SimpleApiAppConfig interface {
-	Enabled() bool
-	EdgeBaseUrl() string
-	BaseUrl() string
-}
-
-type AssetApiAppConfig interface {
-	Enabled() bool
-}
-
-type UploaderAppConfig interface {
-	Engine() string
-	S3Key() (string, error)
-	S3Secret() (string, error)
-	S3Host() (string, error)
-	S3Buckets() ([]string, error)
-	S3VerifySsl() (bool, error)
-}
-
-type DownloaderAppConfig interface {
-	BasePath() string
-	TramEnabled() bool
-	TramHosts() ([]string, error)
-}
-
-func LoadAppConfig(givenPath string) (AppConfig, error) {
+func LoadAppConfig(givenPath string) (*AppConfig, error) {
 	configPath := determineConfigPath(givenPath)
 	if configPath == "" {
-		return NewDefaultAppConfig()
+		return NewAppConfig(NewDefaultAppConfig())
 	}
-	content, err := ioutil.ReadFile(configPath)
+	data, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
-	return NewUserAppConfig(content)
+	return NewAppConfig(data)
+}
+
+func NewAppConfig(data []byte) (*AppConfig, error) {
+	var appConfig AppConfig
+	err := json.Unmarshal(data, &appConfig)
+	if err != nil {
+		return nil, err
+	}
+	appConfig.Source = string(data)
+	return &appConfig, nil
 }
 
 func (err appConfigError) Error() string {

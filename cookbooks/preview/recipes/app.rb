@@ -11,8 +11,15 @@ node.set["monit"]["reload_on_change"] = false
 
 include_recipe 'apt::default'
 include_recipe 'yum::default'
-include_recipe 'monit::default'
-include_recipe 'logrotate::default'
+
+if node[:preview][:enable_monit] then
+  include_recipe 'monit::default'
+end
+
+if node[:preview][:enable_logrotate] then
+  include_recipe 'logrotate::default'
+end
+
 include_recipe 'preview::_common'
 include_recipe 'preview::_libreoffice'
 include_recipe 'preview::placeholders'
@@ -71,17 +78,21 @@ service 'preview' do
   action [:start]
 end
 
-monit_monitrc 'preview' do
-  variables({ category: 'preview' })
+if node[:preview][:enable_monit] then
+  monit_monitrc 'preview' do
+    variables({ category: 'preview' })
+  end
 end
 
-logrotate_app 'preview' do
-  cookbook  'logrotate'
-  path      ['/var/log/preview.log']
-  options   ['missingok', 'delaycompress', 'copytruncate']
-  frequency 'daily'
-  size      1048576
-  maxsize   2097152
-  rotate    2
-  create    '644 root root'
+if node[:preview][:enable_logrotate] then
+  logrotate_app 'preview' do
+    cookbook  'logrotate'
+    path      ['/var/log/preview.log']
+    options   ['missingok', 'delaycompress', 'copytruncate']
+    frequency 'daily'
+    size      1048576
+    maxsize   2097152
+    rotate    2
+    create    '644 root root'
+  end
 end

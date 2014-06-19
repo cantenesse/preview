@@ -7,11 +7,11 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	neturl "net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Downloader structures retreive remote files and make them available locally.
@@ -176,7 +176,9 @@ func (downloader *defaultDownloader) handleHttp(url, source string) (TemporaryFi
 	}
 	defer out.Close()
 
-	resp, err := http.Get(downloader.getHttpUrl(url, source))
+	httpClient := NewHttpClient(false, 30*time.Second)
+
+	resp, err := httpClient.Get(downloader.getHttpUrl(url, source))
 	if err != nil {
 		return nil, err
 	}

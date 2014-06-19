@@ -2,7 +2,6 @@ package common
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"github.com/ngerakines/preview/util"
 	"io"
@@ -192,10 +191,6 @@ func (client *AmazonS3Client) submitDeleteRequest(url string, headers map[string
 }
 
 func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: !client.config.verifySsl},
-	}
-	httpClient := &http.Client{Transport: tr}
 
 	request, err := http.NewRequest(method, url, body)
 	if err != nil {
@@ -205,6 +200,7 @@ func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader,
 	for header, headerValue := range headers {
 		request.Header.Set(header, headerValue)
 	}
+	httpClient := NewHttpClient(client.config.verifySsl, 30*time.Second)
 	response, err := httpClient.Do(request)
 	if err != nil {
 		log.Println("Error executing reqest", err)
