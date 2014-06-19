@@ -36,8 +36,9 @@ func NewRenderV2Command(arguments map[string]interface{}) PreviewCliCommand {
 		command.host = "localhost:8080"
 	}
 	command.files = getConfigStringArray(arguments, "<file>")
-	command.templateIds = []string{getConfigString(arguments, "<templateId>")}
+	command.templateIds = getConfigStringArray(arguments, "<templateId>")
 	command.verbose = getConfigInt(arguments, "--verbose")
+
 	return command
 }
 
