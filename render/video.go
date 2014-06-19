@@ -144,6 +144,11 @@ func (renderAgent *videoRenderAgent) renderGeneratedAsset(id string) {
 	}
 
 	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
+	if _, supports := renderAgent.metrics.fileTypeCount[fileType]; !supports {
+		log.Println("VideoRenderAgent doesn't support filetype", fileType)
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+		return
+	}
 	if err == nil {
 		renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 	}
