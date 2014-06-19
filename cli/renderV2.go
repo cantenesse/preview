@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
@@ -29,6 +30,15 @@ type previewGenerateRequest struct {
 	TemplateIds  []string             `json:"templateIds"`
 }
 
+var templateAliases = map[string]string{
+	"jumbo":    common.DefaultTemplateJumbo.Id,
+	"large":    common.DefaultTemplateLarge.Id,
+	"medium":   common.DefaultTemplateMedium.Id,
+	"small":    common.DefaultTemplateSmall.Id,
+	"document": common.DocumentConversionTemplateId,
+	"video":    common.VideoConversionTemplateId,
+}
+
 func NewRenderV2Command(arguments map[string]interface{}) PreviewCliCommand {
 	command := new(RenderV2Command)
 	command.host = getConfigString(arguments, "<host>")
@@ -37,6 +47,13 @@ func NewRenderV2Command(arguments map[string]interface{}) PreviewCliCommand {
 	}
 	command.files = getConfigStringArray(arguments, "<file>")
 	command.templateIds = getConfigStringArray(arguments, "<templateId>")
+
+	for idx, id := range command.templateIds {
+		if alias, hasAlias := templateAliases[id]; hasAlias {
+			command.templateIds[idx] = alias
+		}
+	}
+
 	command.verbose = getConfigInt(arguments, "--verbose")
 
 	return command
