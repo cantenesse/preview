@@ -4,7 +4,7 @@ maintainer_email 'nick@gerakines'
 license          'MIT'
 description      'Installs/Configures preview'
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version          '0.0.1+develop'
+version          '1.1.0'
 
 depends 'apt'
 depends 'yum'
