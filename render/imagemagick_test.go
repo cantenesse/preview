@@ -1,7 +1,7 @@
 package render
 
 import (
-//	"fmt"
+	//	"fmt"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/ngerakines/testutils"
@@ -87,8 +87,8 @@ func TestRenderJpegPreview(t *testing.T) {
 func TestRenderPdfPreview(t *testing.T) {
 	basicTest(t, "TestRenderPdfPreview", "ChefConf2014schedule.pdf", "pdf", 4)
 }
-	
-func TestRenderMultipagePdfPreview(t *testing.T) {	
+
+func TestRenderMultipagePdfPreview(t *testing.T) {
 	basicTest(t, "TestRenderMultipagePdfPreview", "Multipage.pdf", "pdf", 12)
 }
 

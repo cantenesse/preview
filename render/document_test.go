@@ -23,7 +23,7 @@ func TestConvertDocxToPdf(t *testing.T) {
 
 	rm, sasm, gasm, tm, _ := setupTest(dm.Path)
 	defer rm.Stop()
-	
+
 	testListener := make(RenderStatusChannel, 25)
 	rm.AddListener(testListener)
 
@@ -81,7 +81,7 @@ func TestConvertMultipageDocxToPdf(t *testing.T) {
 
 	rm, sasm, gasm, tm, _ := setupTest(dm.Path)
 	defer rm.Stop()
-	
+
 	testListener := make(RenderStatusChannel, 25)
 	rm.AddListener(testListener)
 

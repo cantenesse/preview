@@ -98,11 +98,10 @@ func TestGAMarshalling(t *testing.T) {
 
 	rm, sasm, gasm, _, blueprint := setupTest(dm.Path)
 	defer rm.Stop()
-	
 
 	testListener := make(render.RenderStatusChannel, 25)
 	rm.AddListener(testListener)
-	
+
 	sourceAssetId, err := util.NewUuid()
 	if err != nil {
 		t.Errorf("Unexpected error returned: %s", err)
@@ -113,7 +112,7 @@ func TestGAMarshalling(t *testing.T) {
 		t.Errorf("Unexpected error returned: %s", err)
 		return
 	}
-	
+
 	err = sasm.Store(sourceAsset)
 	if err != nil {
 		t.Errorf("Unexpected error returned: %s", err)
@@ -127,7 +126,7 @@ func TestGAMarshalling(t *testing.T) {
 		return
 	}
 	gasm.Store(ga)
-	
+
 	jsonData, err := blueprint.marshalGeneratedAssets(sourceAssetId, templateId, "")
 	if err != nil {
 		t.Errorf("Unexpected error returned: %s", err)
@@ -148,4 +147,3 @@ func TestGAMarshalling(t *testing.T) {
 		return
 	}
 }
-
