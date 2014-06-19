@@ -90,6 +90,7 @@ func (uploader *localUploader) Upload(destination, existingFile string) error {
 		log.Println("uploading to", newPath)
 		err := copyFile(existingFile, newPath)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		return nil

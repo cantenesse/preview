@@ -1,7 +1,7 @@
 package render
 
 import (
-	"fmt"
+//	"fmt"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/ngerakines/testutils"
@@ -12,16 +12,17 @@ import (
 	"time"
 )
 
+func init() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
 // TODO: Write tests for source assets. (i.e. missing, missing/invalid attributes)
 // TODO: Write tests for generated assets. (i.e. missing, missing/invalid attributes)
-// TODO: Write test for different supported file types. (i.e. jpg, png, gif, pdf)
 // TODO: Write test for PDF with 0 pages.
-// TODO: Write test for PDF with more than 1 page.
-// TODO: Write test for animated gif.
 
-func TestRenderJpegPreview(t *testing.T) {
+func basicTest(t *testing.T, testname, file, filetype string, expectedOutputSize int) {
 	if !testutils.Integration() || testing.Short() {
-		t.Skip("Skipping integration test TestRenderJpegPreview")
+		t.Skip("Skipping integration test", testname)
 		return
 	}
 
@@ -30,7 +31,7 @@ func TestRenderJpegPreview(t *testing.T) {
 	dm := testutils.NewDirectoryManager()
 	defer dm.Close()
 
-	rm, sasm, gasm, tm := setupTest(dm.Path)
+	rm, sasm, gasm, tm, uploader := setupTest(dm.Path)
 	defer rm.Stop()
 
 	testListener := make(RenderStatusChannel, 25)
@@ -47,9 +48,10 @@ func TestRenderJpegPreview(t *testing.T) {
 		t.Errorf("Unexpected error returned: %s", err)
 		return
 	}
+
 	sourceAsset.AddAttribute(common.SourceAssetAttributeSize, []string{"12345"})
-	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", "wallpaper-641916.jpg")})
-	sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{"jpg"})
+	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", file)})
+	sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{filetype})
 
 	err = sasm.Store(sourceAsset)
 	if err != nil {
@@ -63,21 +65,39 @@ func TestRenderJpegPreview(t *testing.T) {
 		return
 	}
 	for _, template := range templates {
-		placeholderSize, err := common.GetFirstAttribute(template, common.TemplateAttributePlaceholderSize)
-		if err != nil {
-			panic(err)
-		}
-		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, fmt.Sprintf("local:///%s/%s", sourceAssetId, placeholderSize))
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, uploader.Url(sourceAsset, template, 0))
 		if err != nil {
 			t.Errorf("Unexpected error returned: %s", err)
 			return
 		}
 		gasm.Store(ga)
+		log.Println(ga)
 	}
-	if assertGeneratedAssetCount(sourceAssetId, gasm, common.GeneratedAssetStatusComplete, 4) {
-		t.Errorf("Could not verify that %d generated assets had status '%s' for source asset '%s'", 4, common.GeneratedAssetStatusComplete, sourceAssetId)
+
+	if assertGeneratedAssetCount(sourceAssetId, gasm, common.GeneratedAssetStatusComplete, expectedOutputSize) {
+		t.Errorf("Could not verify that %d generated assets had status '%s' for source asset '%s'", expectedOutputSize, common.GeneratedAssetStatusComplete, sourceAssetId)
 		return
 	}
+}
+
+func TestRenderJpegPreview(t *testing.T) {
+	basicTest(t, "TestRenderJpegPreview", "wallpaper-641916.jpg", "jpg", 4)
+}
+
+func TestRenderPdfPreview(t *testing.T) {
+	basicTest(t, "TestRenderPdfPreview", "ChefConf2014schedule.pdf", "pdf", 4)
+}
+	
+func TestRenderMultipagePdfPreview(t *testing.T) {	
+	basicTest(t, "TestRenderMultipagePdfPreview", "Multipage.pdf", "pdf", 12)
+}
+
+func TestRenderGifPreview(t *testing.T) {
+	basicTest(t, "TestRenderGifPreview", "Animated.gif", "gif", 4)
+}
+
+func TestRenderPngPreview(t *testing.T) {
+	basicTest(t, "TestRenderPngPreview", "COW.png", "png", 4)
 }
 
 func assertGeneratedAssetCount(id string, generatedAssetStorageManager common.GeneratedAssetStorageManager, status string, expectedCount int) bool {
@@ -109,15 +129,15 @@ func assertGeneratedAssetCount(id string, generatedAssetStorageManager common.Ge
 		select {
 		case result := <-callback:
 			return result
-		case <-time.After(10 * time.Second):
+		case <-time.After(20 * time.Second):
 			generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
-			log.Println("generatedAssets", generatedAssets, "err", err)
+			log.Println("Timed out. generatedAssets", generatedAssets, "err", err)
 			return true
 		}
 	}
 }
 
-func setupTest(path string) (*RenderAgentManager, common.SourceAssetStorageManager, common.GeneratedAssetStorageManager, common.TemplateManager) {
+func setupTest(path string) (*RenderAgentManager, common.SourceAssetStorageManager, common.GeneratedAssetStorageManager, common.TemplateManager, common.Uploader) {
 	tm := common.NewTemplateManager()
 	sourceAssetStorageManager := common.NewSourceAssetStorageManager()
 	generatedAssetStorageManager := common.NewGeneratedAssetStorageManager(tm)
@@ -131,7 +151,7 @@ func setupTest(path string) (*RenderAgentManager, common.SourceAssetStorageManag
 	rm.AddImageMagickRenderAgent(downloader, uploader, 5)
 	rm.AddDocumentRenderAgent(downloader, uploader, filepath.Join(path, "doc-cache"), 5)
 
-	return rm, sourceAssetStorageManager, generatedAssetStorageManager, tm
+	return rm, sourceAssetStorageManager, generatedAssetStorageManager, tm, uploader
 }
 
 func fileUrl(dir, file string) string {

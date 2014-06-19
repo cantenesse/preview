@@ -60,9 +60,11 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = app.initZencoder()
-	if err != nil {
-		return nil, err
+	if appConfig.VideoRenderAgent.Enabled {
+		err = app.initZencoder()
+		if err != nil {
+			return nil, err
+		}
 	}
 	err = app.initRenderers()
 	if err != nil {
