@@ -23,6 +23,9 @@ func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (asse
 
 	var generatedAsset *common.GeneratedAsset
 	for _, ga := range generatedAssets {
+		if ga.TemplateId != templateId {
+			continue
+		}
 		pageVal, _ := common.GetFirstAttribute(ga, common.GeneratedAssetAttributePage)
 		if len(pageVal) == 0 {
 			pageVal = "0"
