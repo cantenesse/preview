@@ -14,7 +14,7 @@ func main() {
 		return
 	}
 	id := os.Args[1]
-	url := "http://localhost:8080/zencoder/" + id
+	url := "http://localhost:8080/webhooks/zencoder/" + id
 	fmt.Println("POSTing to", url)
 	http.Post(url, "", nil)
 }
