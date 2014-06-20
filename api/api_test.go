@@ -138,7 +138,7 @@ func TestGAMarshalling(t *testing.T) {
 	}
 	gasm.Store(ga)
 
-	jsonData, err := blueprint.marshalGeneratedAssets(sourceAssetId, templateId, "0")
+	jsonData, err := blueprint.marshalGeneratedAssets(sourceAssetId, templateId, "")
 	if err != nil {
 		t.Errorf("Unexpected error returned: %s", err)
 		return
