@@ -60,6 +60,7 @@ The "documentRenderAgent" group has the following keys:
 * "enabled" - Used to determine if the document rendering agent should be started with the application.
 * "count" - The number of agents to run concurrently.
 * "basePath" - The path of the temporary directory to be used by the agent.
+* "supportedFileTypes" - An array of strings corresponding to file types to be supported by this render agent.
 
 The "videoRenderAgent" group has the following keys:
 
@@ -69,12 +70,13 @@ The "videoRenderAgent" group has the following keys:
 * "zencoderKey" - The Zencoder API key of an account to be used for the transcoding process.
 * "zencoderNotificationUrl" - The URL of the server to listen for updates from Zencoder.
 * "zencoderS3Bucket" - The S3 bucket for Zencoder to use as output.
+* "supportedFileTypes" - An array of strings corresponding to file types to be supported by this render agent.
 
 The "imageMagickRenderAgent" group has the following keys:
 
 * "enabled" - Used to determine if the image magick rendering agent should be started with the application.
 * "count" - The number of agents to run concurrently.
-* "supportedFileTypes" - A map of strings to integers representing the file types that are supported by the renderer and the max file size to render.
+* "supportedFileTypes" - An array of strings corresponding to file types to be supported by this render agent.
 
 The "simpleApi" group has the following keys:
 
