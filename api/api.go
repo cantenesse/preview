@@ -306,7 +306,7 @@ func (blueprint *apiBlueprint) marshalGeneratedAssets(said, templateId, page str
 	}
 
 	// If the caller gave a page, return the asset itself. Otherwise return an array of GAs
-	jsonData, err := arr.Serialize(len(page) == 0)
+	jsonData, err := arr.Serialize(len(page) > 0)
 	if err != nil {
 		log.Println("Serialization error:", err)
 		return nil, common.ErrorCouldNotSerializeGeneratedAssets
