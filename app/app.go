@@ -33,7 +33,7 @@ type AppContext struct {
 	assetBlueprint               api.Blueprint
 	adminBlueprint               api.Blueprint
 	staticBlueprint              api.Blueprint
-	webHookBlueprint             api.Blueprint
+	webhookBlueprint             api.Blueprint
 	apiV2Blueprint               api.Blueprint
 	listener                     *stoppableListener.StoppableListener
 	negroni                      *negroni.Negroni
@@ -251,8 +251,8 @@ func (app *AppContext) initApis() error {
 	app.staticBlueprint = api.NewStaticBlueprint(app.placeholderManager)
 	app.staticBlueprint.AddRoutes(p)
 
-	app.webHookBlueprint = api.NewWebHookBlueprint(app.generatedAssetStorageManager, app.agentManager)
-	app.webHookBlueprint.AddRoutes(p)
+	app.webhookBlueprint = api.NewWebhookBlueprint(app.generatedAssetStorageManager, app.agentManager)
+	app.webhookBlueprint.AddRoutes(p)
 
 	app.negroni = negroni.Classic()
 	app.negroni.UseHandler(p)

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
@@ -9,7 +10,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
+	"net/url"
+	"time"
 )
 
 type apiV2Blueprint struct {
@@ -24,7 +26,6 @@ type apiV2Blueprint struct {
 	previewInfoRequestsMeter     metrics.Meter
 	previewGADataRequestsMeter   metrics.Meter
 	previewGAInfoRequestsMeter   metrics.Meter
-	//previewAttributeRequestsMeter metrics.Meter
 }
 
 type generatePreviewRequestV2 struct {
@@ -32,6 +33,24 @@ type generatePreviewRequestV2 struct {
 	url         string
 	attributes  map[string][]string
 	templateIds []string
+}
+
+type userPreviewRequest struct {
+	SourceAssets []struct {
+		Id         string              `json:"fileId"`
+		Url        string              `json:"url"`
+		Attributes map[string][]string `json:"attributes"`
+	} `json:"sourceAssets"`
+	TemplateIds []string `json:"templateIds"`
+}
+
+type sourceAssetView struct {
+	SourceAssets []extendedSourcedAsset `json:"sourceAssets"`
+}
+
+type extendedSourcedAsset struct {
+	SourceAsset     *common.SourceAsset      `json:"sourceAsset"`
+	GeneratedAssets []*common.GeneratedAsset `json:"generatedAssets"`
 }
 
 func NewApiV2Blueprint(
@@ -55,13 +74,12 @@ func NewApiV2Blueprint(
 	bp.previewInfoRequestsMeter = metrics.NewMeter()
 	bp.previewGADataRequestsMeter = metrics.NewMeter()
 	bp.previewGAInfoRequestsMeter = metrics.NewMeter()
-	//bp.previewAttributeRequestsMeter = metrics.NewMeter()
+
 	registry.Register("apiV2.generatePreviewRequests", bp.generatePreviewRequestsMeter)
 	registry.Register("apiV2.previewQueries", bp.previewQueriesMeter)
 	registry.Register("apiV2.previewInfoRequests", bp.previewInfoRequestsMeter)
 	registry.Register("apiV2.previewGADataRequests", bp.previewGADataRequestsMeter)
 	registry.Register("apiV2.previewGAInfoRequests", bp.previewGAInfoRequestsMeter)
-	//registry.Register("apiV2.previewAttributeRequests", bp.previewAttributeRequestsMeter)
 
 	return bp
 }
@@ -91,14 +109,13 @@ func (blueprint *apiV2Blueprint) PreviewQueryHandler(res http.ResponseWriter, re
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds(ids)
 	if err != nil {
-		log.Println("Marshalling error", err)
+		log.Println(err)
 		res.Header().Set("Content-Length", "0")
 		res.WriteHeader(500)
 		return
 	}
 
-	res.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
-	res.Write(jsonData)
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
 func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
@@ -107,14 +124,13 @@ func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds([]string{id})
 	if err != nil {
-		log.Println("Marshalling error", err)
+		log.Println(err)
 		res.Header().Set("Content-Length", "0")
 		res.WriteHeader(500)
 		return
 	}
 
-	res.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
-	res.Write(jsonData)
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
 func (blueprint *apiV2Blueprint) PreviewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
@@ -126,14 +142,13 @@ func (blueprint *apiV2Blueprint) PreviewGAInfoHandler(res http.ResponseWriter, r
 
 	jsonData, err := blueprint.marshalGeneratedAssets(id, templateId, page)
 	if err != nil {
-		log.Println("Marshalling error", err)
+		log.Println(err)
 		res.Header().Set("Content-Length", "0")
 		res.WriteHeader(500)
 		return
 	}
 
-	res.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
-	res.Write(jsonData)
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
 func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, req *http.Request) {
@@ -167,8 +182,7 @@ func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, r
 		{
 			// TODO: Figure out what really should go here
 			// This will probably depend on how the front-end deals with videos
-			res.Header().Set("Content-Length", strconv.Itoa(len(path)))
-			res.Write([]byte(path))
+			http.ServeContent(res, req, "", time.Now(), bytes.NewReader([]byte(path)))
 		}
 	}
 	http.NotFound(res, req)
@@ -196,25 +210,22 @@ func (blueprint *apiV2Blueprint) GeneratePreviewHandler(res http.ResponseWriter,
 		blueprint.agentManager.CreateWorkFromTemplates(gpr.id, gpr.url, gpr.attributes, gpr.templateIds)
 	}
 
-	target := blueprint.buildUrl("/v2/preview/")
-	for idx, gpr := range gprs {
-		if idx != 0 {
-			target += "&"
-		} else {
-			target += "?"
-		}
-		target += "id=" + gpr.id
+	target := blueprint.buildUrl("/v2/preview/?")
+	params := url.Values{}
+	for _, gpr := range gprs {
+		params.Add("id", gpr.id)
 	}
+	target += params.Encode()
+
 	http.Redirect(res, req, target, 303)
 }
 
-type sourceAssetView struct {
-	SourceAssets []extendedSourcedAsset `json:"sourceAssets"`
-}
-
-type extendedSourcedAsset struct {
-	SourceAsset     *common.SourceAsset      `json:"sourceAsset"`
-	GeneratedAssets []*common.GeneratedAsset `json:"generatedAssets"`
+func (view *sourceAssetView) Serialize() ([]byte, error) {
+	bytes, err := json.Marshal(view)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
 }
 
 func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byte, error) {
@@ -227,7 +238,7 @@ func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byt
 		}
 		sas, _ := blueprint.sasm.FindBySourceAssetId(id)
 		for _, sa := range sas {
-			uniqgas := make([]*common.GeneratedAsset, 0, 0)
+			uniqgas := make([]*common.GeneratedAsset, 0, len(gas))
 			for _, ga := range gas {
 				if ga.SourceAssetType == sa.IdType {
 					uniqgas = append(uniqgas, ga)
@@ -240,9 +251,10 @@ func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byt
 		}
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonData, err := data.Serialize()
 	if err != nil {
-		return nil, err
+		log.Println("Serialization error:", err)
+		return nil, common.ErrorCouldNotSerializeSourceAssets
 	}
 
 	return jsonData, nil
@@ -274,7 +286,7 @@ func (blueprint *apiV2Blueprint) marshalGeneratedAssets(said, templateId, page s
 
 	if len(arr) == 0 {
 		log.Println("Could not find GeneratedAssets with source and template id", err)
-		return nil, common.ErrorNotImplemented
+		return nil, common.ErrorUnableToFindGeneratedAssetsById
 	}
 	var jsonData []byte
 	// If the caller gave a page, return the asset itself. Otherwise return an array of GAs
@@ -285,20 +297,14 @@ func (blueprint *apiV2Blueprint) marshalGeneratedAssets(said, templateId, page s
 	}
 
 	if err != nil {
-		return nil, err
+		log.Println("Serialization error:", err)
+		return nil, common.ErrorCouldNotSerializeGeneratedAssets
 	}
 	return jsonData, nil
 }
 
 func newGeneratePreviewRequestV2(body string) ([]*generatePreviewRequestV2, error) {
-	var data struct {
-		SourceAssets []struct {
-			Id         string              `json:"fileId"`
-			Url        string              `json:"url"`
-			Attributes map[string][]string `json:"attributes"`
-		} `json:"sourceAssets"`
-		TemplateIds []string `json:"templateIds"`
-	}
+	var data userPreviewRequest
 	err := json.Unmarshal([]byte(body), &data)
 	if err != nil {
 		return nil, err

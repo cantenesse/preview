@@ -8,30 +8,30 @@ import (
 	"net/http"
 )
 
-type webHookBlueprint struct {
+type webhookBlueprint struct {
 	base               string
 	gasm               common.GeneratedAssetStorageManager
 	renderAgentManager *render.RenderAgentManager
 }
 
-func NewWebHookBlueprint(gasm common.GeneratedAssetStorageManager, ram *render.RenderAgentManager) *webHookBlueprint {
-	blueprint := new(webHookBlueprint)
+func NewWebhookBlueprint(gasm common.GeneratedAssetStorageManager, ram *render.RenderAgentManager) *webhookBlueprint {
+	blueprint := new(webhookBlueprint)
 	// TODO: Abstract this so WebHookBlueprint can apply to non-Zencoder web hooks as well
-	blueprint.base = "/zencoder"
+	blueprint.base = "/webhooks"
 	blueprint.gasm = gasm
 	blueprint.renderAgentManager = ram
 	return blueprint
 }
 
-func (blueprint *webHookBlueprint) AddRoutes(p *pat.PatternServeMux) {
-	p.Post(blueprint.buildUrl("/:id"), http.HandlerFunc(blueprint.zencoderApiHandler))
+func (blueprint *webhookBlueprint) AddRoutes(p *pat.PatternServeMux) {
+	p.Post(blueprint.buildUrl("/zencoder/:id"), http.HandlerFunc(blueprint.zencoderApiHandler))
 }
 
-func (blueprint *webHookBlueprint) buildUrl(path string) string {
+func (blueprint *webhookBlueprint) buildUrl(path string) string {
 	return blueprint.base + path
 }
 
-func (blueprint *webHookBlueprint) zencoderApiHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *webhookBlueprint) zencoderApiHandler(res http.ResponseWriter, req *http.Request) {
 	id := req.URL.Query().Get(":id")
 	ga, err := blueprint.gasm.FindById(id)
 	if err != nil {
@@ -43,4 +43,7 @@ func (blueprint *webHookBlueprint) zencoderApiHandler(res http.ResponseWriter, r
 	blueprint.gasm.Update(ga)
 	blueprint.renderAgentManager.RemoveWork(common.RenderAgentVideo, id)
 	log.Println("Transcoding complete for", id)
+
+	res.Header().Set("Content-Length", "0")
+	res.WriteHeader(202)
 }

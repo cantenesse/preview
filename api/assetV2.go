@@ -5,7 +5,6 @@ import (
 	"github.com/ngerakines/preview/util"
 	"log"
 	"path/filepath"
-	"strings"
 )
 
 var assetActionVideoURL = assetAction(5)
@@ -40,7 +39,7 @@ func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (asse
 		return assetActionVideoURL, surl[0]
 	}
 
-	if strings.HasPrefix(generatedAsset.Location, "local://") {
+	if util.IsLocalUrl(generatedAsset.Location) {
 
 		fullPath := filepath.Join(blueprint.localAssetStoragePath, generatedAsset.Location[8:])
 		if util.CanLoadFile(fullPath) {
@@ -50,7 +49,7 @@ func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (asse
 		}
 	}
 
-	if strings.HasPrefix(generatedAsset.Location, "s3://") {
+	if util.IsS3Url(generatedAsset.Location) {
 		return assetActionS3Proxy, generatedAsset.Location
 	}
 

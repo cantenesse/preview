@@ -8,8 +8,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type RenderV2Command struct {
@@ -81,35 +83,33 @@ func (command *RenderV2Command) Execute() {
 		SourceAssets: arr,
 		TemplateIds:  command.templateIds,
 	}
-	url := fmt.Sprintf("http://%s/api/v2/preview/", command.host)
+	requrl := fmt.Sprintf("http://%s/api/v2/preview/", command.host)
 	bytes, _ := json.Marshal(req)
 	if command.verbose > 1 {
 		prettyjson, _ := json.MarshalIndent(req, "", "	")
 		log.Println("Request:")
 		log.Println(string(prettyjson))
 	}
-	hr, err := http.NewRequest("PUT", url, strings.NewReader(string(bytes)))
+	hr, err := http.NewRequest("PUT", requrl, strings.NewReader(string(bytes)))
 
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	client := &http.Client{}
+	client := common.NewHttpClient(true, 10*time.Second)
 	resp, err := client.Do(hr)
 
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	target := url
-	for idx, i := range saids {
-		if idx != 0 {
-			target += "&"
-		} else {
-			target += "?"
-		}
-		target += "id=" + i
+	target := requrl + "?"
+	params := url.Values{}
+	for _, id := range saids {
+		params.Add("id", id)
 	}
+	target += params.Encode()
+
 	if command.verbose > 0 {
 		log.Println("Response found at:", target)
 	}
@@ -126,26 +126,12 @@ func (command *RenderV2Command) filesToSubmit() []string {
 		shouldTry, path := command.absFilePath(file)
 		log.Println(shouldTry, path)
 		if shouldTry {
-			isDir, err := util.IsDirectory(path)
-			if err == nil {
-				if isDir {
-					subdirFiles, err := ioutil.ReadDir(path)
-					if err == nil {
-						for _, subdirFile := range subdirFiles {
-							if !subdirFile.IsDir() {
-								files = append(files, "file://"+filepath.Join(path, subdirFile.Name()))
-							}
-						}
-					}
-				} else {
-					files = append(files, "file://"+path)
-				}
-			}
+			files = append(files, urlsFromDirectory(path)...)
 		} else {
-			if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+			if util.IsHttpUrl(file) {
 				files = append(files, path)
 			}
-			if strings.HasPrefix(file, "s3://") {
+			if util.IsS3Url(file) {
 				files = append(files, path)
 			}
 		}
@@ -153,14 +139,34 @@ func (command *RenderV2Command) filesToSubmit() []string {
 	return files
 }
 
+func urlsFromDirectory(path string) []string {
+	files := make([]string, 0, 0)
+	isDir, err := util.IsDirectory(path)
+	if err == nil {
+		if isDir {
+			subdirFiles, err := ioutil.ReadDir(path)
+			if err == nil {
+				for _, subdirFile := range subdirFiles {
+					if !subdirFile.IsDir() {
+						files = append(files, "file://"+filepath.Join(path, subdirFile.Name()))
+					}
+				}
+			}
+		} else {
+			files = append(files, "file://"+path)
+		}
+	}
+	return files
+}
+
 func (command *RenderV2Command) absFilePath(file string) (bool, string) {
-	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+	if util.IsHttpUrl(file) {
 		return false, file
 	}
-	if strings.HasPrefix(file, "s3://") {
+	if util.IsS3Url(file) {
 		return false, file
 	}
-	if strings.HasPrefix(file, "file://") {
+	if util.IsFileUrl(file) {
 		return true, file[7:]
 	}
 	if strings.HasPrefix(file, "/") {
