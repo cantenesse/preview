@@ -9,7 +9,7 @@ import (
 
 var assetActionVideoURL = assetAction(5)
 
-func (blueprint *apiV2Blueprint) getAsset(fileId, templateId, page string) (assetAction, string) {
+func (blueprint *apiBlueprint) getAsset(fileId, templateId, page string) (assetAction, string) {
 	generatedAssets, err := blueprint.gasm.FindBySourceAssetId(fileId)
 	if err != nil {
 		log.Println("Error finding generated asset")
