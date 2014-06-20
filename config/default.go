@@ -23,7 +23,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "common": {
       "placeholderBasePath":"` + basePathFunc("placeholders") + `",
       "placeholderGroups": {
-         "image":["jpg", "jpeg", "png", "gif"],
+         "image":["jpg", "jpeg", "png", "gif", "pdf"],
          "document":["doc", "docx"],
          "video":["mp4"]
       },
@@ -46,7 +46,8 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "videoRenderAgent":{
       "enabled":false,
       "count":16,
-      "basePath":"` + basePathFunc("videoRenderAgentTmp") + `"
+      "basePath":"` + basePathFunc("videoRenderAgentTmp") + `",
+      "supportedFileTypes":["mp4"]
    },
    "imageMagickRenderAgent":{
       "enabled":true,

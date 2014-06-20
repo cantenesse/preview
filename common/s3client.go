@@ -208,13 +208,11 @@ func (client *AmazonS3Client) executeRequest(method, url string, body io.Reader,
 		log.Println("Error creating request", request)
 		return nil, err
 	}
-	log.Println(request)
 	for header, headerValue := range headers {
 		request.Header.Set(header, headerValue)
 	}
 	httpClient := NewHttpClient(client.config.verifySsl, 30*time.Second)
 	response, err := httpClient.Do(request)
-	log.Println(response)
 	if err != nil {
 		log.Println("Error executing reqest", err)
 		return nil, err
