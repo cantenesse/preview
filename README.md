@@ -141,23 +141,30 @@ By default, the application will use the following configuration json:
       "enabled":true,
       "count":16,
       "basePath":"/var/preview/tmp/document",
-      "supportedFileTypes":{
-         "doc":33554432,
-         "docx":33554432,
-         "ppt":33554432,
-      }
+      "supportedFileTypes":[
+         "doc",
+         "docx",
+         "ppt"
+      ]
    },
    "imageMagickRenderAgent":{
       "enabled":true,
       "count":16,
-      "supportedFileTypes":{
-         "jpg":33554432,
-         "jpeg":33554432,
-         "png":33554432,
-         "gif":33554432,
-         "pdf":33554432
-      }
+      "supportedFileTypes":[
+         "jpg",
+         "jpeg",
+         "png",
+         "gif",
+         "pdf"
+      ]
    },
+   "videoRenderAgent":{
+      "enabled":false,
+      "count": 16,
+      "supportedFileTypes":[
+         "mp4"
+      ]
+   }
    "simpleApi":{
       "enabled":true,
       "baseUrl": "/api",
