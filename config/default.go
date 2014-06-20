@@ -24,7 +24,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
       "placeholderBasePath":"` + basePathFunc("placeholders") + `",
       "placeholderGroups": {
          "image":["jpg", "jpeg", "png", "gif"],
-         "document":["pdf", "doc", "docx"],
+         "document":["doc", "docx"],
          "video":["mp4"]
       },
       "localAssetStoragePath":"` + basePathFunc("assets") + `",
@@ -40,7 +40,8 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "documentRenderAgent":{
       "enabled":true,
       "count":16,
-      "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
+      "basePath":"` + basePathFunc("documentRenderAgentTmp") + `",
+      "supportedFileTypes":["doc", "docx", "ppt", "pptx"]
    },
    "videoRenderAgent":{
       "enabled":false,
@@ -50,13 +51,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "imageMagickRenderAgent":{
       "enabled":true,
       "count":16,
-      "supportedFileTypes":{
-         "jpg":33554432,
-         "jpeg":33554432,
-         "png":33554432,
-         "gif":33554432,
-         "pdf":33554432
-      }
+      "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"]
    },
    "simpleApi":{
       "enabled":true,

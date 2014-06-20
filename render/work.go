@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/common"
+	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
 	"log"
 	"strconv"
@@ -13,19 +14,21 @@ import (
 )
 
 type RenderAgentManager struct {
-	sourceAssetStorageManager    common.SourceAssetStorageManager
-	generatedAssetStorageManager common.GeneratedAssetStorageManager
-	templateManager              common.TemplateManager
-	temporaryFileManager         common.TemporaryFileManager
-	uploader                     common.Uploader
-	workStatus                   RenderStatusChannel
-	workChannels                 map[string]RenderAgentWorkChannel
-	renderAgents                 map[string][]RenderAgent
-	activeWork                   map[string][]string
-	maxWork                      map[string]int
-	enabledRenderAgents          map[string]bool
-	renderAgentCount             map[string]int
-	videoSupportedFileTypes      []string
+	sourceAssetStorageManager     common.SourceAssetStorageManager
+	generatedAssetStorageManager  common.GeneratedAssetStorageManager
+	templateManager               common.TemplateManager
+	temporaryFileManager          common.TemporaryFileManager
+	uploader                      common.Uploader
+	workStatus                    RenderStatusChannel
+	workChannels                  map[string]RenderAgentWorkChannel
+	renderAgents                  map[string][]RenderAgent
+	activeWork                    map[string][]string
+	maxWork                       map[string]int
+	enabledRenderAgents           map[string]bool
+	renderAgentCount              map[string]int
+	documentSupportedFileTypes    []string
+	imageMagickSupportedFileTypes []string
+	videoSupportedFileTypes       []string
 
 	documentMetrics    *documentRenderAgentMetrics
 	imageMagickMetrics *imageMagickRenderAgentMetrics
@@ -50,6 +53,8 @@ func NewRenderAgentManager(
 	zencoder *zencoder.Zencoder,
 	s3bucket string,
 	notificationUrl string,
+	documentSupportedFileTypes []string,
+	imageMagickSupportedFileTypes []string,
 	videoSupportedFileTypes []string) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
@@ -70,14 +75,16 @@ func NewRenderAgentManager(
 	agentManager.enabledRenderAgents = make(map[string]bool)
 	agentManager.renderAgentCount = make(map[string]int)
 
-	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry)
-	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry)
+	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry, documentSupportedFileTypes)
+	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry, imageMagickSupportedFileTypes)
 	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry, videoSupportedFileTypes)
 
 	agentManager.zencoder = zencoder
 	agentManager.zencoderS3Bucket = s3bucket
 	agentManager.zencoderNotificationUrl = notificationUrl
 
+	agentManager.documentSupportedFileTypes = documentSupportedFileTypes
+	agentManager.imageMagickSupportedFileTypes = imageMagickSupportedFileTypes
 	agentManager.videoSupportedFileTypes = videoSupportedFileTypes
 
 	agentManager.stop = make(chan (chan bool))
@@ -250,12 +257,14 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 
 func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*common.Template, string, error) {
 	var templateIds []string
-	if fileType == "doc" || fileType == "docx" || fileType == "pptx" {
+	if util.Contains(agentManager.documentSupportedFileTypes, fileType) {
 		templateIds = []string{common.DocumentConversionTemplateId}
-	} else if contains(agentManager.videoSupportedFileTypes, fileType) {
+	} else if util.Contains(agentManager.videoSupportedFileTypes, fileType) {
 		templateIds = []string{common.VideoConversionTemplateId}
-	} else {
+	} else if util.Contains(agentManager.imageMagickSupportedFileTypes, fileType) {
 		templateIds = common.LegacyDefaultTemplates
+	} else {
+		return nil, common.GeneratedAssetStatusFailed, common.ErrorNoRenderersSupportFileType
 	}
 	templates, err := agentManager.templateManager.FindByIds(templateIds)
 	for _, t := range templates {
@@ -265,15 +274,6 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 		return nil, common.GeneratedAssetStatusFailed, err
 	}
 	return templates, common.DefaultGeneratedAssetStatus, nil
-}
-
-func contains(container []string, key string) bool {
-	for _, s := range container {
-		if s == key {
-			return true
-		}
-	}
-	return false
 }
 
 func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status string, template *common.Template) (string, func()) {
