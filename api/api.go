@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-type apiV2Blueprint struct {
+type apiBlueprint struct {
 	base                         string
 	agentManager                 *render.RenderAgentManager
 	gasm                         common.GeneratedAssetStorageManager
@@ -28,7 +28,7 @@ type apiV2Blueprint struct {
 	previewGAInfoRequestsMeter   metrics.Meter
 }
 
-type generatePreviewRequestV2 struct {
+type apiGeneratePreviewRequest struct {
 	id          string
 	url         string
 	attributes  map[string][]string
@@ -53,15 +53,17 @@ type extendedSourcedAsset struct {
 	GeneratedAssets []*common.GeneratedAsset `json:"generatedAssets"`
 }
 
-func NewApiV2Blueprint(
+type GeneratedAssetList []*common.GeneratedAsset
+
+func NewApiBlueprint(
 	base string,
 	agentManager *render.RenderAgentManager,
 	gasm common.GeneratedAssetStorageManager,
 	sasm common.SourceAssetStorageManager,
 	registry metrics.Registry,
 	s3Client common.S3Client,
-	storagePath string) *apiV2Blueprint {
-	bp := new(apiV2Blueprint)
+	storagePath string) *apiBlueprint {
+	bp := new(apiBlueprint)
 	bp.base = base
 	bp.agentManager = agentManager
 	bp.gasm = gasm
@@ -75,16 +77,16 @@ func NewApiV2Blueprint(
 	bp.previewGADataRequestsMeter = metrics.NewMeter()
 	bp.previewGAInfoRequestsMeter = metrics.NewMeter()
 
-	registry.Register("apiV2.generatePreviewRequests", bp.generatePreviewRequestsMeter)
-	registry.Register("apiV2.previewQueries", bp.previewQueriesMeter)
-	registry.Register("apiV2.previewInfoRequests", bp.previewInfoRequestsMeter)
-	registry.Register("apiV2.previewGADataRequests", bp.previewGADataRequestsMeter)
-	registry.Register("apiV2.previewGAInfoRequests", bp.previewGAInfoRequestsMeter)
+	registry.Register("api.generatePreviewRequests", bp.generatePreviewRequestsMeter)
+	registry.Register("api.previewQueries", bp.previewQueriesMeter)
+	registry.Register("api.previewInfoRequests", bp.previewInfoRequestsMeter)
+	registry.Register("api.previewGADataRequests", bp.previewGADataRequestsMeter)
+	registry.Register("api.previewGAInfoRequests", bp.previewGAInfoRequestsMeter)
 
 	return bp
 }
 
-func (blueprint *apiV2Blueprint) AddRoutes(p *pat.PatternServeMux) {
+func (blueprint *apiBlueprint) AddRoutes(p *pat.PatternServeMux) {
 	p.Put(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
 	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/:page/data"), http.HandlerFunc(blueprint.PreviewGADataHandler))
 	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/:page"), http.HandlerFunc(blueprint.PreviewGAInfoHandler))
@@ -93,11 +95,11 @@ func (blueprint *apiV2Blueprint) AddRoutes(p *pat.PatternServeMux) {
 	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.PreviewQueryHandler))                 // Search - /preview/?id=1234&id=5678
 }
 
-func (blueprint *apiV2Blueprint) buildUrl(path string) string {
+func (blueprint *apiBlueprint) buildUrl(path string) string {
 	return blueprint.base + path
 }
 
-func (blueprint *apiV2Blueprint) PreviewQueryHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) PreviewQueryHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewQueriesMeter.Mark(1)
 
 	ids, hasIds := req.URL.Query()["id"]
@@ -118,7 +120,7 @@ func (blueprint *apiV2Blueprint) PreviewQueryHandler(res http.ResponseWriter, re
 	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
-func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewInfoRequestsMeter.Mark(1)
 	id := req.URL.Query().Get(":id")
 
@@ -133,7 +135,7 @@ func (blueprint *apiV2Blueprint) PreviewInfoHandler(res http.ResponseWriter, req
 	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
-func (blueprint *apiV2Blueprint) PreviewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) PreviewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewGAInfoRequestsMeter.Mark(1)
 
 	id := req.URL.Query().Get(":id")
@@ -151,7 +153,7 @@ func (blueprint *apiV2Blueprint) PreviewGAInfoHandler(res http.ResponseWriter, r
 	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
-func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) PreviewGADataHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewGADataRequestsMeter.Mark(1)
 
 	id := req.URL.Query().Get(":id")
@@ -188,7 +190,7 @@ func (blueprint *apiV2Blueprint) PreviewGADataHandler(res http.ResponseWriter, r
 	http.NotFound(res, req)
 }
 
-func (blueprint *apiV2Blueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.generatePreviewRequestsMeter.Mark(1)
 
 	body, err := ioutil.ReadAll(req.Body)
@@ -199,7 +201,7 @@ func (blueprint *apiV2Blueprint) GeneratePreviewHandler(res http.ResponseWriter,
 	}
 	defer req.Body.Close()
 
-	gprs, err := newGeneratePreviewRequestV2(string(body))
+	gprs, err := newApiGeneratePreviewRequest(string(body))
 	if err != nil {
 		res.Header().Set("Content-Length", "0")
 		res.WriteHeader(400)
@@ -228,7 +230,7 @@ func (view *sourceAssetView) Serialize() ([]byte, error) {
 	return bytes, nil
 }
 
-func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byte, error) {
+func (blueprint *apiBlueprint) marshalSourceAssetsFromIds(ids []string) ([]byte, error) {
 	var data sourceAssetView
 
 	for _, id := range ids {
@@ -260,13 +262,27 @@ func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byt
 	return jsonData, nil
 }
 
-func (blueprint *apiV2Blueprint) marshalGeneratedAssets(said, templateId, page string) ([]byte, error) {
+func (gal GeneratedAssetList) Serialize(single bool) ([]byte, error) {
+	var bytes []byte
+	var err error
+	if single {
+		bytes, err = json.Marshal(gal[0])
+	} else {
+		bytes, err = json.Marshal(gal)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
+func (blueprint *apiBlueprint) marshalGeneratedAssets(said, templateId, page string) ([]byte, error) {
 	gas, err := blueprint.gasm.FindBySourceAssetId(said)
 	if err != nil {
 		return nil, err
 	}
 
-	var arr []*common.GeneratedAsset
+	var arr GeneratedAssetList
 	for _, g := range gas {
 		if g.TemplateId == templateId {
 			if len(page) > 0 {
@@ -288,14 +304,9 @@ func (blueprint *apiV2Blueprint) marshalGeneratedAssets(said, templateId, page s
 		log.Println("Could not find GeneratedAssets with source and template id", err)
 		return nil, common.ErrorUnableToFindGeneratedAssetsById
 	}
-	var jsonData []byte
-	// If the caller gave a page, return the asset itself. Otherwise return an array of GAs
-	if len(page) > 0 {
-		jsonData, err = json.Marshal(arr[0])
-	} else {
-		jsonData, err = json.Marshal(arr)
-	}
 
+	// If the caller gave a page, return the asset itself. Otherwise return an array of GAs
+	jsonData, err := arr.Serialize(len(page) == 0)
 	if err != nil {
 		log.Println("Serialization error:", err)
 		return nil, common.ErrorCouldNotSerializeGeneratedAssets
@@ -303,15 +314,15 @@ func (blueprint *apiV2Blueprint) marshalGeneratedAssets(said, templateId, page s
 	return jsonData, nil
 }
 
-func newGeneratePreviewRequestV2(body string) ([]*generatePreviewRequestV2, error) {
+func newApiGeneratePreviewRequest(body string) ([]*apiGeneratePreviewRequest, error) {
 	var data userPreviewRequest
 	err := json.Unmarshal([]byte(body), &data)
 	if err != nil {
 		return nil, err
 	}
-	gprs := make([]*generatePreviewRequestV2, 0, 0)
+	gprs := make([]*apiGeneratePreviewRequest, 0, 0)
 	for _, sourceAsset := range data.SourceAssets {
-		gpr := new(generatePreviewRequestV2)
+		gpr := new(apiGeneratePreviewRequest)
 		gpr.id = sourceAsset.Id
 		gpr.url = sourceAsset.Url
 		gpr.attributes = sourceAsset.Attributes

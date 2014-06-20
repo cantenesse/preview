@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestGPRV2(t *testing.T) {
+func TestApiGPR(t *testing.T) {
 
 	ida, err := util.NewUuid()
 	if err != nil {
@@ -51,7 +51,7 @@ func TestGPRV2(t *testing.T) {
         ]
 }
 `
-	gprs, err := newGeneratePreviewRequestV2(data)
+	gprs, err := newApiGeneratePreviewRequest(data)
 	if err != nil {
 		t.Errorf("Error creating GPR", err)
 	}
@@ -64,7 +64,7 @@ func TestGPRV2(t *testing.T) {
 	"templateIds": [ ]
 }
 `
-	gprs, err = newGeneratePreviewRequestV2(emptyData)
+	gprs, err = newApiGeneratePreviewRequest(emptyData)
 	if err != nil {
 		t.Errorf("Error creating GPR", err)
 	}
@@ -77,14 +77,14 @@ func TestGPRV2(t *testing.T) {
 	"templateIds": [ { "this":"is a completely invalid request"}]
 }
 `
-	gprs, err = newGeneratePreviewRequestV2(invalidData)
+	gprs, err = newApiGeneratePreviewRequest(invalidData)
 	if err == nil {
 		t.Errorf("Invalid data should have given an error")
 	}
 }
 
 // From the render/ tests
-func setupTest(path string) (*render.RenderAgentManager, common.SourceAssetStorageManager, common.GeneratedAssetStorageManager, common.TemplateManager, *apiV2Blueprint) {
+func setupTest(path string) (*render.RenderAgentManager, common.SourceAssetStorageManager, common.GeneratedAssetStorageManager, common.TemplateManager, *apiBlueprint) {
 	tm := common.NewTemplateManager()
 	sourceAssetStorageManager := common.NewSourceAssetStorageManager()
 	generatedAssetStorageManager := common.NewGeneratedAssetStorageManager(tm)
@@ -97,7 +97,7 @@ func setupTest(path string) (*render.RenderAgentManager, common.SourceAssetStora
 
 	//rm.AddImageMagickRenderAgent(downloader, uploader, 5)
 	//rm.AddDocumentRenderAgent(downloader, uploader, filepath.Join(path, "doc-cache"), 5)
-	blueprint := NewApiV2Blueprint("/api/v2", rm, generatedAssetStorageManager, sourceAssetStorageManager, registry, nil, path)
+	blueprint := NewApiBlueprint("/api/v2", rm, generatedAssetStorageManager, sourceAssetStorageManager, registry, nil, path)
 	return rm, sourceAssetStorageManager, generatedAssetStorageManager, tm, blueprint
 }
 
@@ -138,7 +138,7 @@ func TestGAMarshalling(t *testing.T) {
 	}
 	gasm.Store(ga)
 
-	jsonData, err := blueprint.marshalGeneratedAssets(sourceAssetId, templateId, "")
+	jsonData, err := blueprint.marshalGeneratedAssets(sourceAssetId, templateId, "0")
 	if err != nil {
 		t.Errorf("Unexpected error returned: %s", err)
 		return
