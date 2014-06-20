@@ -75,7 +75,7 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 		headers["Authorization"] = fmt.Sprintf("AWS %s:%s", client.config.key, signature)
 	}
 	url := fmt.Sprintf("%s/%s", processUrl(client.config.host, s3object.Bucket(), client.config.urlCompatMode), s3object.FileName())
-	log.Println("Publishing objec to", url)
+	log.Println("Publishing object to", url)
 	_, err := client.submitPutRequest(url, content, headers)
 	if err != nil {
 		log.Println("error submitting put request:", err.Error())
@@ -182,7 +182,6 @@ func (client *AmazonS3Client) submitPutRequest(url string, payload []byte, heade
 	log.Println("Got a response", response)
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
-	log.Println(string(body), err)
 	if err != nil {
 		return nil, err
 	}
