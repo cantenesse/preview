@@ -197,6 +197,7 @@ func (app *AppContext) initRenderers() error {
 	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, app.appConfig.VideoRenderAgent.ZencoderS3Bucket, app.appConfig.VideoRenderAgent.ZencoderNotificationUrl, app.appConfig.DocumentRenderAgent.SupportedFileTypes, app.appConfig.ImageMagickRenderAgent.SupportedFileTypes, app.appConfig.VideoRenderAgent.SupportedFileTypes)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent.Enabled, app.appConfig.ImageMagickRenderAgent.Count)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent.Enabled, app.appConfig.DocumentRenderAgent.Count)
+	app.agentManager.SetRenderAgentInfo(common.RenderAgentVideo, app.appConfig.VideoRenderAgent.Enabled, app.appConfig.VideoRenderAgent.Count)
 	if app.appConfig.ImageMagickRenderAgent.Enabled {
 		for i := 0; i < app.appConfig.ImageMagickRenderAgent.Count; i++ {
 			app.agentManager.AddImageMagickRenderAgent(app.downloader, app.uploader, 5)

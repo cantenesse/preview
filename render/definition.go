@@ -161,7 +161,7 @@ func (renderAgent *genericRenderAgent) commitStatus(id string, existingAttribute
 				{
 					if !ok {
 						for _, listener := range renderAgent.statusListeners {
-							listener <- RenderStatus{id, status, common.RenderAgentDocument}
+							listener <- RenderStatus{id, status, renderAgent.name}
 						}
 						generatedAsset, err := renderAgent.gasm.FindById(id)
 						if err != nil {

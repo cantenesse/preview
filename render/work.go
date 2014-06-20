@@ -338,7 +338,7 @@ func (agentManager *RenderAgentManager) Stop() {
 }
 
 func (agentManager *RenderAgentManager) AddImageMagickRenderAgent(downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) *genericRenderAgent {
-	renderAgent := newGenericRenderAgent("ImageMagickRenderAgent", agentManager.imageMagickMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentImageMagick])
+	renderAgent := newGenericRenderAgent(common.RenderAgentImageMagick, agentManager.imageMagickMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentImageMagick])
 	renderer := newImageMagickRenderer(renderAgent)
 	renderAgent.attachRenderer(renderer)
 	go renderAgent.start()
@@ -348,7 +348,7 @@ func (agentManager *RenderAgentManager) AddImageMagickRenderAgent(downloader com
 }
 
 func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common.Downloader, uploader common.Uploader, docCachePath string, maxWorkIncrease int) *genericRenderAgent {
-	renderAgent := newGenericRenderAgent("DocumentRenderAgent", agentManager.documentMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentDocument])
+	renderAgent := newGenericRenderAgent(common.RenderAgentDocument, agentManager.documentMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentDocument])
 	renderer := newDocumentRenderer(renderAgent, docCachePath)
 	renderAgent.attachRenderer(renderer)
 	go renderAgent.start()
@@ -358,7 +358,7 @@ func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common
 }
 
 func (agentManager *RenderAgentManager) AddVideoRenderAgent(downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) *genericRenderAgent {
-	renderAgent := newGenericRenderAgent("VideoRenderAgent", agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentVideo])
+	renderAgent := newGenericRenderAgent(common.RenderAgentVideo, agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentVideo])
 	renderer := newVideoRenderer(renderAgent, agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
 	renderAgent.attachRenderer(renderer)
 	go renderAgent.start()
