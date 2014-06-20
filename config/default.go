@@ -46,7 +46,6 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "videoRenderAgent":{
       "enabled":false,
       "count":16,
-      "basePath":"` + basePathFunc("videoRenderAgentTmp") + `",
       "supportedFileTypes":["mp4"]
    },
    "imageMagickRenderAgent":{
