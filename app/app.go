@@ -209,7 +209,7 @@ func (app *AppContext) initRenderers() error {
 	}
 	if app.appConfig.VideoRenderAgent.Enabled {
 		for i := 0; i < app.appConfig.VideoRenderAgent.Count; i++ {
-			app.agentManager.AddVideoRenderAgent(5)
+			app.agentManager.AddVideoRenderAgent(nil, nil, 5)
 		}
 	}
 	return nil

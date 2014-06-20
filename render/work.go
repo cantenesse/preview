@@ -14,25 +14,27 @@ import (
 )
 
 type RenderAgentManager struct {
-	sourceAssetStorageManager     common.SourceAssetStorageManager
-	generatedAssetStorageManager  common.GeneratedAssetStorageManager
-	templateManager               common.TemplateManager
-	temporaryFileManager          common.TemporaryFileManager
-	uploader                      common.Uploader
-	workStatus                    RenderStatusChannel
-	workChannels                  map[string]RenderAgentWorkChannel
-	renderAgents                  map[string][]RenderAgent
-	activeWork                    map[string][]string
-	maxWork                       map[string]int
-	enabledRenderAgents           map[string]bool
-	renderAgentCount              map[string]int
+	sourceAssetStorageManager    common.SourceAssetStorageManager
+	generatedAssetStorageManager common.GeneratedAssetStorageManager
+	templateManager              common.TemplateManager
+	temporaryFileManager         common.TemporaryFileManager
+	uploader                     common.Uploader
+	workStatus                   RenderStatusChannel
+	workChannels                 map[string]RenderAgentWorkChannel
+	renderAgents                 map[string][]*genericRenderAgent
+	activeWork                   map[string][]string
+	maxWork                      map[string]int
+	enabledRenderAgents          map[string]bool
+	renderAgentCount             map[string]int
+
+	// TODO: Store renderAgents in a map, with a string key corresponding to the type of agent.
 	documentSupportedFileTypes    []string
 	imageMagickSupportedFileTypes []string
 	videoSupportedFileTypes       []string
 
-	documentMetrics    *documentRenderAgentMetrics
-	imageMagickMetrics *imageMagickRenderAgentMetrics
-	videoMetrics       *videoRenderAgentMetrics
+	documentMetrics    *RenderAgentMetrics
+	imageMagickMetrics *RenderAgentMetrics
+	videoMetrics       *RenderAgentMetrics
 
 	stop chan (chan bool)
 	mu   sync.Mutex
@@ -69,15 +71,15 @@ func NewRenderAgentManager(
 	for _, renderAgent := range common.RenderAgents {
 		agentManager.workChannels[renderAgent] = make(RenderAgentWorkChannel, 200)
 	}
-	agentManager.renderAgents = make(map[string][]RenderAgent)
+	agentManager.renderAgents = make(map[string][]*genericRenderAgent)
 	agentManager.activeWork = make(map[string][]string)
 	agentManager.maxWork = make(map[string]int)
 	agentManager.enabledRenderAgents = make(map[string]bool)
 	agentManager.renderAgentCount = make(map[string]int)
 
-	agentManager.documentMetrics = newDocumentRenderAgentMetrics(registry, documentSupportedFileTypes)
-	agentManager.imageMagickMetrics = newImageMagickRenderAgentMetrics(registry, imageMagickSupportedFileTypes)
-	agentManager.videoMetrics = newVideoRenderAgentMetrics(registry, videoSupportedFileTypes)
+	agentManager.documentMetrics = newRenderAgentMetrics(registry, "document", documentSupportedFileTypes)
+	agentManager.imageMagickMetrics = newRenderAgentMetrics(registry, "imageMagick", imageMagickSupportedFileTypes)
+	agentManager.videoMetrics = newRenderAgentMetrics(registry, "video", videoSupportedFileTypes)
 
 	agentManager.zencoder = zencoder
 	agentManager.zencoderS3Bucket = s3bucket
@@ -335,34 +337,43 @@ func (agentManager *RenderAgentManager) Stop() {
 	close(agentManager.stop)
 }
 
-func (agentManager *RenderAgentManager) AddImageMagickRenderAgent(downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) RenderAgent {
-	renderAgent := newImageMagickRenderAgent(agentManager.imageMagickMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentImageMagick])
+func (agentManager *RenderAgentManager) AddImageMagickRenderAgent(downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) *genericRenderAgent {
+	renderAgent := newGenericRenderAgent("ImageMagickRenderAgent", agentManager.imageMagickMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentImageMagick])
+	renderer := newImageMagickRenderer(renderAgent)
+	renderAgent.attachRenderer(renderer)
+	go renderAgent.start()
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentImageMagick, renderAgent, maxWorkIncrease)
 	return renderAgent
 }
 
-func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common.Downloader, uploader common.Uploader, docCachePath string, maxWorkIncrease int) RenderAgent {
-	renderAgent := newDocumentRenderAgent(agentManager.documentMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, docCachePath, agentManager.workChannels[common.RenderAgentDocument])
+func (agentManager *RenderAgentManager) AddDocumentRenderAgent(downloader common.Downloader, uploader common.Uploader, docCachePath string, maxWorkIncrease int) *genericRenderAgent {
+	renderAgent := newGenericRenderAgent("DocumentRenderAgent", agentManager.documentMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentDocument])
+	renderer := newDocumentRenderer(renderAgent, docCachePath)
+	renderAgent.attachRenderer(renderer)
+	go renderAgent.start()
 	renderAgent.AddStatusListener(agentManager.workStatus)
 	agentManager.AddRenderAgent(common.RenderAgentDocument, renderAgent, maxWorkIncrease)
 	return renderAgent
 }
 
-func (agentManager *RenderAgentManager) AddVideoRenderAgent(maxWorkIncrease int) RenderAgent {
-	renderAgent := newVideoRenderAgent(agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.workChannels[common.RenderAgentVideo], agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
+func (agentManager *RenderAgentManager) AddVideoRenderAgent(downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) *genericRenderAgent {
+	renderAgent := newGenericRenderAgent("VideoRenderAgent", agentManager.videoMetrics, agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[common.RenderAgentVideo])
+	renderer := newVideoRenderer(renderAgent, agentManager.zencoder, agentManager.zencoderS3Bucket, agentManager.zencoderNotificationUrl)
+	renderAgent.attachRenderer(renderer)
+	go renderAgent.start()
 	renderAgent.AddStatusListener(agentManager.workStatus)
-	agentManager.AddRenderAgent(common.RenderAgentVideo, renderAgent, maxWorkIncrease)
+	agentManager.AddRenderAgent(common.RenderAgentDocument, renderAgent, maxWorkIncrease)
 	return renderAgent
 }
 
-func (agentManager *RenderAgentManager) AddRenderAgent(name string, renderAgent RenderAgent, maxWorkIncrease int) {
+func (agentManager *RenderAgentManager) AddRenderAgent(name string, renderAgent *genericRenderAgent, maxWorkIncrease int) {
 	agentManager.mu.Lock()
 	defer agentManager.mu.Unlock()
 
 	renderAgents, hasRenderAgents := agentManager.renderAgents[name]
 	if !hasRenderAgents {
-		renderAgents = make([]RenderAgent, 0, 0)
+		renderAgents = make([]*genericRenderAgent, 0, 0)
 		renderAgents = append(renderAgents, renderAgent)
 		agentManager.renderAgents[name] = renderAgents
 		agentManager.maxWork[name] = maxWorkIncrease
