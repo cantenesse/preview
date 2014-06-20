@@ -136,22 +136,6 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, newAttributes}
 }
 
-func (renderer *imageMagickRenderer) getBounds(path string) (*image.Rectangle, error) {
-	reader, err := os.Open(path)
-	if err != nil {
-		log.Println("os.Open error", err)
-		return nil, err
-	}
-	defer reader.Close()
-	image, err := jpeg.Decode(reader)
-	if err != nil {
-		log.Println("jpeg.Decode error", err)
-		return nil, err
-	}
-	bounds := image.Bounds()
-	return &bounds, nil
-}
-
 func (renderer *imageMagickRenderer) resize(source, destination string, size int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
@@ -219,6 +203,22 @@ func (renderer *imageMagickRenderer) firstGifFrame(source, destination string, s
 	log.Println(buf.String())
 
 	return nil
+}
+
+func (renderer *imageMagickRenderer) getBounds(path string) (*image.Rectangle, error) {
+	reader, err := os.Open(path)
+	if err != nil {
+		log.Println("os.Open error", err)
+		return nil, err
+	}
+	defer reader.Close()
+	image, err := jpeg.Decode(reader)
+	if err != nil {
+		log.Println("jpeg.Decode error", err)
+		return nil, err
+	}
+	bounds := image.Bounds()
+	return &bounds, nil
 }
 
 func (renderer *imageMagickRenderer) getSize(template *common.Template) (int, error) {

@@ -363,7 +363,7 @@ func (agentManager *RenderAgentManager) AddVideoRenderAgent(downloader common.Do
 	renderAgent.attachRenderer(renderer)
 	go renderAgent.start()
 	renderAgent.AddStatusListener(agentManager.workStatus)
-	agentManager.AddRenderAgent(common.RenderAgentDocument, renderAgent, maxWorkIncrease)
+	agentManager.AddRenderAgent(common.RenderAgentVideo, renderAgent, maxWorkIncrease)
 	return renderAgent
 }
 

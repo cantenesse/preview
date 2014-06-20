@@ -78,7 +78,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	}
 	defer sourceFile.Release()
 
-	//      // 5. Create a temporary destination directory.
+	// 5. Create a temporary destination directory.
 	destination, err := renderer.createTemporaryDestinationDirectory()
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
