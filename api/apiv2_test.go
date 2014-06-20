@@ -12,11 +12,22 @@ import (
 )
 
 func TestGPRV2(t *testing.T) {
+
+	ida, err := util.NewUuid()
+	if err != nil {
+		t.Errorf("Error generating UUIDs", err)
+	}
+
+	idb, err := util.NewUuid()
+	if err != nil {
+		t.Errorf("Error generating UUIDs", err)
+	}
+
 	data := `
 {
 	"sourceAssets": [
 		{
-			"fileId": "c6ff303d-f7d7-11e3-8fd1-9810862cd6dc",
+			"fileId": "` + ida + `",
 			"url": "s3://bla/foo.jpg",
 			"attributes": {
 				"type": [
@@ -25,7 +36,7 @@ func TestGPRV2(t *testing.T) {
 			}
 		},
 		{
-			"fileId": "ca839ddd-f7d7-11e3-8fd1-9810862cd6dc",
+			"fileId": "` + idb + `",
 			"url": "file:///path/to/some/interesting/file/bla.pdf",
 			"attributes": {
 				"type": [
@@ -35,9 +46,9 @@ func TestGPRV2(t *testing.T) {
 		}
 	],
 	"templateIds": [
-		"4128966B-9F69-4E56-AD5C-1FDB3C24F910",
-		"12334567-ABCD-EF12-3456-789ABCDE0123"
-	]
+                "` + common.LegacyDefaultTemplates[0] + `",
+                "` + common.DocumentConversionTemplateId + `"
+        ]
 }
 `
 	gprs, err := newGeneratePreviewRequestV2(data)
@@ -82,7 +93,7 @@ func setupTest(path string) (*render.RenderAgentManager, common.SourceAssetStora
 	//downloader := common.NewDownloader(path, path, tfm, false, []string{}, nil)
 	uploader := common.NewLocalUploader(path)
 	registry := metrics.NewRegistry()
-	rm := render.NewRenderAgentManager(registry, sourceAssetStorageManager, generatedAssetStorageManager, tm, tfm, uploader, true, nil, "", "", nil)
+	rm := render.NewRenderAgentManager(registry, sourceAssetStorageManager, generatedAssetStorageManager, tm, tfm, uploader, true, nil, "", "", nil, nil, nil)
 
 	//rm.AddImageMagickRenderAgent(downloader, uploader, 5)
 	//rm.AddDocumentRenderAgent(downloader, uploader, filepath.Join(path, "doc-cache"), 5)

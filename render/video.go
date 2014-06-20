@@ -28,7 +28,6 @@ type videoRenderAgent struct {
 type videoRenderAgentMetrics struct {
 	workProcessed metrics.Meter
 	convertTime   metrics.Timer
-	// TODO: finish metrics
 	fileTypeCount map[string]metrics.Counter
 }
 

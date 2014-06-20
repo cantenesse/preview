@@ -34,6 +34,15 @@ type generatePreviewRequestV2 struct {
 	templateIds []string
 }
 
+type sourceAssetView struct {
+	SourceAssets []extendedSourcedAsset `json:"sourceAssets"`
+}
+
+type extendedSourcedAsset struct {
+	SourceAsset     *common.SourceAsset      `json:"sourceAsset"`
+	GeneratedAssets []*common.GeneratedAsset `json:"generatedAssets"`
+}
+
 func NewApiV2Blueprint(
 	base string,
 	agentManager *render.RenderAgentManager,
@@ -206,15 +215,6 @@ func (blueprint *apiV2Blueprint) GeneratePreviewHandler(res http.ResponseWriter,
 		target += "id=" + gpr.id
 	}
 	http.Redirect(res, req, target, 303)
-}
-
-type sourceAssetView struct {
-	SourceAssets []extendedSourcedAsset `json:"sourceAssets"`
-}
-
-type extendedSourcedAsset struct {
-	SourceAsset     *common.SourceAsset      `json:"sourceAsset"`
-	GeneratedAssets []*common.GeneratedAsset `json:"generatedAssets"`
 }
 
 func (blueprint *apiV2Blueprint) marshalSourceAssetsFromIds(ids []string) ([]byte, error) {

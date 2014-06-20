@@ -39,7 +39,7 @@ func initTempFileManager(path string) *tempFileManager {
 		"http": {"listen": ":8081"},
 		"common": {"nodeId": "9D7DB7FC75B4", "placeholderBasePath": "./", "placeholderGroups": {"image": ["jpg"]}, "localAssetStoragePath":"./", "workDispatcherEnabled":true},
 		"storage": {"engine": "cassandra", "cassandraNodes": ["localhost"], "cassandraKeyspace": "preview"},
-		"imageMagickRenderAgent": {"enabled": true, "count": 16, "supportedFileTypes":{"jpg": 123456}},
+		"imageMagickRenderAgent": {"enabled": true, "count": 16, "supportedFileTypes":["jpg"]},
 		"documentRenderAgent": {"enabled": true, "count": 16, "basePath": "./"},
 		"simpleApi": {"enabled": true, "baseUrl":"/api", "edgeBaseUrl": "http://localhost:8080"},
 		"assetApi": {"basePath": "./", "enabled": true},
@@ -82,9 +82,6 @@ func TestBasicConfig(t *testing.T) {
 	}
 	if len(appConfig.ImageMagickRenderAgent.SupportedFileTypes) != 1 {
 		t.Error("Invalid count for appConfig.ImageMagickRenderAgent().SupportedFileTypes()", len(appConfig.ImageMagickRenderAgent.SupportedFileTypes))
-	}
-	if appConfig.ImageMagickRenderAgent.SupportedFileTypes["jpg"] != 123456 {
-		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().SupportedFileTypes()[\"jpg\"]", appConfig.ImageMagickRenderAgent.SupportedFileTypes["jpg"])
 	}
 
 	if appConfig.SimpleApi.Enabled != true {

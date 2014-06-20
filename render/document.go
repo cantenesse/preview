@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
@@ -33,10 +34,7 @@ type documentRenderAgent struct {
 type documentRenderAgentMetrics struct {
 	workProcessed metrics.Meter
 	convertTime   metrics.Timer
-	docCount      metrics.Counter
-	docxCount     metrics.Counter
-	pptCount      metrics.Counter
-	pptxCount     metrics.Counter
+	fileTypeCount map[string]metrics.Counter
 }
 
 func newDocumentRenderAgent(
@@ -70,21 +68,20 @@ func newDocumentRenderAgent(
 	return renderAgent
 }
 
-func newDocumentRenderAgentMetrics(registry metrics.Registry) *documentRenderAgentMetrics {
+func newDocumentRenderAgentMetrics(registry metrics.Registry, supportedFileTypes []string) *documentRenderAgentMetrics {
 	documentMetrics := new(documentRenderAgentMetrics)
 	documentMetrics.workProcessed = metrics.NewMeter()
 	documentMetrics.convertTime = metrics.NewTimer()
-	documentMetrics.docCount = metrics.NewCounter()
-	documentMetrics.docxCount = metrics.NewCounter()
-	documentMetrics.pptCount = metrics.NewCounter()
-	documentMetrics.pptxCount = metrics.NewCounter()
+
+	documentMetrics.fileTypeCount = make(map[string]metrics.Counter)
+
+	for _, filetype := range supportedFileTypes {
+		documentMetrics.fileTypeCount[filetype] = metrics.NewCounter()
+		registry.Register(fmt.Sprintf("documentRenderAgent.%sCount", filetype), documentMetrics.fileTypeCount[filetype])
+	}
 
 	registry.Register("documentRenderAgent.workProcessed", documentMetrics.workProcessed)
 	registry.Register("documentRenderAgent.convertTime", documentMetrics.convertTime)
-	registry.Register("documentRenderAgent.docCount", documentMetrics.docCount)
-	registry.Register("documentRenderAgent.docxCount", documentMetrics.docxCount)
-	registry.Register("documentRenderAgent.pptCount", documentMetrics.pptCount)
-	registry.Register("documentRenderAgent.pptxCount", documentMetrics.pptxCount)
 
 	return documentMetrics
 }
@@ -169,16 +166,7 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 
 	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
 	if err == nil {
-		switch fileType {
-		case "doc":
-			renderAgent.metrics.docCount.Inc(1)
-		case "docx":
-			renderAgent.metrics.docxCount.Inc(1)
-		case "ppt":
-			renderAgent.metrics.pptCount.Inc(1)
-		case "pptx":
-			renderAgent.metrics.pptxCount.Inc(1)
-		}
+		renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 	}
 
 	// 3. Get the template... not needed yet

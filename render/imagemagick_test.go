@@ -1,7 +1,6 @@
 package render
 
 import (
-	//	"fmt"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"github.com/ngerakines/testutils"
@@ -146,7 +145,7 @@ func setupTest(path string) (*RenderAgentManager, common.SourceAssetStorageManag
 	downloader := common.NewDownloader(path, path, tfm, false, []string{}, nil)
 	uploader := common.NewLocalUploader(path)
 	registry := metrics.NewRegistry()
-	rm := NewRenderAgentManager(registry, sourceAssetStorageManager, generatedAssetStorageManager, tm, tfm, uploader, true, nil, "", "", nil)
+	rm := NewRenderAgentManager(registry, sourceAssetStorageManager, generatedAssetStorageManager, tm, tfm, uploader, true, nil, "", "", []string{"docx"}, []string{"jpeg", "jpg", "png", "pdf", "gif"}, nil)
 
 	rm.AddImageMagickRenderAgent(downloader, uploader, 5)
 	rm.AddDocumentRenderAgent(downloader, uploader, filepath.Join(path, "doc-cache"), 5)

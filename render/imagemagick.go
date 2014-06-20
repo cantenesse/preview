@@ -32,10 +32,7 @@ type imageMagickRenderAgent struct {
 type imageMagickRenderAgentMetrics struct {
 	workProcessed metrics.Meter
 	convertTime   metrics.Timer
-	jpgCount      metrics.Counter
-	pngCount      metrics.Counter
-	gifCount      metrics.Counter
-	pdfCount      metrics.Counter
+	fileTypeCount map[string]metrics.Counter
 }
 
 func newImageMagickRenderAgent(
@@ -67,22 +64,20 @@ func newImageMagickRenderAgent(
 	return renderAgent
 }
 
-func newImageMagickRenderAgentMetrics(registry metrics.Registry) *imageMagickRenderAgentMetrics {
+func newImageMagickRenderAgentMetrics(registry metrics.Registry, supportedFileTypes []string) *imageMagickRenderAgentMetrics {
 	imageMagickMetrics := new(imageMagickRenderAgentMetrics)
 	imageMagickMetrics.workProcessed = metrics.NewMeter()
 	imageMagickMetrics.convertTime = metrics.NewTimer()
 
-	imageMagickMetrics.jpgCount = metrics.NewCounter()
-	imageMagickMetrics.pngCount = metrics.NewCounter()
-	imageMagickMetrics.gifCount = metrics.NewCounter()
-	imageMagickMetrics.pdfCount = metrics.NewCounter()
+	imageMagickMetrics.fileTypeCount = make(map[string]metrics.Counter)
+
+	for _, filetype := range supportedFileTypes {
+		imageMagickMetrics.fileTypeCount[filetype] = metrics.NewCounter()
+		registry.Register(fmt.Sprintf("imageMagickRenderAgent.%sCount", filetype), imageMagickMetrics.fileTypeCount[filetype])
+	}
 
 	registry.Register("imageMagickRenderAgent.workProcessed", imageMagickMetrics.workProcessed)
 	registry.Register("imageMagickRenderAgent.convertTime", imageMagickMetrics.convertTime)
-	registry.Register("imageMagickRenderAgent.jpgCount", imageMagickMetrics.jpgCount)
-	registry.Register("imageMagickRenderAgent.pngCount", imageMagickMetrics.pngCount)
-	registry.Register("imageMagickRenderAgent.gifCount", imageMagickMetrics.gifCount)
-	registry.Register("imageMagickRenderAgent.pdfCount", imageMagickMetrics.pdfCount)
 
 	return imageMagickMetrics
 }
@@ -157,18 +152,7 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 		return
 	}
 
-	switch fileType {
-	case "jpg":
-		renderAgent.metrics.jpgCount.Inc(1)
-	case "jpeg":
-		renderAgent.metrics.jpgCount.Inc(1)
-	case "png":
-		renderAgent.metrics.pngCount.Inc(1)
-	case "gif":
-		renderAgent.metrics.gifCount.Inc(1)
-	case "pdf":
-		renderAgent.metrics.pdfCount.Inc(1)
-	}
+	renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
 	templates, err := renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})
 	if err != nil {

@@ -39,15 +39,16 @@ type AppConfig struct {
 	} `json:"storage"`
 
 	ImageMagickRenderAgent struct {
-		Enabled            bool             `json:"enabled"`
-		Count              int              `json:"count"`
-		SupportedFileTypes map[string]int64 `json:"supportedFileTypes"`
+		Enabled            bool     `json:"enabled"`
+		Count              int      `json:"count"`
+		SupportedFileTypes []string `json:"supportedFileTypes"`
 	} `json:"imageMagickRenderAgent"`
 
 	DocumentRenderAgent struct {
-		Enabled  bool   `json:"enabled"`
-		Count    int    `json:"count"`
-		BasePath string `json:"basePath"`
+		Enabled            bool     `json:"enabled"`
+		Count              int      `json:"count"`
+		BasePath           string   `json:"basePath"`
+		SupportedFileTypes []string `json:"supportedFileTypes"`
 	} `json:"documentRenderAgent"`
 
 	VideoRenderAgent struct {

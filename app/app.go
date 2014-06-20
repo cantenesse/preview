@@ -194,7 +194,7 @@ func (app *AppContext) initStorage() error {
 func (app *AppContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, app.appConfig.VideoRenderAgent.ZencoderS3Bucket, app.appConfig.VideoRenderAgent.ZencoderNotificationUrl, app.appConfig.VideoRenderAgent.SupportedFileTypes)
+	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, app.appConfig.VideoRenderAgent.ZencoderS3Bucket, app.appConfig.VideoRenderAgent.ZencoderNotificationUrl, app.appConfig.DocumentRenderAgent.SupportedFileTypes, app.appConfig.ImageMagickRenderAgent.SupportedFileTypes, app.appConfig.VideoRenderAgent.SupportedFileTypes)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent.Enabled, app.appConfig.ImageMagickRenderAgent.Count)
 	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent.Enabled, app.appConfig.DocumentRenderAgent.Count)
 	if app.appConfig.ImageMagickRenderAgent.Enabled {
@@ -219,9 +219,6 @@ func (app *AppContext) initApis() error {
 	// NKG: This is where different APIs are configured and enabled.
 
 	allSupportedFileTypes := make(map[string]int64)
-	for fileType, maxFileSize := range app.appConfig.ImageMagickRenderAgent.SupportedFileTypes {
-		allSupportedFileTypes[fileType] = maxFileSize
-	}
 
 	app.signatureManager = api.NewSignatureManager()
 
