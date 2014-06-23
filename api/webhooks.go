@@ -36,6 +36,7 @@ func (blueprint *webhookBlueprint) zencoderApiHandler(res http.ResponseWriter, r
 	ga, err := blueprint.gasm.FindById(id)
 	if err != nil {
 		log.Println("Could not find GeneratedAsset with ID", id, "in Zencoder web hook")
+		http.Error(res, "", 500)
 		return
 	}
 	ga.Status = common.GeneratedAssetStatusComplete
