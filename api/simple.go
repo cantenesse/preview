@@ -158,19 +158,6 @@ func (blueprint *simpleBlueprint) handleGeneratePreviewRequest(gprs []*generateP
 	}
 }
 
-// Note: this function no longer works. Sorry!
-func (blueprint *simpleBlueprint) generatedAssetStatus(fileType string, fileSize int64) string {
-	// TODO: Check the expiration of the file.
-	maxSize, hasEntry := blueprint.supportedFileTypes[fileType]
-	if !hasEntry {
-		return common.NewGeneratedAssetError(common.ErrorNoRenderersSupportFileType)
-	}
-	if fileSize > maxSize {
-		return common.NewGeneratedAssetError(common.ErrorFileTooLarge)
-	}
-	return common.GeneratedAssetStatusWaiting
-}
-
 func (blueprint *simpleBlueprint) parseFileIds(req *http.Request) []string {
 	results := make([]string, 0, 0)
 
