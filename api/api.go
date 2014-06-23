@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/render"
@@ -20,7 +21,6 @@ type apiBlueprint struct {
 	gasm                         common.GeneratedAssetStorageManager
 	sasm                         common.SourceAssetStorageManager
 	s3Client                     common.S3Client
-	localAssetStoragePath        string
 	generatePreviewRequestsMeter metrics.Meter
 	previewQueriesMeter          metrics.Meter
 	previewInfoRequestsMeter     metrics.Meter
@@ -61,15 +61,13 @@ func NewApiBlueprint(
 	gasm common.GeneratedAssetStorageManager,
 	sasm common.SourceAssetStorageManager,
 	registry metrics.Registry,
-	s3Client common.S3Client,
-	storagePath string) *apiBlueprint {
+	s3Client common.S3Client) *apiBlueprint {
 	bp := new(apiBlueprint)
 	bp.base = base
 	bp.agentManager = agentManager
 	bp.gasm = gasm
 	bp.sasm = sasm
 	bp.s3Client = s3Client
-	bp.localAssetStoragePath = storagePath
 
 	bp.generatePreviewRequestsMeter = metrics.NewMeter()
 	bp.previewQueriesMeter = metrics.NewMeter()
@@ -87,55 +85,52 @@ func NewApiBlueprint(
 }
 
 func (blueprint *apiBlueprint) AddRoutes(p *pat.PatternServeMux) {
-	p.Put(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
-	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/:page/data"), http.HandlerFunc(blueprint.PreviewGADataHandler))
-	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid/:page"), http.HandlerFunc(blueprint.PreviewGAInfoHandler))
-	p.Get(blueprint.buildUrl("/v2/preview/:id/:templateid"), http.HandlerFunc(blueprint.PreviewGAInfoHandler)) // Generated assets with template ID - /preview/123/456
-	p.Get(blueprint.buildUrl("/v2/preview/:id"), http.HandlerFunc(blueprint.PreviewInfoHandler))               // Get specific source assets with ID - /preview/12345
-	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.PreviewQueryHandler))                 // Search - /preview/?id=1234&id=5678
+	p.Put(blueprint.buildUrl("/preview/"), http.HandlerFunc(blueprint.generatePreviewHandler))
+	p.Get(blueprint.buildUrl("/preview/:id/:templateid/:page/data"), http.HandlerFunc(blueprint.previewGADataHandler))
+	p.Get(blueprint.buildUrl("/preview/:id/:templateid/:page"), http.HandlerFunc(blueprint.previewGAInfoHandler))
+	p.Get(blueprint.buildUrl("/preview/:id/:templateid"), http.HandlerFunc(blueprint.previewGAInfoHandler)) // Generated assets with template ID - /preview/123/456
+	p.Get(blueprint.buildUrl("/preview/:id"), http.HandlerFunc(blueprint.previewInfoHandler))               // Get specific source assets with ID - /preview/12345
+	p.Get(blueprint.buildUrl("/preview/"), http.HandlerFunc(blueprint.previewQueryHandler))                 // Search - /preview/?id=1234&id=5678
 }
 
 func (blueprint *apiBlueprint) buildUrl(path string) string {
 	return blueprint.base + path
 }
 
-func (blueprint *apiBlueprint) PreviewQueryHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewQueriesMeter.Mark(1)
 
 	ids, hasIds := req.URL.Query()["id"]
 	if !hasIds {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
+		http.Error(res, "", 400)
 		return
 	}
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds(ids)
 	if err != nil {
 		log.Println(err)
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
+		http.Error(res, "", 500)
 		return
 	}
 
 	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
-func (blueprint *apiBlueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) previewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewInfoRequestsMeter.Mark(1)
 	id := req.URL.Query().Get(":id")
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds([]string{id})
 	if err != nil {
 		log.Println(err)
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
+		http.Error(res, "", 500)
 		return
 	}
 
 	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
-func (blueprint *apiBlueprint) PreviewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) previewGAInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewGAInfoRequestsMeter.Mark(1)
 
 	id := req.URL.Query().Get(":id")
@@ -145,66 +140,36 @@ func (blueprint *apiBlueprint) PreviewGAInfoHandler(res http.ResponseWriter, req
 	jsonData, err := blueprint.marshalGeneratedAssets(id, templateId, page)
 	if err != nil {
 		log.Println(err)
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
+		http.Error(res, "", 500)
 		return
 	}
 
 	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(jsonData))
 }
 
-func (blueprint *apiBlueprint) PreviewGADataHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) previewGADataHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewGADataRequestsMeter.Mark(1)
 
 	id := req.URL.Query().Get(":id")
 	templateId := req.URL.Query().Get(":templateid")
 	page := req.URL.Query().Get(":page")
 
-	action, path := blueprint.getAsset(id, templateId, page)
-	switch action {
-	case assetActionServeFile:
-		{
-			http.ServeFile(res, req, path)
-			return
-		}
-	case assetActionRedirect:
-		{
-			http.Redirect(res, req, path, 302)
-			return
-		}
-	case assetActionS3Proxy:
-		{
-			bucket, file := splitS3Url(path)
-			err := blueprint.s3Client.Proxy(bucket, file, res)
-			if err != nil {
-				return
-			}
-		}
-	case assetActionVideoURL:
-		{
-			// TODO: Figure out what really should go here
-			// This will probably depend on how the front-end deals with videos
-			http.ServeContent(res, req, "", time.Now(), bytes.NewReader([]byte(path)))
-		}
-	}
-	http.NotFound(res, req)
+	http.Redirect(res, req, fmt.Sprintf("/asset/%s/%s/%s", id, templateId, page), 303)
 }
 
-func (blueprint *apiBlueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *apiBlueprint) generatePreviewHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.generatePreviewRequestsMeter.Mark(1)
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
+		http.Error(res, "", 400)
 		return
 	}
 	defer req.Body.Close()
 
 	gprs, err := newApiGeneratePreviewRequest(string(body))
 	if err != nil {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
+		http.Error(res, "", 400)
 		return
 	}
 
@@ -212,7 +177,7 @@ func (blueprint *apiBlueprint) GeneratePreviewHandler(res http.ResponseWriter, r
 		blueprint.agentManager.CreateWorkFromTemplates(gpr.id, gpr.url, gpr.attributes, gpr.templateIds)
 	}
 
-	target := blueprint.buildUrl("/v2/preview/?")
+	target := blueprint.buildUrl("/preview/?")
 	params := url.Values{}
 	for _, gpr := range gprs {
 		params.Add("id", gpr.id)

@@ -83,7 +83,7 @@ func (command *RenderV2Command) Execute() {
 		SourceAssets: arr,
 		TemplateIds:  command.templateIds,
 	}
-	requrl := fmt.Sprintf("http://%s/api/v2/preview/", command.host)
+	requrl := fmt.Sprintf("http://%s/api/preview/", command.host)
 	bytes, _ := json.Marshal(req)
 	if command.verbose > 1 {
 		prettyjson, _ := json.MarshalIndent(req, "", "	")
