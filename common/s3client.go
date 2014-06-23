@@ -86,19 +86,12 @@ func (client *AmazonS3Client) Put(s3object S3Object, content []byte) error {
 
 func processUrl(url, bucket string, compatMode bool) string {
 	if compatMode {
-		url = convertToNewUrl(url)
+		url = url + "/" + bucket
 	}
 	if strings.Contains(url, "${bucket}") {
 		return strings.Replace(url, "${bucket}", bucket, -1)
 	}
 	return url
-}
-
-// Input:  s3://${bucket}
-// Output: https://${bucket}.s3.amazonaws.com
-func convertToNewUrl(url string) string {
-	bucket := url[5:]
-	return "https://" + bucket + ".s3.amazonaws.com"
 }
 
 func (client *AmazonS3Client) Get(bucket, file string) (S3Object, error) {
