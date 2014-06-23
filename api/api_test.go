@@ -97,7 +97,7 @@ func setupTest(path string) (*render.RenderAgentManager, common.SourceAssetStora
 
 	//rm.AddImageMagickRenderAgent(downloader, uploader, 5)
 	//rm.AddDocumentRenderAgent(downloader, uploader, filepath.Join(path, "doc-cache"), 5)
-	blueprint := NewApiBlueprint("/api/v2", rm, generatedAssetStorageManager, sourceAssetStorageManager, registry, nil, path)
+	blueprint := NewApiBlueprint("/api/v2", rm, generatedAssetStorageManager, sourceAssetStorageManager, registry, nil)
 	return rm, sourceAssetStorageManager, generatedAssetStorageManager, tm, blueprint
 }
 

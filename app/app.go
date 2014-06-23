@@ -236,7 +236,7 @@ func (app *AppContext) initApis() error {
 	s3Client := app.buildS3Client()
 
 	// TODO: proper config
-	app.apiBlueprint = api.NewApiBlueprint(app.appConfig.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry, s3Client, app.appConfig.Common.LocalAssetStoragePath)
+	app.apiBlueprint = api.NewApiBlueprint(app.appConfig.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry, s3Client)
 	app.apiBlueprint.AddRoutes(p)
 
 	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.appConfig.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, s3Client, app.signatureManager)

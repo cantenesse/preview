@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type staticBlueprint struct {
@@ -40,6 +42,7 @@ var (
 	assetActionServeFile = assetAction(1)
 	assetActionRedirect  = assetAction(2)
 	assetActionS3Proxy   = assetAction(3)
+	assetActionVideoURL  = assetAction(4)
 )
 
 // NewAssetBlueprint creates, configures and returns a new blueprint. This structure contains the state and HTTP controllers used to serve assets.
@@ -123,6 +126,12 @@ func (blueprint *assetBlueprint) assetHandler(res http.ResponseWriter, req *http
 				return
 			}
 		}
+	case assetActionVideoURL:
+		{
+			// TODO: Figure out what really should go here
+			// This will probably depend on how the front-end deals with videos
+			http.ServeContent(res, req, "", time.Now(), bytes.NewReader([]byte(path)))
+		}
 	}
 	blueprint.emptyRequestsMeter.Mark(1)
 	http.NotFound(res, req)
@@ -140,30 +149,36 @@ func (blueprint *assetBlueprint) getAsset(fileId, placeholderSize, page string) 
 	}
 
 	templateId, hasTemplateId := blueprint.templatesBySize[placeholderSize]
-	if hasTemplateId {
-		for _, generatedAsset := range generatedAssets {
-			pageVal, _ := common.GetFirstAttribute(generatedAsset, common.GeneratedAssetAttributePage)
-			if len(pageVal) == 0 {
-				pageVal = "0"
+	if !hasTemplateId {
+		templateId = placeholderSize
+	}
+	for _, generatedAsset := range generatedAssets {
+		pageVal, _ := common.GetFirstAttribute(generatedAsset, common.GeneratedAssetAttributePage)
+		if len(pageVal) == 0 {
+			pageVal = "0"
+		}
+		pageMatch := pageVal == page
+		if generatedAsset.TemplateId == templateId && pageMatch {
+			surl := generatedAsset.GetAttribute("streamingUrl")
+			if len(surl) > 0 && len(surl[0]) > 0 {
+				return assetActionVideoURL, surl[0]
 			}
-			pageMatch := pageVal == page
-			if generatedAsset.TemplateId == templateId && pageMatch {
-				if strings.HasPrefix(generatedAsset.Location, "local://") {
-					fullPath := filepath.Join(blueprint.localAssetStoragePath, fileId, placeholderSize, page)
-					if util.CanLoadFile(fullPath) {
-						return assetActionServeFile, fullPath
-					}
-					placeholder := blueprint.placeholderManager.Url(fileId, placeholderSize)
-					if util.CanLoadFile(placeholder.Path) {
-						return assetActionServeFile, placeholder.Path
-					}
+			if util.IsLocalUrl(generatedAsset.Location) {
+				fullPath := filepath.Join(blueprint.localAssetStoragePath, generatedAsset.Location[8:])
+				if util.CanLoadFile(fullPath) {
+					return assetActionServeFile, fullPath
 				}
-				if strings.HasPrefix(generatedAsset.Location, "s3://") {
-					return assetActionS3Proxy, generatedAsset.Location
+				placeholder := blueprint.placeholderManager.Url(fileId, placeholderSize)
+				if util.CanLoadFile(placeholder.Path) {
+					return assetActionServeFile, placeholder.Path
 				}
+			}
+			if util.IsS3Url(generatedAsset.Location) {
+				return assetActionS3Proxy, generatedAsset.Location
 			}
 		}
 	}
+	
 	placeholder := blueprint.placeholderManager.Url(fileId, placeholderSize)
 	if util.CanLoadFile(placeholder.Path) {
 		return assetActionServeFile, placeholder.Path
