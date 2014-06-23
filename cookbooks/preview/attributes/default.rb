@@ -1,6 +1,6 @@
 
 default[:preview][:platform] = 'amd64'
-default[:preview][:version] = '1.0.1'
+default[:preview][:version] = '1.1.0'
 default[:preview][:install_type] = 'archive'
 default[:preview][:package] = 'preview'
 default[:preview][:archive_source] = "https://github.com/ngerakines/preview/releases/download/v#{node[:preview][:version]}/preview-#{node[:preview][:version]}-linux_#{node[:preview][:platform]}.zip"
@@ -41,21 +41,21 @@ default[:preview][:config][:documentRenderAgent] = {}
 default[:preview][:config][:documentRenderAgent][:enabled] = true
 default[:preview][:config][:documentRenderAgent][:count] = 8
 default[:preview][:config][:documentRenderAgent][:basePath] = "#{node[:preview][:basePath]}tmp/documentRenderAgent/"
-default[:preview][:config][:documentRenderAgent][:supportedFileTypes] = {}
-default[:preview][:config][:documentRenderAgent][:supportedFileTypes][:doc] = 33554432
-default[:preview][:config][:documentRenderAgent][:supportedFileTypes][:docx] = 33554432
-default[:preview][:config][:documentRenderAgent][:supportedFileTypes][:ppt] = 33554432
-default[:preview][:config][:documentRenderAgent][:supportedFileTypes][:pptx] = 33554432
+default[:preview][:config][:documentRenderAgent][:supportedFileTypes] = ["docx", "pptx", "doc", "ppt"]
 
 default[:preview][:config][:imageMagickRenderAgent] = {}
 default[:preview][:config][:imageMagickRenderAgent][:enabled] = true
 default[:preview][:config][:imageMagickRenderAgent][:count] = 8
-default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes] = {}
-default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes][:jpg] = 33554432
-default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes][:jpeg] = 33554432
-default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes][:png] = 33554432
-default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes][:gif] = 33554432
-default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes][:pdf] = 33554432
+default[:preview][:config][:imageMagickRenderAgent][:supportedFileTypes] = ["jpg", "jpeg", "png", "gif", "pdf"]
+
+default[:preview][:config][:videoRenderAgent] = {}
+default[:preview][:config][:videoRenderAgent][:enabled] = false
+default[:preview][:config][:videoRenderAgent][:count] = 8
+default[:preview][:config][:videoRenderAgent][:engine] = "zencoder"
+default[:preview][:config][:videoRenderAgent][:zencoderKey] = ""
+default[:preview][:config][:videoRenderAgent][:zencoderNotificationUrl] = ""
+default[:preview][:config][:videoRenderAgent][:zencoderS3Bucket] = ""
+default[:preview][:config][:videoRenderAgent][:supportedFileTypes] = ["mp4", "mov"]
 
 default[:preview][:config][:simpleApi] = {}
 default[:preview][:config][:simpleApi][:enabled] = true
