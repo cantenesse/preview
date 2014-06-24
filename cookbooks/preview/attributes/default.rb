@@ -68,6 +68,12 @@ default[:preview][:config][:assetApi][:enabled] = true
 default[:preview][:config][:uploader] = {}
 default[:preview][:config][:uploader][:engine] = "local"
 
+default[:preview][:config][:s3][:secret] = ""
+default[:preview][:config][:s3][:host] = ""
+default[:preview][:config][:s3][:buckets] = [""]
+default[:preview][:config][:s3][:verifySsl] = false
+default[:preview][:config][:s3][:urlCompatMode] = true
+
 default[:preview][:config][:downloader] = {}
 default[:preview][:config][:downloader][:basePath] = "#{node[:preview][:basePath]}tmp/downloads/"
 default[:preview][:config][:downloader][:tramEnabled] = false
