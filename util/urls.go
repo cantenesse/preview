@@ -2,6 +2,7 @@ package util
 
 import (
 	"strings"
+	"fmt"
 )
 
 func IsLocalUrl(url string) bool {
@@ -28,4 +29,9 @@ func JoinUrl(base, file string) string {
 		file = file[:len(file)-1]
 	}
 	return base + file
+}
+
+func S3ToHttps(url string) string {
+	arr := strings.Split(url, "/")
+	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s", arr[2], strings.Join(arr[3:], "/"))
 }

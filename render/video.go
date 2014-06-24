@@ -32,7 +32,7 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 	}
 
 	surl := fmt.Sprintf("%s/%s.m3u8", generatedAsset.Location, id)
-	generatedAsset.AddAttribute("streamingUrl", []string{surl})
+	generatedAsset.AddAttribute("streamingUrl", []string{util.S3ToHttps(surl)})
 	statusCallback := renderer.renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
