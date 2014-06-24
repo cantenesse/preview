@@ -125,24 +125,6 @@ func (command *RenderCommand) ExecuteWithId(id string) {
 			log.Printf("http://%s/asset/%s/jumbo/0", command.host, request.id)
 		}
 	}
-	if command.verify {
-		for len(pendingIds) > 0 {
-			for id := range pendingIds {
-				previewInfoResponse, previewInfoResponseErr := command.submitPreviewInfoRequest(id)
-				if previewInfoResponseErr != nil {
-					log.Println("Error checking", id, ":", previewInfoResponseErr)
-					delete(pendingIds, id)
-				} else {
-					if command.isComplete(previewInfoResponse) {
-						delete(pendingIds, id)
-					}
-				}
-			}
-			if len(pendingIds) > 0 {
-				time.Sleep(5 * time.Second)
-			}
-		}
-	}
 }
 
 func (command *RenderCommand) filesToSubmit() []string {
@@ -167,10 +149,10 @@ func (command *RenderCommand) filesToSubmit() []string {
 				}
 			}
 		} else {
-			if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+			if util.IsHttpUrl(file) {
 				files = append(files, path)
 			}
-			if strings.HasPrefix(file, "s3://") {
+			if util.IsS3Url(file) {
 				files = append(files, path)
 			}
 		}
@@ -179,13 +161,13 @@ func (command *RenderCommand) filesToSubmit() []string {
 }
 
 func (command *RenderCommand) absFilePath(file string) (bool, string) {
-	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+	if util.IsHttpUrl(file) {
 		return false, file
 	}
-	if strings.HasPrefix(file, "s3://") {
+	if util.IsS3Url(file) {
 		return false, file
 	}
-	if strings.HasPrefix(file, "file://") {
+	if util.IsFileUrl(file) {
 		return true, file[7:]
 	}
 	if strings.HasPrefix(file, "/") {

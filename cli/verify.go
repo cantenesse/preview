@@ -10,13 +10,13 @@ import (
 )
 
 var inputFiles = []string{
-	"test-data/Multipage.pdf",
-	"test-data/Multipage.docx",
-	"test-data/Animated.gif",
-	"test-data/COW.png",
-	"test-data/ChefConf2014schedule.docx",
-	"test-data/ChefConf2014schedule.pdf",
-	"test-data/wallpaper-641916.jpg",
+	"Multipage.pdf",
+	"Multipage.docx",
+	"Animated.gif",
+	"COW.png",
+	"ChefConf2014schedule.docx",
+	"ChefConf2014schedule.pdf",
+	"wallpaper-641916.jpg",
 }
 
 type VerifyCommand struct {
@@ -61,7 +61,7 @@ func (command *VerifyCommand) Execute() {
 	jobs := make([]*verifyJob, 0, len(inputFiles))
 
 	for _, loc := range inputFiles {
-		jobs = append(jobs, newVerifyJob(loc))
+		jobs = append(jobs, newVerifyJob(util.JoinUrl(command.filepath, loc)))
 	}
 
 	for _, job := range jobs {
@@ -75,7 +75,7 @@ func (command *VerifyCommand) Execute() {
 		renderCommand.(*RenderCommand).ExecuteWithId(job.id)
 	}
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		workDone := true
 		for _, job := range jobs {
 			if job.isComplete {
@@ -97,7 +97,7 @@ func (command *VerifyCommand) Execute() {
 			break
 		}
 
-		time.Sleep(0.5 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	for _, job := range jobs {
