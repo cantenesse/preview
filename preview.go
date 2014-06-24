@@ -12,6 +12,7 @@ Usage: preview [--help --version --config=<file>]
        preview daemon [--help --version --config <file>]
        preview render [--verbose... --verify] <host> <file>...
        preview renderV2 [--verbose...] <host> (--template <templateId>)... <file>...
+       preview verify [--verbose... --config=<file>] <host> <filepath>
 
 Options:
   --help           Show this screen.
@@ -35,6 +36,10 @@ Options:
 	case "renderV2":
 		{
 			command = cli.NewRenderV2Command(arguments)
+		}
+	case "verify":
+		{
+			command = cli.NewVerifyCommand(arguments)
 		}
 	}
 	command.Execute()

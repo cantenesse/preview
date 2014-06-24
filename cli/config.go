@@ -49,6 +49,8 @@ func GetCommand(arguments map[string]interface{}) string {
 		return "render"
 	} else if getConfigBool(arguments, "renderV2") {
 		return "renderV2"
+	} else if getConfigBool(arguments, "verify") {
+		return "verify"
 	}
 	return "daemon"
 }
