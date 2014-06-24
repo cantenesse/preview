@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/bmizerany/pat"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type simpleBlueprint struct {
@@ -76,8 +78,7 @@ func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
+		http.Error(res, http.StatusText(400), 400)
 		return
 	}
 	defer req.Body.Close()
@@ -86,16 +87,14 @@ func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter
 	if hasId {
 		gprs, err := newGeneratePreviewRequestFromText(id, string(body))
 		if err != nil {
-			res.Header().Set("Content-Length", "0")
-			res.WriteHeader(400)
+			http.Error(res, http.StatusText(400), 400)
 			return
 		}
 		blueprint.handleGeneratePreviewRequest(gprs)
 	} else {
 		gprs, err := newGeneratePreviewRequestFromJson(string(body))
 		if err != nil {
-			res.Header().Set("Content-Length", "0")
-			res.WriteHeader(400)
+			http.Error(res, http.StatusText(400), 400)
 			return
 		}
 		blueprint.handleGeneratePreviewRequest(gprs)
@@ -111,13 +110,11 @@ func (blueprint *simpleBlueprint) previewInfoHandler(res http.ResponseWriter, re
 	fileIds := blueprint.parseFileIds(req)
 	previewInfo, err := blueprint.handlePreviewInfoRequest(fileIds)
 	if err != nil {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
+		http.Error(res, http.StatusText(500), 500)
 		return
 	}
 
-	res.Header().Set("Content-Length", strconv.Itoa(len(previewInfo)))
-	res.Write(previewInfo)
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(previewInfo))
 }
 
 func (blueprint *simpleBlueprint) buildUrl(path string) string {
