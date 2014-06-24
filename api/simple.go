@@ -28,6 +28,11 @@ type simpleBlueprint struct {
 	previewInfoRequestsMeter     metrics.Meter
 }
 
+type templateTuple struct {
+	placeholderSize string
+	template        *common.Template
+}
+
 // NewSimpleBlueprint creates a new simpleBlueprint object.
 func NewSimpleBlueprint(
 	registry metrics.Registry,
@@ -60,31 +65,14 @@ func NewSimpleBlueprint(
 }
 
 func (blueprint *simpleBlueprint) AddRoutes(p *pat.PatternServeMux) {
-	p.Put(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
-	p.Put(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
-	p.Get(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.PreviewInfoHandler))
-	p.Get(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.PreviewInfoHandler))
+	p.Put(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.generatePreviewHandler))
+	p.Put(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.generatePreviewHandler))
+	p.Get(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.previewInfoHandler))
+	p.Get(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.previewInfoHandler))
 }
 
-func (blueprint *simpleBlueprint) buildUrl(path string) string {
-	return blueprint.base + path
-}
-
-func (blueprint *simpleBlueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.generatePreviewRequestsMeter.Mark(1)
-	if req.Method != "PUT" {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
-		return
-	}
-
-	if !strings.HasPrefix(req.URL.Path, blueprint.buildUrl("/v1/preview")) {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
-		return
-	}
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -117,21 +105,9 @@ func (blueprint *simpleBlueprint) GeneratePreviewHandler(res http.ResponseWriter
 	res.WriteHeader(202)
 }
 
-func (blueprint *simpleBlueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *simpleBlueprint) previewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewInfoRequestsMeter.Mark(1)
-	if req.Method != "GET" {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
-		return
-	}
 
-	if !strings.HasPrefix(req.URL.Path, blueprint.buildUrl("/v1/preview")) {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
-		return
-	}
 	fileIds := blueprint.parseFileIds(req)
 	previewInfo, err := blueprint.handlePreviewInfoRequest(fileIds)
 	if err != nil {
@@ -142,6 +118,10 @@ func (blueprint *simpleBlueprint) PreviewInfoHandler(res http.ResponseWriter, re
 
 	res.Header().Set("Content-Length", strconv.Itoa(len(previewInfo)))
 	res.Write(previewInfo)
+}
+
+func (blueprint *simpleBlueprint) buildUrl(path string) string {
+	return blueprint.base + path
 }
 
 func (blueprint *simpleBlueprint) urlHasFileId(url string) (string, bool) {
@@ -184,11 +164,6 @@ func (blueprint *simpleBlueprint) parseFileIds(req *http.Request) []string {
 		}
 	}
 	return results
-}
-
-type templateTuple struct {
-	placeholderSize string
-	template        *common.Template
 }
 
 func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]byte, error) {
