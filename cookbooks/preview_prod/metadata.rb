@@ -9,13 +9,11 @@ version          '1.1.0'
 depends 'tram', '~> 1.0.0'
 depends 'preview', '= 1.1.0'
 depends 'cassandra', '~> 2.4.0'
-depends 'haproxy', '~> 1.6.4'
 
 supports 'centos'
 
 recipe 'preview_prod::node', 'Configures and prepares a preview application node.'
 recipe 'preview_prod::storage', 'Configures and prepares a storage node.'
-recipe 'preview_prod::proxy', 'Configures and prepares haproxy.'
 recipe 'preview_prod::cache', 'Configures and prepares tram.'
 
 attribute 'preview_prod/node_id',
@@ -71,9 +69,3 @@ attribute 'preview_prod/tramHosts',
   :required => 'required',
   :type => 'array',
   :recipes => ['preview_prod::node']
-
-attribute 'preview_prod/proxyApps',
-  :display_name => 'A map of apps that the proxy distributes requests to.',
-  :required => 'required',
-  :type => 'hash',
-  :recipes => ['preview_prod::proxy']
