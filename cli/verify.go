@@ -86,8 +86,8 @@ func (command *VerifyCommand) Execute() {
 
 			if job.isComplete {
 				job.endTime = time.Now()
-				fmt.Println(job.location, "complete")
-				fmt.Println("duration", job.endTime.Sub(job.startTime))
+				log.Println(job.location, "complete")
+				log.Println("duration", job.endTime.Sub(job.startTime))
 			} else {
 				workDone = false
 			}
@@ -102,7 +102,7 @@ func (command *VerifyCommand) Execute() {
 
 	for _, job := range jobs {
 		if !job.isComplete {
-			fmt.Println(job.location, "failed or timed out")
+			log.Println(job.location, "failed or timed out")
 		}
 	}
 }
@@ -118,13 +118,13 @@ func (command *VerifyCommand) submitPreviewInfoRequest(id string) (*previewInfoR
 	}
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return nil, err
 	}
 
