@@ -19,3 +19,13 @@ func IsHttpUrl(url string) bool {
 func IsFileUrl(url string) bool {
 	return strings.HasPrefix(url, "file://")
 }
+
+func JoinUrl(base, file string) string {
+	if !strings.HasSuffix(base, "/") {
+		base += "/"
+	}
+	if strings.HasPrefix(file, "/") {
+		file = file[:len(file)-1]
+	}
+	return base + file
+}
