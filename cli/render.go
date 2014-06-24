@@ -79,7 +79,43 @@ func (command *RenderCommand) Execute() {
 		if command.verbose > 0 {
 			log.Println("Peparing to send file", file)
 		}
-		request := newGenerateRequestFromFile(file)
+		request := newGenerateRequestFromFile(file, "")
+		pendingIds[request.id] = false
+		if command.verbose > 1 {
+			log.Println(request.ToLegacyRequestPayload())
+		}
+		command.submitGenerateRequest(request)
+		if command.verbose > 0 {
+			log.Printf("http://%s/asset/%s/jumbo/0", command.host, request.id)
+		}
+	}
+	if command.verify {
+		for len(pendingIds) > 0 {
+			for id := range pendingIds {
+				previewInfoResponse, previewInfoResponseErr := command.submitPreviewInfoRequest(id)
+				if previewInfoResponseErr != nil {
+					log.Println("Error checking", id, ":", previewInfoResponseErr)
+					delete(pendingIds, id)
+				} else {
+					if command.isComplete(previewInfoResponse) {
+						delete(pendingIds, id)
+					}
+				}
+			}
+			if len(pendingIds) > 0 {
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}
+}
+
+func (command *RenderCommand) ExecuteWithId(id string) {
+	pendingIds := make(map[string]bool)
+	for _, file := range command.filesToSubmit() {
+		if command.verbose > 0 {
+			log.Println("Peparing to send file", file)
+		}
+		request := newGenerateRequestFromFile(file, id)
 		pendingIds[request.id] = false
 		if command.verbose > 1 {
 			log.Println(request.ToLegacyRequestPayload())
@@ -166,14 +202,17 @@ func (request *generateRequest) ToLegacyRequestPayload() string {
 	return buffer.String()
 }
 
-func newGenerateRequestFromFile(file string) *generateRequest {
+func newGenerateRequestFromFile(file, id string) *generateRequest {
 	localFilePath := file[5:]
 	log.Println("Creating new request for file", localFilePath)
 	fi, err := os.Stat(localFilePath)
-	if err != nil {
-		return newGenerateRequest(uuid.New(), filepath.Ext(localFilePath)[1:], file, 1)
+	if len(id) == 0 {
+		id = uuid.New()
 	}
-	return newGenerateRequest(uuid.New(), filepath.Ext(localFilePath)[1:], file, fi.Size())
+	if err != nil {
+		return newGenerateRequest(id, filepath.Ext(localFilePath)[1:], file, 1)
+	}
+	return newGenerateRequest(id, filepath.Ext(localFilePath)[1:], file, fi.Size())
 }
 
 func newGenerateRequest(id, fileType, url string, size int64) *generateRequest {
