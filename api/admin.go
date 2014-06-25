@@ -105,7 +105,7 @@ func (blueprint *adminBlueprint) placeholdersHandler(res http.ResponseWriter, re
 func (blueprint *adminBlueprint) renderAgentsHandler(res http.ResponseWriter, req *http.Request) {
 	view := new(renderAgentsView)
 	view.RenderAgents = make(map[string]renderAgentViewElement)
-	for _, name := range common.RenderAgents {
+	for name := range blueprint.appConfig.RenderAgents {
 		view.RenderAgents[name] = blueprint.newRenderAgentViewElement(name)
 	}
 
@@ -120,7 +120,7 @@ func (blueprint *adminBlueprint) renderAgentsHandler(res http.ResponseWriter, re
 }
 
 func (blueprint *adminBlueprint) newRenderAgentViewElement(name string) renderAgentViewElement {
-	enabled, count, activeWork := blueprint.agentManager.ActiveWorkForRenderAgent(common.RenderAgentDocument)
+	enabled, count, activeWork := blueprint.agentManager.ActiveWorkForRenderAgent(name)
 	return renderAgentViewElement{count, enabled, activeWork}
 }
 

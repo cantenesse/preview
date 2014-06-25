@@ -42,7 +42,7 @@ func (blueprint *webhookBlueprint) zencoderApiHandler(res http.ResponseWriter, r
 	ga.Status = common.GeneratedAssetStatusComplete
 	log.Println("Updating", ga)
 	blueprint.gasm.Update(ga)
-	blueprint.renderAgentManager.RemoveWork(common.RenderAgentVideo, id)
+	blueprint.renderAgentManager.RemoveWork("videoRenderAgent", id)
 	log.Println("Transcoding complete for", id)
 
 	res.Header().Set("Content-Length", "0")
