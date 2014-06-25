@@ -52,9 +52,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
          "supportedFileTypes":["mp4"],
          "engine":"zencoder",
          "rendererParams":{
-             "zencoderNotificationUrl":"http://example.com/zencoderhandler",
-             "zencoderS3Bucket":"YOUR_BUCKET_HERE"
-         }         
+          }         
       },
       "imageMagickRenderAgent":{
          "enabled":true,
@@ -142,7 +140,8 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
             "group":"7A96",
             "attributes":{
                 "output":["m3u8"],
-		"forceS3Location":["true"]
+		"forceS3Location":["true"],
+                "zencoderNotificationUrl":["http://example.com/zencoderhandler"]
             }
         }
     ]

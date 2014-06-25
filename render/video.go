@@ -13,17 +13,12 @@ func init() {
 }
 
 type videoRenderer struct {
-	renderAgent             *genericRenderAgent
-	zencoderS3Bucket        string
-	zencoderNotificationUrl string
+	renderAgent *genericRenderAgent
 }
 
 func newVideoRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(videoRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.zencoderS3Bucket = params["zencoderS3Bucket"]
-	renderer.zencoderNotificationUrl = params["zencoderNotificationUrl"]
-
 	return renderer
 }
 
@@ -61,9 +56,20 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
 	input := urls[0]
+
+	templates, err := renderer.renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})
+	if err != nil || !templates[0].HasAttribute("zencoderNotificationUrl") {
+		log.Println("Could not retrieve notification URL from template")
+		return
+	}
+	zencoderNotificationUrl := templates[0].GetAttribute("zencoderNotificationUrl")[0]
+	if len(zencoderNotificationUrl) == 0 {
+		log.Println("Length of notification URL is zero")
+		return
+	}
 	// Zencoder will put the files the folder generatedAsset.Location
 	// The filename for the HLS playlist will be generatedAsset.Id with .m3u8 extension
-	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, renderer.zencoderNotificationUrl)
+	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, zencoderNotificationUrl)
 	arr, _ := json.MarshalIndent(settings, "", "	")
 	log.Println(string(arr))
 	job, err := renderer.renderAgent.agentManager.zencoder.CreateJob(settings)

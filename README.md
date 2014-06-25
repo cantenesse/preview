@@ -145,8 +145,6 @@ By default, the application will use the following configuration json:
          "supportedFileTypes":["mp4"],
          "engine":"zencoder",
          "rendererParams":{
-             "zencoderNotificationUrl":"http://example.com/zencoderhandler",
-             "zencoderS3Bucket":"YOUR_BUCKET_HERE"
          }         
       },
       "imageMagickRenderAgent":{
@@ -235,7 +233,8 @@ By default, the application will use the following configuration json:
             "group":"7A96",
             "attributes":{
                 "output":["m3u8"],
-		"forceS3Location":["true"]
+		"forceS3Location":["s3://YOUR_BUCKET"],
+                "zencoderNotificationUrl":["http://example.com/zencoderhandler"]
             }
         }
     ]
