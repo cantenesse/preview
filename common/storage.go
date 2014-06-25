@@ -49,12 +49,6 @@ func NewGeneratedAssetStorageManager(templateManager TemplateManager) GeneratedA
 func NewTemplateManager() TemplateManager {
 	tm := new(inMemoryTemplateManager)
 	tm.templates = make([]*Template, 0, 0)
-	tm.Store(DefaultTemplateJumbo)
-	tm.Store(DefaultTemplateLarge)
-	tm.Store(DefaultTemplateMedium)
-	tm.Store(DefaultTemplateSmall)
-	tm.Store(DocumentConversionTemplate)
-	tm.Store(VideoConversionTemplate)
 	return tm
 }
 
@@ -173,7 +167,7 @@ func (tm *inMemoryTemplateManager) FindByIds(ids []string) ([]*Template, error) 
 func (tm *inMemoryTemplateManager) FindByRenderService(renderService string) ([]*Template, error) {
 	results := make([]*Template, 0, 0)
 	for _, template := range tm.templates {
-		if template.Renderer == renderService {
+		if template.RenderAgent == renderService {
 			results = append(results, template)
 		}
 	}
