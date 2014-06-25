@@ -37,21 +37,36 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "storage":{
       "engine":"memory"
    },
-   "documentRenderAgent":{
-      "enabled":true,
-      "count":16,
-      "basePath":"` + basePathFunc("documentRenderAgentTmp") + `",
-      "supportedFileTypes":["doc", "docx", "ppt", "pptx"]
+   "renderAgents": {
+      "documentRenderAgent":{
+         "enabled":true,
+         "count":16,
+         "supportedFileTypes":["doc", "docx", "ppt", "pptx"],
+         "rendererParams":{
+             "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
+         }
+      },
+      "videoRenderAgent":{
+         "enabled":false,
+         "count":16,
+         "supportedFileTypes":["mp4"],
+         "engine":"zencoder",
+         "rendererParams":{
+             "zencoderNotificationUrl":"http://example.com/zencoderhandler",
+             "zencoderS3Bucket":"YOUR_BUCKET_HERE"
+         }         
+      },
+      "imageMagickRenderAgent":{
+         "enabled":true,
+         "count":16,
+         "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"],
+         "rendererParams":{
+         }
+      }
    },
-   "videoRenderAgent":{
+   "zencoder":{
       "enabled":false,
-      "count":16,
-      "supportedFileTypes":["mp4"]
-   },
-   "imageMagickRenderAgent":{
-      "enabled":true,
-      "count":16,
-      "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"]
+      "key":"YOUR_KEY_HERE"
    },
    "simpleApi":{
       "enabled":true,
@@ -67,11 +82,11 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
    "downloader":{
       "basePath":"` + basePathFunc("cache") + `",
       "tramEnabled": false
-   }
+   },
    "templates": [
         {
             "id":"04a2c710-8872-4c88-9c75-a67175d3a8e7",
-            "renderAgent":"renderAgentImageMagick",
+            "renderAgent":"imageMagickRenderAgent",
             "group":"4C96",
             "attributes":{
                 "width":["1040"],
@@ -82,7 +97,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
         },
 	{
             "id":"2eee7c27-75e2-4682-9920-9a4e14caa433",
-            "renderAgent":"renderAgentImageMagick",
+            "renderAgent":"imageMagickRenderAgent",
             "group":"4C96",
             "attributes":{
                 "width":["520"],
@@ -93,7 +108,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
         },
 	{
             "id":"a89a6a0d-51d9-4d99-b278-0c5dfc538984",
-            "renderAgent":"renderAgentImageMagick",
+            "renderAgent":"imageMagickRenderAgent",
             "group":"4C96",
             "attributes":{
                 "width":["500"],
@@ -104,7 +119,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
         },
 	{
             "id":"eaa7be0e-354f-482c-ac75-75cbdafecb6e",
-            "renderAgent":"renderAgentImageMagick",
+            "renderAgent":"imageMagickRenderAgent",
             "group":"4C96",
             "attributes":{
                 "width":["250"],
@@ -115,7 +130,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
         },
 	{
             "id":"9B17C6CE-7B09-4FD5-92AD-D85DD218D6D7",
-            "renderAgent":"renderAgentDocument",
+            "renderAgent":"documentRenderAgent",
             "group":"A907",
             "attributes":{
                 "output":["pdf"]
@@ -123,7 +138,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
         },
 	{
             "id":"4128966B-9F69-4E56-AD5C-1FDB3C24F910",
-            "renderAgent":"renderAgentVideo",
+            "renderAgent":"videoRenderAgent",
             "group":"7A96",
             "attributes":{
                 "output":["m3u8"],
