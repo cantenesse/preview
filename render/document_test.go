@@ -52,8 +52,9 @@ func TestConvertDocxToPdf(t *testing.T) {
 		t.Errorf("Unexpected error returned: %s", err)
 		return
 	}
+
 	for _, template := range templates {
-		log.Println("Found template", template.Id, "with service", template.Renderer)
+		log.Println("Found template", template.Id, "with service", template.RenderAgent)
 		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, fmt.Sprintf("local:///%s/pdf", sourceAssetId))
 		if err != nil {
 			t.Errorf("Unexpected error returned: %s", err)
@@ -111,7 +112,7 @@ func TestConvertMultipageDocxToPdf(t *testing.T) {
 		return
 	}
 	for _, template := range templates {
-		log.Println("Found template", template.Id, "with service", template.Renderer)
+		log.Println("Found template", template.Id, "with service", template.RenderAgent)
 		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, fmt.Sprintf("local:///%s/pdf", sourceAssetId))
 		if err != nil {
 			t.Errorf("Unexpected error returned: %s", err)
