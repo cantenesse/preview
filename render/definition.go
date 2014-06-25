@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+func init() {
+	Renderers = make(map[string]rendererConstructor)
+}
+
+var Renderers map[string]rendererConstructor
+
 type RenderAgentWorkChannel chan string
 
 type RenderStatusChannel chan RenderStatus
@@ -26,6 +32,8 @@ type generatedAssetUpdate struct {
 type Renderer interface {
 	renderGeneratedAsset(id string)
 }
+
+type rendererConstructor func(*genericRenderAgent, map[string]string) Renderer
 
 type RenderAgentMetrics struct {
 	workProcessed metrics.Meter
@@ -69,6 +77,7 @@ func newRenderAgentMetrics(registry metrics.Registry, name string, supportedFile
 
 func newGenericRenderAgent(
 	name string,
+	params map[string]string,
 	metrics *RenderAgentMetrics,
 	agentManager *RenderAgentManager,
 	sasm common.SourceAssetStorageManager,
@@ -92,12 +101,11 @@ func newGenericRenderAgent(
 	renderAgent.workChannel = workChannel
 	renderAgent.statusListeners = make([]RenderStatusChannel, 0, 0)
 	renderAgent.stop = make(chan (chan bool))
+	renderAgent.renderer = Renderers[name](renderAgent, params)
+
+	go renderAgent.start()
 
 	return renderAgent
-}
-
-func (renderAgent *genericRenderAgent) attachRenderer(renderer Renderer) {
-	renderAgent.renderer = renderer
 }
 
 func (renderAgent *genericRenderAgent) start() {

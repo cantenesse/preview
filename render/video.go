@@ -3,24 +3,26 @@ package render
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"log"
 )
 
+func init() {
+	Renderers["videoRenderAgent"] = newVideoRenderer
+}
+
 type videoRenderer struct {
 	renderAgent             *genericRenderAgent
-	zencoder                *zencoder.Zencoder
 	zencoderS3Bucket        string
 	zencoderNotificationUrl string
 }
 
-func newVideoRenderer(renderAgent *genericRenderAgent, zencoder *zencoder.Zencoder, zencoderS3Bucket, zencoderNotificationUrl string) *videoRenderer {
+func newVideoRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(videoRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.zencoderS3Bucket = zencoderS3Bucket
-	renderer.zencoderNotificationUrl = zencoderNotificationUrl
+	renderer.zencoderS3Bucket = params["zencoderS3Bucket"]
+	renderer.zencoderNotificationUrl = params["zencoderNotificationUrl"]
 
 	return renderer
 }
@@ -64,7 +66,7 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, renderer.zencoderNotificationUrl)
 	arr, _ := json.MarshalIndent(settings, "", "	")
 	log.Println(string(arr))
-	job, err := renderer.zencoder.CreateJob(settings)
+	job, err := renderer.renderAgent.agentManager.zencoder.CreateJob(settings)
 	if err != nil {
 		log.Println("Zencoder error:", err)
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}

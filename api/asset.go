@@ -178,7 +178,7 @@ func (blueprint *assetBlueprint) getAsset(fileId, placeholderSize, page string) 
 			}
 		}
 	}
-	
+
 	placeholder := blueprint.placeholderManager.Url(fileId, placeholderSize)
 	if util.CanLoadFile(placeholder.Path) {
 		return assetActionServeFile, placeholder.Path

@@ -60,7 +60,7 @@ func NewApp(appConfig *config.AppConfig) (*AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	if appConfig.VideoRenderAgent.Enabled {
+	if appConfig.Zencoder.Enabled {
 		err = app.initZencoder()
 		if err != nil {
 			return nil, err
@@ -204,24 +204,17 @@ func (app *AppContext) initStorage() error {
 func (app *AppContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, app.appConfig.VideoRenderAgent.ZencoderS3Bucket, app.appConfig.VideoRenderAgent.ZencoderNotificationUrl, app.appConfig.DocumentRenderAgent.SupportedFileTypes, app.appConfig.ImageMagickRenderAgent.SupportedFileTypes, app.appConfig.VideoRenderAgent.SupportedFileTypes)
-	app.agentManager.SetRenderAgentInfo(common.RenderAgentImageMagick, app.appConfig.ImageMagickRenderAgent.Enabled, app.appConfig.ImageMagickRenderAgent.Count)
-	app.agentManager.SetRenderAgentInfo(common.RenderAgentDocument, app.appConfig.DocumentRenderAgent.Enabled, app.appConfig.DocumentRenderAgent.Count)
-	app.agentManager.SetRenderAgentInfo(common.RenderAgentVideo, app.appConfig.VideoRenderAgent.Enabled, app.appConfig.VideoRenderAgent.Count)
-
-	if app.appConfig.ImageMagickRenderAgent.Enabled {
-		for i := 0; i < app.appConfig.ImageMagickRenderAgent.Count; i++ {
-			app.agentManager.AddImageMagickRenderAgent(app.downloader, app.uploader, 5)
-		}
+	supportedFileTypes := make(map[string][]string)
+	for k, v := range app.appConfig.RenderAgents {
+		supportedFileTypes[k] = v.SupportedFileTypes
 	}
-	if app.appConfig.DocumentRenderAgent.Enabled {
-		for i := 0; i < app.appConfig.DocumentRenderAgent.Count; i++ {
-			app.agentManager.AddDocumentRenderAgent(app.downloader, app.uploader, app.appConfig.DocumentRenderAgent.BasePath, 5)
-		}
-	}
-	if app.appConfig.VideoRenderAgent.Enabled {
-		for i := 0; i < app.appConfig.VideoRenderAgent.Count; i++ {
-			app.agentManager.AddVideoRenderAgent(nil, nil, 5)
+	app.agentManager = render.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.appConfig.Common.WorkDispatcherEnabled, app.zencoder, supportedFileTypes)
+	for k, v := range app.appConfig.RenderAgents {
+		app.agentManager.SetRenderAgentInfo(k, v.Enabled, v.Count)
+		if v.Enabled {
+			for i := 0; i < v.Count; i++ {
+				app.agentManager.AddRenderAgent(k, v.RendererParams, app.downloader, app.uploader, 5)
+			}
 		}
 	}
 	return nil
@@ -270,7 +263,7 @@ func (app *AppContext) initApis() error {
 }
 
 func (app *AppContext) initZencoder() error {
-	apikey := app.appConfig.VideoRenderAgent.ZencoderKey
+	apikey := app.appConfig.Zencoder.Key
 	app.zencoder = zencoder.NewZencoder(apikey)
 	_, err := app.zencoder.GetAccount()
 	if err != nil {

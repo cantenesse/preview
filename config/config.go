@@ -38,27 +38,17 @@ type AppConfig struct {
 		MysqlDatabase     string   `json:"mysqlDatabase"`
 	} `json:"storage"`
 
-	ImageMagickRenderAgent struct {
-		Enabled            bool     `json:"enabled"`
-		Count              int      `json:"count"`
-		SupportedFileTypes []string `json:"supportedFileTypes"`
-	} `json:"imageMagickRenderAgent"`
+	RenderAgents map[string]struct {
+		Enabled            bool              `json:"enabled"`
+		Count              int               `json:"count"`
+		SupportedFileTypes []string          `json:"supportedFileTypes"`
+		RendererParams     map[string]string `json:"rendererParams"`
+	} `json:"renderAgents"`
 
-	DocumentRenderAgent struct {
-		Enabled            bool     `json:"enabled"`
-		Count              int      `json:"count"`
-		BasePath           string   `json:"basePath"`
-		SupportedFileTypes []string `json:"supportedFileTypes"`
-	} `json:"documentRenderAgent"`
-
-	VideoRenderAgent struct {
-		Enabled                 bool     `json:"enabled"`
-		Count                   int      `json:"count"`
-		ZencoderKey             string   `json:"zencoderKey"`
-		ZencoderS3Bucket        string   `json:"zencoderS3Bucket"`
-		ZencoderNotificationUrl string   `json:"zencoderNotificationUrl"`
-		SupportedFileTypes      []string `json:"supportedFileTypes"`
-	} `json:"videoRenderAgent"`
+	Zencoder struct {
+		Enabled bool   `json:"enabled"`
+		Key     string `json:"key"`
+	} `json:"zencoder"`
 
 	SimpleApi struct {
 		Enabled     bool   `json:"enabled"`
@@ -88,12 +78,12 @@ type AppConfig struct {
 		TramEnabled bool     `json:"tramEnabled"`
 		TramHosts   []string `json:"tramHosts"`
 	} `json:"downloader"`
-	
+
 	Templates []struct {
-		Id string `json:"id"`
-		RenderAgent string `json:"renderAgent"`
-		Group string `json:"group"`
-		Attributes map[string][]string `json:"attributes"`
+		Id          string              `json:"id"`
+		RenderAgent string              `json:"renderAgent"`
+		Group       string              `json:"group"`
+		Attributes  map[string][]string `json:"attributes"`
 	}
 }
 

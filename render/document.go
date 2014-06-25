@@ -13,15 +13,19 @@ import (
 	"strings"
 )
 
+func init() {
+	Renderers["documentRenderAgent"] = newDocumentRenderer
+}
+
 type documentRenderer struct {
 	renderAgent      *genericRenderAgent
 	tempFileBasePath string
 }
 
-func newDocumentRenderer(renderAgent *genericRenderAgent, tempFileBasePath string) *documentRenderer {
+func newDocumentRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(documentRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.tempFileBasePath = tempFileBasePath
+	renderer.tempFileBasePath = params["tempFileBasePath"]
 
 	return renderer
 }

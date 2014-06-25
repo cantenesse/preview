@@ -13,11 +13,15 @@ import (
 	"strconv"
 )
 
+func init() {
+	Renderers["imageMagickRenderAgent"] = newImageMagickRenderer
+}
+
 type imageMagickRenderer struct {
 	renderAgent *genericRenderAgent
 }
 
-func newImageMagickRenderer(renderAgent *genericRenderAgent) *imageMagickRenderer {
+func newImageMagickRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(imageMagickRenderer)
 	renderer.renderAgent = renderAgent
 
