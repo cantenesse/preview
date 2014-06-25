@@ -88,6 +88,13 @@ type AppConfig struct {
 		TramEnabled bool     `json:"tramEnabled"`
 		TramHosts   []string `json:"tramHosts"`
 	} `json:"downloader"`
+	
+	Templates []struct {
+		Id string `json:"id"`
+		RenderAgent string `json:"renderAgent"`
+		Group string `json:"group"`
+		Attributes map[string][]string `json:"attributes"`
+	}
 }
 
 func LoadAppConfig(givenPath string) (*AppConfig, error) {

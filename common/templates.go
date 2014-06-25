@@ -1,12 +1,12 @@
 package common
 
 type Template struct {
-	Id         string
-	Renderer   string
-	Group      string
-	Attributes []Attribute
+	Id          string
+	RenderAgent string
+	Group       string
+	Attributes  []Attribute
 }
-
+// Templates are now defined in the configuration file
 var (
 	LegacyDefaultTemplates = []string{
 		"04a2c710-8872-4c88-9c75-a67175d3a8e7",
@@ -14,79 +14,19 @@ var (
 		"a89a6a0d-51d9-4d99-b278-0c5dfc538984",
 		"eaa7be0e-354f-482c-ac75-75cbdafecb6e",
 	}
-	DefaultTemplateJumbo = &Template{
-		"04a2c710-8872-4c88-9c75-a67175d3a8e7",
-		RenderAgentImageMagick,
-		"4C96",
-		[]Attribute{
-			Attribute{TemplateAttributeWidth, []string{"1040"}},
-			Attribute{TemplateAttributeHeight, []string{"780"}},
-			Attribute{TemplateAttributeOutput, []string{"jpg"}},
-			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeJumbo}},
-		},
-	}
-	DefaultTemplateLarge = &Template{
-		"2eee7c27-75e2-4682-9920-9a4e14caa433",
-		RenderAgentImageMagick,
-		"4C96",
-		[]Attribute{
-			Attribute{TemplateAttributeWidth, []string{"520"}},
-			Attribute{TemplateAttributeHeight, []string{"390"}},
-			Attribute{TemplateAttributeOutput, []string{"jpg"}},
-			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeLarge}},
-		},
-	}
-	DefaultTemplateMedium = &Template{
-		"a89a6a0d-51d9-4d99-b278-0c5dfc538984",
-		RenderAgentImageMagick,
-		"4C96",
-		[]Attribute{
-			Attribute{TemplateAttributeWidth, []string{"500"}},
-			Attribute{TemplateAttributeHeight, []string{"376"}},
-			Attribute{TemplateAttributeOutput, []string{"jpg"}},
-			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeMedium}},
-		},
-	}
-	DefaultTemplateSmall = &Template{
-		"eaa7be0e-354f-482c-ac75-75cbdafecb6e",
-		RenderAgentImageMagick,
-		"4C96",
-		[]Attribute{
-			Attribute{TemplateAttributeWidth, []string{"250"}},
-			Attribute{TemplateAttributeHeight, []string{"188"}},
-			Attribute{TemplateAttributeOutput, []string{"jpg"}},
-			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeSmall}},
-		},
-	}
-
-	DocumentConversionTemplate = &Template{
-		"9B17C6CE-7B09-4FD5-92AD-D85DD218D6D7",
-		RenderAgentDocument,
-		"A907",
-		[]Attribute{
-			Attribute{TemplateAttributeOutput, []string{"pdf"}},
-		},
-	}
+	
+	// These IDs are required for the old API to work
 	DocumentConversionTemplateId = "9B17C6CE-7B09-4FD5-92AD-D85DD218D6D7"
-
-	VideoConversionTemplate = &Template{
-		"4128966B-9F69-4E56-AD5C-1FDB3C24F910",
-		RenderAgentVideo,
-		"7A69",
-		[]Attribute{
-			Attribute{TemplateAttributeOutput, []string{"m3u8"}},
-		},
-	}
 	VideoConversionTemplateId = "4128966B-9F69-4E56-AD5C-1FDB3C24F910"
-
+	
 	// TemplateAttributeHeight is a constant for the height attribute that can be set for templates.
-	TemplateAttributeHeight = "height"
-	// TemplateAttributeWidth is a constant for the width attribute that can be set for templates.
-	TemplateAttributeWidth = "width"
-	// TemplateAttributeOutput is a constant for the output attribute that can be set for templates.
-	TemplateAttributeOutput = "output"
-	// TemplateAttributePlaceholderSize is a constant for the placeholderSize attribute that can be set for templates.
-	TemplateAttributePlaceholderSize = "placeholderSize"
+        TemplateAttributeHeight = "height"
+        // TemplateAttributeWidth is a constant for the width attribute that can be set for templates.
+        TemplateAttributeWidth = "width"
+        // TemplateAttributeOutput is a constant for the output attribute that can be set for templates.
+        TemplateAttributeOutput = "output"
+        // TemplateAttributePlaceholderSize is a constant for the placeholderSize attribute that can be set for templates.
+        TemplateAttributePlaceholderSize = "placeholderSize"
 )
 
 func (template *Template) AddAttribute(name string, value []string) Attribute {

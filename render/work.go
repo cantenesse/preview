@@ -152,8 +152,8 @@ func (agentManager *RenderAgentManager) CreateWorkFromTemplates(sourceAssetId, u
 	status := common.DefaultGeneratedAssetStatus
 	for _, template := range templates {
 		var location string
-		if template.Id == common.VideoConversionTemplateId {
-			// Zencoder has to use S3 for an output
+		forceLoc := template.GetAttribute("forceS3Location")
+		if len(forceLoc) == 1 && forceLoc[0] == "true" {
 			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
 		} else {
 			location = agentManager.uploader.Url(sourceAsset, template, 0)
@@ -203,8 +203,8 @@ func (agentManager *RenderAgentManager) CreateWork(sourceAssetId, url, fileType 
 
 	for _, template := range templates {
 		var location string
-		if template.Id == common.VideoConversionTemplateId {
-			// Zencoder has to use S3 for an output
+		forceLoc := template.GetAttribute("forceS3Location")
+		if len(forceLoc) == 1 && forceLoc[0] == "true" {
 			location = fmt.Sprintf("s3://%s/%s", agentManager.zencoderS3Bucket, sourceAssetId)
 		} else {
 			location = agentManager.uploader.Url(sourceAsset, template, 0)
@@ -270,7 +270,7 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 	}
 	templates, err := agentManager.templateManager.FindByIds(templateIds)
 	for _, t := range templates {
-		log.Println(t.Id, t.Renderer)
+		log.Println(t.Id, t.RenderAgent)
 	}
 	if err != nil {
 		return nil, common.GeneratedAssetStatusFailed, err
@@ -282,12 +282,12 @@ func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status str
 	agentManager.mu.Lock()
 	defer agentManager.mu.Unlock()
 
-	max, hasMax := agentManager.maxWork[template.Renderer]
+	max, hasMax := agentManager.maxWork[template.RenderAgent]
 	if !hasMax {
 		return status, nil
 	}
 	max = max * 4
-	activeWork, hasCount := agentManager.activeWork[template.Renderer]
+	activeWork, hasCount := agentManager.activeWork[template.RenderAgent]
 	if !hasCount {
 		return status, nil
 	}
@@ -295,7 +295,7 @@ func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status str
 		return status, nil
 	}
 
-	renderAgents, hasRenderAgent := agentManager.renderAgents[template.Renderer]
+	renderAgents, hasRenderAgent := agentManager.renderAgents[template.RenderAgent]
 	if !hasRenderAgent {
 		return status, nil
 	}
@@ -303,7 +303,7 @@ func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status str
 		return status, nil
 	}
 	renderAgent := renderAgents[0]
-	agentManager.activeWork[template.Renderer] = uniqueListWith(agentManager.activeWork[template.Renderer], generatedAssetId)
+	agentManager.activeWork[template.RenderAgent] = uniqueListWith(agentManager.activeWork[template.RenderAgent], generatedAssetId)
 
 	return common.GeneratedAssetStatusScheduled, func() {
 		renderAgent.Dispatch() <- generatedAssetId
