@@ -5,6 +5,10 @@ import (
 	"github.com/ngerakines/preview/cli"
 )
 
+var (
+	githash string = ""
+)
+
 func main() {
 	usage := `Preview
 
@@ -21,7 +25,7 @@ Options:
   --verify         Verify that a generate preview request completes
   --config=<file>  The configuration file to use.`
 
-	arguments, _ := docopt.Parse(usage, nil, true, "1.1.0", false)
+	arguments, _ := docopt.Parse(usage, nil, true, version(), false)
 
 	var command cli.PreviewCliCommand
 	switch cli.GetCommand(arguments) {
@@ -43,4 +47,12 @@ Options:
 		}
 	}
 	command.Execute()
+}
+
+func version() string {
+	previewVersion := "1.1.0"
+	if len(githash) > 0 {
+		return previewVersion + "+" + githash
+	}
+	return previewVersion
 }
