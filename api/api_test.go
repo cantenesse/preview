@@ -93,10 +93,8 @@ func setupTest(path string) (*render.RenderAgentManager, common.SourceAssetStora
 	//downloader := common.NewDownloader(path, path, tfm, false, []string{}, nil)
 	uploader := common.NewLocalUploader(path)
 	registry := metrics.NewRegistry()
-	rm := render.NewRenderAgentManager(registry, sourceAssetStorageManager, generatedAssetStorageManager, tm, tfm, uploader, true, nil, "", "", nil, nil, nil)
+	rm := render.NewRenderAgentManager(registry, sourceAssetStorageManager, generatedAssetStorageManager, tm, tfm, uploader, true, nil, nil)
 
-	//rm.AddImageMagickRenderAgent(downloader, uploader, 5)
-	//rm.AddDocumentRenderAgent(downloader, uploader, filepath.Join(path, "doc-cache"), 5)
 	blueprint := NewApiBlueprint("/api/v2", rm, generatedAssetStorageManager, sourceAssetStorageManager, registry, nil)
 	return rm, sourceAssetStorageManager, generatedAssetStorageManager, tm, blueprint
 }

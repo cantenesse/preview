@@ -39,11 +39,12 @@ func initTempFileManager(path string) *tempFileManager {
 		"http": {"listen": ":8081"},
 		"common": {"nodeId": "9D7DB7FC75B4", "placeholderBasePath": "./", "placeholderGroups": {"image": ["jpg"]}, "localAssetStoragePath":"./", "workDispatcherEnabled":true},
 		"storage": {"engine": "cassandra", "cassandraNodes": ["localhost"], "cassandraKeyspace": "preview"},
+		"renderAgents":{
 		"imageMagickRenderAgent": {"enabled": true, "count": 16, "supportedFileTypes":["jpg"]},
-		"documentRenderAgent": {"enabled": true, "count": 16, "basePath": "./"},
+		"documentRenderAgent": {"enabled": true, "count": 16, "rendererParams":{"basePath": "./"}}},
 		"simpleApi": {"enabled": true, "baseUrl":"/api", "edgeBaseUrl": "http://localhost:8080"},
 		"assetApi": {"basePath": "./", "enabled": true},
-		"uploader": {"engine": "s3", "s3Key": "foo", "s3Secret": "bar", "s3Host": "baz", "s3Buckets": ["previewa", "previewb"]},
+		"uploader": {"engine": "s3"}, "s3":{"key": "foo", "secret": "bar", "host": "baz", "buckets": ["previewa", "previewb"]},
 		"downloader": {"basePath": "./", "tramEnabled": false}
 		}`)
 	return fm
@@ -77,11 +78,11 @@ func TestBasicConfig(t *testing.T) {
 		t.Error("appConfig.Storage().CassandraNodes()", cassandraNodes)
 	}
 
-	if appConfig.ImageMagickRenderAgent.Enabled != true {
-		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().Enabled()", appConfig.ImageMagickRenderAgent.Enabled)
+	if appConfig.RenderAgents["imageMagickRenderAgent"].Enabled != true {
+		t.Error("Invalid default for appConfig.ImageMagickRenderAgent().Enabled()", appConfig.RenderAgents["imageMagickRenderAgent"].Enabled)
 	}
-	if len(appConfig.ImageMagickRenderAgent.SupportedFileTypes) != 1 {
-		t.Error("Invalid count for appConfig.ImageMagickRenderAgent().SupportedFileTypes()", len(appConfig.ImageMagickRenderAgent.SupportedFileTypes))
+	if len(appConfig.RenderAgents["imageMagickRenderAgent"].SupportedFileTypes) != 1 {
+		t.Error("Invalid count for appConfig.ImageMagickRenderAgent().SupportedFileTypes()", len(appConfig.RenderAgents["imageMagickRenderAgent"].SupportedFileTypes))
 	}
 
 	if appConfig.SimpleApi.Enabled != true {
