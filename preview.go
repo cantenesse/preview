@@ -16,7 +16,7 @@ Usage: preview [--help --version --config=<file>]
        preview daemon [--help --version --config <file>]
        preview render [--verbose... --verify] <host> <file>...
        preview renderV2 [--verbose...] <host> (--template <templateId>)... <file>...
-       preview verify [--verbose... --config=<file>] <host> <filepath>
+       preview verify [--verbose... --config=<file> --timeout=<timeout>] <host> <filepath>
 
 Options:
   --help           Show this screen.
