@@ -28,7 +28,6 @@ type simpleBlueprint struct {
 	supportedFileTypes           map[string]int64
 	generatePreviewRequestsMeter metrics.Meter
 	previewInfoRequestsMeter     metrics.Meter
-	templatesBySize              map[string]string
 }
 
 type templateTuple struct {
@@ -63,18 +62,6 @@ func NewSimpleBlueprint(
 	blueprint.previewInfoRequestsMeter = metrics.NewMeter()
 	registry.Register("simpleApi.generatePreviewRequests", blueprint.generatePreviewRequestsMeter)
 	registry.Register("simpleApi.previewInfoRequests", blueprint.previewInfoRequestsMeter)
-
-	blueprint.templatesBySize = make(map[string]string)
-
-	legacyTemplates, err := blueprint.templateManager.FindByIds(common.LegacyDefaultTemplates)
-	if err == nil {
-		for _, legacyTemplate := range legacyTemplates {
-			placeholderSize, err := common.GetFirstAttribute(legacyTemplate, common.TemplateAttributePlaceholderSize)
-			if err == nil {
-				blueprint.templatesBySize[placeholderSize] = legacyTemplate.Id
-			}
-		}
-	}
 
 	return blueprint, nil
 }
@@ -327,7 +314,7 @@ func (blueprint *simpleBlueprint) getPreviewImage(generatedAsset *common.Generat
 	log.Println("Building preview image for", generatedAsset)
 	if generatedAsset.Status == common.GeneratedAssetStatusComplete {
 		signedUrl, expires := blueprint.signUrl(blueprint.scrubUrl(generatedAsset, placeholderSize))
-		width, height, err := blueprint.getImageSize(placeholderSize)
+		width, height, err := blueprint.getImageSize(generatedAsset)
 		if err != nil {
 			return &imageInfo{signedUrl, 200, 200, expires, true, false, page}
 		}
@@ -342,28 +329,23 @@ func (blueprint *simpleBlueprint) getPreviewImage(generatedAsset *common.Generat
 	return blueprint.getPlaceholder(fileType, placeholderSize, page)
 }
 
-func (blueprint *simpleBlueprint) getImageSize(placeholderSize string) (int32, int32, error) {
-	id, hasId := blueprint.templatesBySize[placeholderSize]
-	if !hasId {
-		log.Println("Could not find template with placeholderSize", placeholderSize)
+func (blueprint *simpleBlueprint) getImageSize(ga *common.GeneratedAsset) (int32, int32, error) {
+	if !(ga.HasAttribute("imageWidth") && ga.HasAttribute("imageHeight")) {
+		log.Println("Asset does not have width and height attributes")
 		return 0, 0, common.ErrorNotImplemented
 	}
-	templates, err := blueprint.templateManager.FindByIds([]string{id})
-	if err != nil {
-		log.Println("Could not find template")
-		return 0, 0, err
-	}
-	template := templates[0]
-	if !(template.HasAttribute(common.TemplateAttributeWidth) && template.HasAttribute(common.TemplateAttributeHeight)) {
-		log.Println("Template does not have width and height attributes")
+	widths := ga.GetAttribute("imageWidth")
+	heights := ga.GetAttribute("imageHeight")
+	if len(widths) == 0 || len(heights) == 0 {
+		log.Println("Asset does not have width and height attributes")
 		return 0, 0, common.ErrorNotImplemented
 	}
-	width, err := strconv.Atoi(template.GetAttribute(common.TemplateAttributeWidth)[0])
+	width, err := strconv.Atoi(widths[0])
 	if err != nil {
 		log.Println("Error parsing template width")
 		return 0, 0, err
 	}
-	height, err := strconv.Atoi(template.GetAttribute(common.TemplateAttributeHeight)[0])
+	height, err := strconv.Atoi(heights[0])
 	if err != nil {
 		log.Println("Error parsing template height")
 		return 0, 0, err
@@ -374,11 +356,7 @@ func (blueprint *simpleBlueprint) getImageSize(placeholderSize string) (int32, i
 func (blueprint *simpleBlueprint) getPlaceholder(fileType, placeholderSize string, page int32) *imageInfo {
 	placeholder := blueprint.placeholderManager.Url(fileType, placeholderSize)
 	signedUrl, expires := blueprint.signUrl(blueprint.edgeContentHost + "/static" + placeholder.Url)
-	width, height, err := blueprint.getImageSize(placeholderSize)
-	if err != nil {
-		return &imageInfo{signedUrl, 200, 200, expires, false, true, page}
-	}
-	return &imageInfo{signedUrl, width, height, expires, false, true, page}
+	return &imageInfo{signedUrl, 200, 200, expires, false, true, page}
 }
 
 func (blueprint *simpleBlueprint) getFileType(sourceAssets []*common.SourceAsset) string {
