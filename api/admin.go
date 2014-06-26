@@ -120,7 +120,7 @@ func (blueprint *adminBlueprint) renderAgentsHandler(res http.ResponseWriter, re
 }
 
 func (blueprint *adminBlueprint) newRenderAgentViewElement(name string) renderAgentViewElement {
-	enabled, count, activeWork := blueprint.agentManager.ActiveWorkForRenderAgent(common.RenderAgentDocument)
+	enabled, count, activeWork := blueprint.agentManager.ActiveWorkForRenderAgent(name)
 	return renderAgentViewElement{count, enabled, activeWork}
 }
 
