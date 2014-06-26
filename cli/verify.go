@@ -97,7 +97,12 @@ func (command *VerifyCommand) Execute() {
 			if job.isComplete {
 				continue
 			}
-			response, _ := command.submitPreviewInfoRequest(job.id)
+			response, err := command.submitPreviewInfoRequest(job.id)
+			if err != nil {
+				log.Println("Error getting preview response:", err)
+				workDone = false
+				continue
+			}
 			job.isComplete = command.isComplete(response)
 
 			if job.isComplete {
