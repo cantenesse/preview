@@ -18,6 +18,8 @@ var inputFiles = []string{
 	"ChefConf2014schedule.docx",
 	"ChefConf2014schedule.pdf",
 	"wallpaper-641916.jpg",
+	"LittleBitOfEverything.docx",
+	"LittleBitOfEverything.pptx",
 }
 
 type VerifyCommand struct {
