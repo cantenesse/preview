@@ -71,6 +71,8 @@ func (blueprint *simpleBlueprint) AddRoutes(p *pat.PatternServeMux) {
 	p.Put(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.generatePreviewHandler))
 	p.Get(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.previewInfoHandler))
 	p.Get(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.previewInfoHandler))
+	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.multipagePreviewInfoHandler))
+	p.Get(blueprint.buildUrl("/v2/preview/:fileid"), http.HandlerFunc(blueprint.multipagePreviewInfoHandler))
 }
 
 func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter, req *http.Request) {
@@ -109,6 +111,19 @@ func (blueprint *simpleBlueprint) previewInfoHandler(res http.ResponseWriter, re
 
 	fileIds := blueprint.parseFileIds(req)
 	previewInfo, err := blueprint.handlePreviewInfoRequest(fileIds)
+	if err != nil {
+		http.Error(res, http.StatusText(500), 500)
+		return
+	}
+
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(previewInfo))
+}
+
+func (blueprint *simpleBlueprint) multipagePreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
+	blueprint.previewInfoRequestsMeter.Mark(1)
+
+	fileIds := blueprint.parseFileIds(req)
+	previewInfo, err := blueprint.multipagePreviewInfoRequest(fileIds)
 	if err != nil {
 		http.Error(res, http.StatusText(500), 500)
 		return
@@ -163,9 +178,15 @@ func (blueprint *simpleBlueprint) parseFileIds(req *http.Request) []string {
 	return results
 }
 
-func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]byte, error) {
-	collections := make([]*previewInfoCollection, 0, 0)
+func (blueprint *simpleBlueprint) getSourceAssetType(sourceAsset *common.SourceAsset) string {
+	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
+	if err == nil {
+		return fileType
+	}
+	return "unknown"
+}
 
+func (blueprint *simpleBlueprint) legacyTemplates() (map[string]templateTuple, error) {
 	legacyTemplates, err := blueprint.templateManager.FindByIds(common.LegacyDefaultTemplates)
 	if err != nil {
 		return nil, err
@@ -178,6 +199,16 @@ func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]
 			return nil, err
 		}
 		templates[legacyTemplate.Id] = templateTuple{placeholderSize, legacyTemplate}
+	}
+	return templates, nil
+}
+
+func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]byte, error) {
+	collections := make([]*previewInfoCollection, 0, 0)
+
+	templates, err := blueprint.legacyTemplates()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, fileId := range fileIds {
