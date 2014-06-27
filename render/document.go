@@ -343,8 +343,8 @@ func (renderAgent *documentRenderAgent) createPdfWithMSOffice(source, destinatio
 	case "xlsx", "xls":
 		script = "applescripts/ExcelToPdf.scpt"
 	}
-	// This is what actually converts the file by using applescript to print it to the PDFwriter printer
 
+	// This is what actually converts the file by using applescript to print it to the PDFwriter printer
 	cmd = exec.Command("osascript", script, fileWithExtension, path.Base(fileWithExtension))
 	log.Println(cmd)
 	err = cmd.Run()
@@ -354,9 +354,9 @@ func (renderAgent *documentRenderAgent) createPdfWithMSOffice(source, destinatio
 	}
 	var pdfFile string
 	iterations := 0
-	// This is necessary because automator can exit before the PDF printer finishes printing
+	// This is necessary because the applescript command can exit before the PDF printer finishes printing
 	for {
-		// PDFs get put here from PDFwriter; the UUID of the file lets us find it easily
+		// PDFs get put here from PDFwriter; the UUID in the filename lets us find it easily
 		pdfs, err := filepath.Glob("/Users/Shared/PDFwriter/*/job_*" + id + ".pdf")
 		if err != nil {
 			log.Println("error running command", err)
@@ -367,10 +367,11 @@ func (renderAgent *documentRenderAgent) createPdfWithMSOffice(source, destinatio
 			break
 		}
 		time.Sleep(1 * time.Second)
-		if iterations > 5 {
+		if iterations > 10 {
 			log.Println("Timeout")
 			return common.ErrorNotImplemented
 		}
+		iterations++;
 	}
 
 	// Put the file where Preview expects it to be
