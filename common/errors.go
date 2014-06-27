@@ -35,6 +35,7 @@ var (
 	ErrorCouldNotDetermineFileType        = codederror.NewCodedError([]string{"PRV", "COM"}, 28, "Could not determine type of file.")
 	ErrorCouldNotSerializeSourceAssets    = codederror.NewCodedError([]string{"PRV", "COM"}, 29, "Could not serialze source assets.")
 	ErrorCouldNotSerializeGeneratedAssets = codederror.NewCodedError([]string{"PRV", "COM"}, 30, "Could not serialze generated assets.")
+	ErrorCouldNotDetermineRenderDensity   = codederror.NewCodedError([]string{"PRV", "COM"}, 31, "Could not determine density from template")
 
 	AllErrors = []codederror.CodedError{
 		ErrorNotImplemented,
@@ -66,6 +67,7 @@ var (
 		ErrorCouldNotDetermineFileSize,
 		ErrorCouldNotSerializeSourceAssets,
 		ErrorCouldNotSerializeGeneratedAssets,
+		ErrorCouldNotDetermineRenderDensity,
 	}
 )
 

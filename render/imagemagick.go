@@ -183,6 +183,11 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 		return
 	}
 
+	density, err := renderAgent.getDensity(template)
+	if err != nil {
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderDensity), nil}
+		return
+	}
 	renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ := renderAgent.getGeneratedAssetPage(generatedAsset)
@@ -195,7 +200,7 @@ func (renderAgent *imageMagickRenderAgent) renderGeneratedAsset(id string) {
 				// Create derived work for all pages but first one
 				renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
 			}
-			err = renderAgent.imageFromPdf(sourceFile.Path(), destination, size, page)
+			err = renderAgent.imageFromPdf(sourceFile.Path(), destination, size, density, page)
 		} else if fileType == "gif" {
 			err = renderAgent.firstGifFrame(sourceFile.Path(), destination, size)
 		} else {
@@ -299,14 +304,14 @@ func (renderAgent *imageMagickRenderAgent) resize(source, destination string, si
 	return nil
 }
 
-func (renderAgent *imageMagickRenderAgent) imageFromPdf(source, destination string, size, page int) error {
+func (renderAgent *imageMagickRenderAgent) imageFromPdf(source, destination string, size, density, page int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
 		return err
 	}
 
-	cmd := exec.Command("convert", "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
+	cmd := exec.Command("convert", "-density", strconv.Itoa(density), "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
 	log.Println(cmd)
 
 	var buf bytes.Buffer
@@ -351,6 +356,18 @@ func (renderAgent *imageMagickRenderAgent) getSize(template *common.Template) (i
 		sizeValue, err := strconv.Atoi(rawSize)
 		if err == nil {
 			return sizeValue, nil
+		}
+		return 0, err
+	}
+	return 0, err
+}
+
+func (renderAgent *imageMagickRenderAgent) getDensity(template *common.Template) (int, error) {
+	rawDensity, err := common.GetFirstAttribute(template, common.TemplateAttributeDensity)
+	if err == nil {
+		density, err := strconv.Atoi(rawDensity)
+		if err == nil {
+			return density, nil
 		}
 		return 0, err
 	}

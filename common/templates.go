@@ -23,6 +23,7 @@ var (
 			Attribute{TemplateAttributeHeight, []string{"780"}},
 			Attribute{TemplateAttributeOutput, []string{"jpg"}},
 			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeJumbo}},
+			Attribute{TemplateAttributeDensity, []string{"144"}},
 		},
 	}
 	DefaultTemplateLarge = &Template{
@@ -34,6 +35,7 @@ var (
 			Attribute{TemplateAttributeHeight, []string{"390"}},
 			Attribute{TemplateAttributeOutput, []string{"jpg"}},
 			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeLarge}},
+			Attribute{TemplateAttributeDensity, []string{"144"}},
 		},
 	}
 	DefaultTemplateMedium = &Template{
@@ -45,6 +47,7 @@ var (
 			Attribute{TemplateAttributeHeight, []string{"376"}},
 			Attribute{TemplateAttributeOutput, []string{"jpg"}},
 			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeMedium}},
+			Attribute{TemplateAttributeDensity, []string{"144"}},
 		},
 	}
 	DefaultTemplateSmall = &Template{
@@ -56,6 +59,7 @@ var (
 			Attribute{TemplateAttributeHeight, []string{"188"}},
 			Attribute{TemplateAttributeOutput, []string{"jpg"}},
 			Attribute{TemplateAttributePlaceholderSize, []string{PlaceholderSizeSmall}},
+			Attribute{TemplateAttributeDensity, []string{"144"}},
 		},
 	}
 
@@ -87,6 +91,8 @@ var (
 	TemplateAttributeOutput = "output"
 	// TemplateAttributePlaceholderSize is a constant for the placeholderSize attribute that can be set for templates.
 	TemplateAttributePlaceholderSize = "placeholderSize"
+	// TemplateAttributeDensity is the density by which ImageMagick samples the image.
+	TemplateAttributeDensity = "density"
 )
 
 func (template *Template) AddAttribute(name string, value []string) Attribute {
