@@ -23,7 +23,7 @@ func buildDefaultDocumentConfig(basePathFunc basePath) []byte {
       "localAssetStoragePath":"` + basePathFunc("assets") + `"
    },
    "http":{
-      "listen":":8080"
+      "listen":":8081"
    },
    "conversion":{
       "enabled":true,

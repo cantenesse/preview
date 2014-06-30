@@ -41,6 +41,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
       "enabled":true,
       "count":16,
       "basePath":"` + basePathFunc("documentRenderAgentTmp") + `",
+      "conversionServer": "http://127.0.0.1:8081"
       "supportedFileTypes":["doc", "docx", "ppt", "pptx"]
    },
    "videoRenderAgent":{

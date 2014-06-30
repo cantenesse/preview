@@ -1,15 +1,16 @@
 package render
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/ngerakines/preview/common"
+	"github.com/ngerakines/preview/docserver"
 	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ type documentRenderAgent struct {
 	temporaryFileManager common.TemporaryFileManager
 	agentManager         *RenderAgentManager
 	tempFileBasePath     string
+	conversionServer     string
 	stop                 chan (chan bool)
 }
 
@@ -47,6 +49,7 @@ func newDocumentRenderAgent(
 	downloader common.Downloader,
 	uploader common.Uploader,
 	tempFileBasePath string,
+	conversionServer string,
 	workChannel RenderAgentWorkChannel) RenderAgent {
 
 	renderAgent := new(documentRenderAgent)
@@ -60,6 +63,7 @@ func newDocumentRenderAgent(
 	renderAgent.uploader = uploader
 	renderAgent.workChannel = workChannel
 	renderAgent.tempFileBasePath = tempFileBasePath
+	renderAgent.conversionServer = conversionServer
 	renderAgent.statusListeners = make([]RenderStatusChannel, 0, 0)
 	renderAgent.stop = make(chan (chan bool))
 
@@ -173,12 +177,10 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 
 	// 4. Fetch the source asset file
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
-	sourceFile, err := renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
-	if err != nil {
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNoDownloadUrlsWork), nil}
+	if len(urls) == 0 {
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-	defer sourceFile.Release()
 
 	//      // 5. Create a temporary destination directory.
 	destination, err := renderAgent.createTemporaryDestinationDirectory()
@@ -190,8 +192,9 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	defer destinationTemporaryFile.Release()
 
 	renderAgent.metrics.convertTime.Time(func() {
-		err = renderAgent.createPdf(sourceFile.Path(), destination)
+		err = renderAgent.createPdf(urls[0], destination, fileType)
 		if err != nil {
+			log.Println(err)
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
 			return
 		}
@@ -288,26 +291,58 @@ func (renderAgent *documentRenderAgent) getSourceAsset(generatedAsset *common.Ge
 	return nil, common.ErrorNoSourceAssetsFoundForId
 }
 
-func (renderAgent *documentRenderAgent) createPdf(source, destination string) error {
-	_, err := exec.LookPath("soffice")
+func (renderAgent *documentRenderAgent) createPdf(source, destination, filetype string) error {
+	jsonData := `{
+    "location":"` + source + `",
+    "filetype":"` + filetype + `"
+}`
+
+	log.Println("Creating pdf:", jsonData)
+	req, err := http.NewRequest("PUT", renderAgent.conversionServer+"/", strings.NewReader(jsonData))
 	if err != nil {
-		log.Println("soffice command not found")
+		return err
+	}
+	client := common.NewHttpClient(true, 10*time.Second)
+	httpResp, err := client.Do(req)
+	if err != nil {
 		return err
 	}
 
-	// TODO: Make this path configurable.
-	cmd := exec.Command("soffice", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", source, "--outdir", destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	log.Println(buf.String())
+	resp, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
-		log.Println("error running command", err)
 		return err
+	}
+	log.Println("Received response", string(resp))
+
+	var job *docserver.ConvertDocumentJob
+	err = json.Unmarshal(resp, &job)
+	if err != nil {
+		return err
+	}
+
+	for iterations := 0; iterations < 30; iterations++ {
+		httpResp, err = http.Get(renderAgent.conversionServer + "/" + job.Id)
+		if err != nil {
+			return err
+		}
+
+		resp, err := ioutil.ReadAll(httpResp.Body)
+		if err != nil {
+			return err
+		}
+		log.Println("Received response", string(resp))
+		err = json.Unmarshal(resp, &job)
+		if err != nil {
+			return err
+		}
+		if job.Status == "completed" {
+			return nil
+		} else if job.Status == "failed" {
+			log.Println("document conversion failed")
+			return common.ErrorNotImplemented
+		}
+
+		time.Sleep(1 * time.Second)
 	}
 
 	return nil

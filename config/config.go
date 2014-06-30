@@ -48,6 +48,7 @@ type AppConfig struct {
 		Enabled            bool     `json:"enabled"`
 		Count              int      `json:"count"`
 		BasePath           string   `json:"basePath"`
+		ConversionServer   string   `json:conversionServer"`
 		SupportedFileTypes []string `json:"supportedFileTypes"`
 	} `json:"documentRenderAgent"`
 
