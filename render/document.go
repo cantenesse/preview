@@ -10,7 +10,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -191,7 +190,7 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	defer destinationTemporaryFile.Release()
 
 	renderAgent.metrics.convertTime.Time(func() {
-		err = renderAgent.createPdfWithMSOffice(sourceFile.Path(), destination, fileType)
+		err = renderAgent.createPdf(sourceFile.Path(), destination)
 		if err != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
 			return
@@ -311,91 +310,6 @@ func (renderAgent *documentRenderAgent) createPdf(source, destination string) er
 		return err
 	}
 
-	return nil
-}
-
-// Currently this is a total hack that is only a proof of concept
-func (renderAgent *documentRenderAgent) createPdfWithMSOffice(source, destination, fileType string) error {
-	_, err := exec.LookPath("osascript")
-	if err != nil {
-		log.Println("osascript command not found")
-		return err
-	}
-	id := path.Base(source)
-
-	// For MS Office to open it, it has to have a filetype
-	fileWithExtension := source + "." + fileType
-	cmd := exec.Command("mv", source, fileWithExtension)
-
-	log.Println(cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Println("error running command", err)
-		return err
-	}
-
-	var script string
-	switch fileType {
-	case "docx", "doc":
-		script = "applescripts/WordToPdf.scpt"
-	case "pptx", "ppt":
-		script = "applescripts/PowerpointToPdf.scpt"
-	case "xlsx", "xls":
-		script = "applescripts/ExcelToPdf.scpt"
-	}
-
-	// This is what actually converts the file by using applescript to print it to the PDFwriter printer
-	cmd = exec.Command("osascript", script, fileWithExtension, path.Base(fileWithExtension))
-	log.Println(cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Println("error running command", err)
-		return err
-	}
-	var pdfFile string
-	iterations := 0
-	// This is necessary because the applescript command can exit before the PDF printer finishes printing
-	for {
-		// PDFs get put here from PDFwriter; the UUID in the filename lets us find it easily
-		pdfs, err := filepath.Glob("/Users/Shared/PDFwriter/*/job_*" + id + ".pdf")
-		if err != nil {
-			log.Println("error running command", err)
-			return err
-		}
-		if len(pdfs) == 1 {
-			pdfFile = pdfs[0]
-			break
-		}
-		time.Sleep(1 * time.Second)
-		if iterations > 10 {
-			log.Println("Timeout")
-			return common.ErrorNotImplemented
-		}
-		iterations++;
-	}
-
-	// Put the file where Preview expects it to be
-	cmd = exec.Command("mv", pdfFile, destination+"/"+id+".pdf")
-	log.Println(cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Println("error running command", err)
-		return err
-	}
-
-	// Undo the move we did earlier
-	// Again, this is a total hack and only a proof-of-concept
-	cmd = exec.Command("mv", fileWithExtension, source)
-	log.Println(cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Println("error running command", err)
-		return err
-	}
-	// For some reason on Mac, the call to pdfinfo will crash if we don't wait here
-	// Maybe the move command exits prematurely before the file actually moves?
-	// I'm guessing and don't really know
-	time.Sleep(1 * time.Second)
 	return nil
 }
 

@@ -17,7 +17,9 @@ Usage: preview [--help --version --config=<file>]
        preview render [--verbose... --verify] <host> <file>...
        preview renderV2 [--verbose...] <host> (--template <templateId>)... <file>...
        preview verify [--verbose... --config=<file> --timeout=<timeout>] <host> <filepath>
-
+       preview document daemon [--help --version --config <file>]
+       preview document render [--verbose...] <host> <file>
+       
 Options:
   --help           Show this screen.
   --version        Show version.
@@ -44,6 +46,14 @@ Options:
 	case "verify":
 		{
 			command = cli.NewVerifyCommand(arguments)
+		}
+	case "document_daemon":
+		{
+			command = cli.NewDocumentDaemonCommand(arguments)
+		}
+	case "document_render":
+		{
+			command = cli.NewDocumentRenderCommand(arguments)
 		}
 	}
 	command.Execute()
