@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/config"
-	"github.com/ngerakines/preview/render"
+	"github.com/ngerakines/preview/daemon/agent"
 	"github.com/rcrowley/go-metrics"
 	"net/http"
 	"strconv"
@@ -15,10 +14,11 @@ import (
 type adminBlueprint struct {
 	base                 string
 	registry             metrics.Registry
-	appConfig            *config.AppConfig
+	config               string
+	renderAgents         []string
 	placeholderManager   common.PlaceholderManager
 	temporaryFileManager common.TemporaryFileManager
-	agentManager         *render.RenderAgentManager
+	agentManager         *agent.RenderAgentManager
 }
 
 type placeholdersView struct {
@@ -49,11 +49,17 @@ type errorsView struct {
 }
 
 // NewAdminBlueprint creates a new adminBlueprint object.
-func NewAdminBlueprint(registry metrics.Registry, appConfig *config.AppConfig, placeholderManager common.PlaceholderManager, temporaryFileManager common.TemporaryFileManager, agentManager *render.RenderAgentManager) *adminBlueprint {
+func NewAdminBlueprint(registry metrics.Registry,
+	config string,
+	renderAgents []string,
+	placeholderManager common.PlaceholderManager,
+	temporaryFileManager common.TemporaryFileManager,
+	agentManager *agent.RenderAgentManager) *adminBlueprint {
 	blueprint := new(adminBlueprint)
 	blueprint.base = "/admin"
 	blueprint.registry = registry
-	blueprint.appConfig = appConfig
+	blueprint.config = config
+	blueprint.renderAgents = renderAgents
 	blueprint.placeholderManager = placeholderManager
 	blueprint.temporaryFileManager = temporaryFileManager
 	blueprint.agentManager = agentManager
@@ -70,9 +76,8 @@ func (blueprint *adminBlueprint) AddRoutes(p *pat.PatternServeMux) {
 }
 
 func (blueprint *adminBlueprint) configHandler(res http.ResponseWriter, req *http.Request) {
-	content := blueprint.appConfig.Source
-	res.Header().Set("Content-Length", strconv.Itoa(len(content)))
-	res.Write([]byte(content))
+	res.Header().Set("Content-Length", strconv.Itoa(len(blueprint.config)))
+	res.Write([]byte(blueprint.config))
 }
 
 func (blueprint *adminBlueprint) metricsHandler(res http.ResponseWriter, req *http.Request) {
@@ -105,7 +110,7 @@ func (blueprint *adminBlueprint) placeholdersHandler(res http.ResponseWriter, re
 func (blueprint *adminBlueprint) renderAgentsHandler(res http.ResponseWriter, req *http.Request) {
 	view := new(renderAgentsView)
 	view.RenderAgents = make(map[string]renderAgentViewElement)
-	for name := range blueprint.appConfig.RenderAgents {
+	for _, name := range blueprint.renderAgents {
 		view.RenderAgents[name] = blueprint.newRenderAgentViewElement(name)
 	}
 

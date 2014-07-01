@@ -98,7 +98,7 @@ func NewSourceAsset(id, idType string) (*SourceAsset, error) {
 	return sa, nil
 }
 
-func newSourceAssetFromJson(payload []byte) (*SourceAsset, error) {
+func NewSourceAssetFromJson(payload []byte) (*SourceAsset, error) {
 	var sa SourceAsset
 
 	err := json.Unmarshal(payload, &sa)
@@ -130,7 +130,7 @@ func NewGeneratedAssetFromSourceAsset(sourceAsset *SourceAsset, templateId, loca
 	return ga, nil
 }
 
-func newGeneratedAssetFromJson(payload []byte) (*GeneratedAsset, error) {
+func NewGeneratedAssetFromJson(payload []byte) (*GeneratedAsset, error) {
 	var ga GeneratedAsset
 
 	err := json.Unmarshal(payload, &ga)

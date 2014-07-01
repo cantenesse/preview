@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/render"
 	"github.com/ngerakines/preview/util"
 	"github.com/ngerakines/testutils"
 	"github.com/rcrowley/go-metrics"

@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/render"
+	"github.com/ngerakines/preview/daemon/agent"
 	"log"
 	"net/http"
 )
@@ -11,10 +11,10 @@ import (
 type webhookBlueprint struct {
 	base               string
 	gasm               common.GeneratedAssetStorageManager
-	renderAgentManager *render.RenderAgentManager
+	renderAgentManager *agent.RenderAgentManager
 }
 
-func NewWebhookBlueprint(gasm common.GeneratedAssetStorageManager, ram *render.RenderAgentManager) *webhookBlueprint {
+func NewWebhookBlueprint(gasm common.GeneratedAssetStorageManager, ram *agent.RenderAgentManager) *webhookBlueprint {
 	blueprint := new(webhookBlueprint)
 	// TODO: Abstract this so WebHookBlueprint can apply to non-Zencoder web hooks as well
 	blueprint.base = "/webhooks"

@@ -3,7 +3,8 @@ package main
 import (
 	"github.com/docopt/docopt.go"
 	"github.com/ngerakines/preview/cli"
-	_ "github.com/ngerakines/preview/daemon"
+	"github.com/ngerakines/preview/daemon"
+	"log"
 )
 
 var (
@@ -11,6 +12,9 @@ var (
 )
 
 func main() {
+
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	usage := `Preview
 
 Usage: preview [--help --version --config=<file>]
@@ -36,7 +40,7 @@ Options:
 		}
 	case "daemon":
 		{
-			command = cli.NewDaemonCommand(arguments)
+			command = daemon.NewDaemonCommand(arguments)
 		}
 	case "renderV2":
 		{

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/render"
+	"github.com/ngerakines/preview/daemon/agent"
 	"github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"log"
@@ -19,7 +19,7 @@ import (
 type simpleBlueprint struct {
 	base                         string
 	edgeContentHost              string
-	renderAgentManager           *render.RenderAgentManager
+	renderAgentManager           *agent.RenderAgentManager
 	sourceAssetStorageManager    common.SourceAssetStorageManager
 	generatedAssetStorageManager common.GeneratedAssetStorageManager
 	templateManager              common.TemplateManager
@@ -40,7 +40,7 @@ func NewSimpleBlueprint(
 	registry metrics.Registry,
 	base string,
 	edgeContentHost string,
-	renderAgentManager *render.RenderAgentManager,
+	renderAgentManager *agent.RenderAgentManager,
 	sourceAssetStorageManager common.SourceAssetStorageManager,
 	generatedAssetStorageManager common.GeneratedAssetStorageManager,
 	templateManager common.TemplateManager,

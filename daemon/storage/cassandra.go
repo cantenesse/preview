@@ -1,0 +1,309 @@
+package storage
+
+import (
+	"github.com/gocql/gocql"
+	"github.com/ngerakines/preview/common"
+	"log"
+	"strings"
+	"time"
+)
+
+type CassandraManager struct {
+	cluster *gocql.ClusterConfig
+}
+
+type cassandraSourceAssetStorageManager struct {
+	cassandraManager *CassandraManager
+	nodeId           string
+	keyspace         string
+}
+
+type cassandraGeneratedAssetStorageManager struct {
+	cassandraManager *CassandraManager
+	templateManager  common.TemplateManager
+	nodeId           string
+	keyspace         string
+}
+
+func NewCassandraManager(hosts []string, keyspace string) (*CassandraManager, error) {
+	cm := new(CassandraManager)
+
+	cm.cluster = gocql.NewCluster(hosts...)
+	cm.cluster.Consistency = gocql.One
+	cm.cluster.Keyspace = keyspace
+	cm.cluster.CQLVersion = "3.1.1"
+
+	return cm, nil
+}
+
+func NewCassandraSourceAssetStorageManager(cm *CassandraManager, nodeId, keyspace string) (common.SourceAssetStorageManager, error) {
+	csasm := new(cassandraSourceAssetStorageManager)
+	csasm.cassandraManager = cm
+	csasm.nodeId = nodeId
+	csasm.keyspace = keyspace
+	return csasm, nil
+}
+
+func NewCassandraGeneratedAssetStorageManager(cm *CassandraManager, templateManager common.TemplateManager, nodeId, keyspace string) (common.GeneratedAssetStorageManager, error) {
+	cgasm := new(cassandraGeneratedAssetStorageManager)
+	cgasm.cassandraManager = cm
+	cgasm.templateManager = templateManager
+	cgasm.nodeId = nodeId
+	cgasm.keyspace = keyspace
+	return cgasm, nil
+}
+
+func (cm *CassandraManager) Stop() {
+}
+
+func (sasm *cassandraSourceAssetStorageManager) Store(sourceAsset *common.SourceAsset) error {
+	log.Println("About to store sourceAsset", sourceAsset)
+	sourceAsset.CreatedBy = sasm.nodeId
+	sourceAsset.UpdatedBy = sasm.nodeId
+	payload, err := sourceAsset.Serialize()
+	if err != nil {
+		log.Println("Error serializing source asset:", err)
+		return err
+	}
+	session, err := sasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	err = session.Query(`INSERT INTO `+sasm.keyspace+`.source_assets (id, type, message) VALUES (?, ?, ?)`, sourceAsset.Id, sourceAsset.IdType, payload).Exec()
+	if err != nil {
+		log.Println("Error persisting source asset:", err)
+		return err
+	}
+
+	return nil
+}
+
+func (sasm *cassandraSourceAssetStorageManager) FindBySourceAssetId(id string) ([]*common.SourceAsset, error) {
+	results := make([]*common.SourceAsset, 0, 0)
+
+	session, err := sasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	query := `SELECT id, message FROM ` + sasm.keyspace + `.source_assets WHERE id = ?`
+	log.Println("Executing query", query, "with", id)
+	iter := session.Query(`SELECT id, message FROM `+sasm.keyspace+`.source_assets WHERE id = ?`, id).Consistency(gocql.One).Iter()
+	var sourceAssetId string
+	var message []byte
+	for iter.Scan(&sourceAssetId, &message) {
+		sourceAsset, err := common.NewSourceAssetFromJson(message)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, sourceAsset)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) Store(generatedAsset *common.GeneratedAsset) error {
+	log.Println("About to store generatedAsset", generatedAsset)
+	generatedAsset.CreatedBy = gasm.nodeId
+	generatedAsset.UpdatedBy = gasm.nodeId
+	payload, err := generatedAsset.Serialize()
+	if err != nil {
+		log.Println("Error serializing source asset:", err)
+		return err
+	}
+
+	log.Println("Storing generated asset", generatedAsset)
+
+	session, err := gasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	batch := session.NewBatch(gocql.UnloggedBatch)
+	query1 := `INSERT INTO ` + gasm.keyspace + `.generated_assets (id, source, status, template_id, message) VALUES (?, ?, ?, ?, ?)`
+	log.Println("Executing query", query1, "with", generatedAsset.Id, generatedAsset.SourceAssetId, generatedAsset.Status, generatedAsset.TemplateId, payload)
+	batch.Query(query1,
+		generatedAsset.Id, generatedAsset.SourceAssetId, generatedAsset.Status, generatedAsset.TemplateId, payload)
+
+	if generatedAsset.Status == common.GeneratedAssetStatusWaiting {
+		log.Println("generated asset status is", common.GeneratedAssetStatusWaiting)
+		templateGroup, err := gasm.templateGroup(generatedAsset.TemplateId)
+		if err != nil {
+			log.Println("error getting template group", templateGroup)
+			return err
+		}
+		batch.Query(`INSERT INTO `+gasm.keyspace+`.waiting_generated_assets (id, source, template) VALUES (?, ?, ?)`,
+			generatedAsset.Id, generatedAsset.SourceAssetId+generatedAsset.SourceAssetType, templateGroup)
+	}
+
+	log.Println("Executing batch", batch)
+	err = session.ExecuteBatch(batch)
+	log.Println("executed batch")
+	if err != nil {
+		log.Println("Error executing batch:", err)
+		return err
+	}
+
+	return nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) templateGroup(id string) (string, error) {
+	templates, err := gasm.templateManager.FindByIds([]string{id})
+	if err != nil {
+		return "", err
+	}
+	if len(templates) != 1 {
+		return "", common.ErrorNoTemplateForId
+	}
+	template := templates[0]
+	return template.Group, nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) Update(generatedAsset *common.GeneratedAsset) error {
+	generatedAsset.UpdatedAt = time.Now().UnixNano()
+	generatedAsset.UpdatedBy = gasm.nodeId
+	payload, err := generatedAsset.Serialize()
+	if err != nil {
+		log.Println("Error serializing generated asset:", err)
+		return err
+	}
+	session, err := gasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	batch := session.NewBatch(gocql.UnloggedBatch)
+	batch.Query(`UPDATE `+gasm.keyspace+`.generated_assets SET status = ?, message = ? WHERE id = ?`, generatedAsset.Status, payload, generatedAsset.Id)
+
+	if generatedAsset.Status == common.GeneratedAssetStatusScheduled || generatedAsset.Status == common.GeneratedAssetStatusProcessing {
+		templateGroup, err := gasm.templateGroup(generatedAsset.TemplateId)
+		if err != nil {
+			return err
+		}
+		batch.Query(`DELETE FROM `+gasm.keyspace+`.waiting_generated_assets WHERE id = ? AND template = ? AND source = ?`, generatedAsset.Id, templateGroup, generatedAsset.SourceAssetId+generatedAsset.SourceAssetType)
+		batch.Query(`INSERT INTO `+gasm.keyspace+`.active_generated_assets (id) VALUES (?)`, generatedAsset.Id)
+	}
+	if generatedAsset.Status == common.GeneratedAssetStatusComplete || strings.HasPrefix(generatedAsset.Status, common.GeneratedAssetStatusFailed) {
+		batch.Query(`DELETE FROM `+gasm.keyspace+`.active_generated_assets WHERE id = ?`, generatedAsset.Id)
+	}
+	err = session.ExecuteBatch(batch)
+	if err != nil {
+		log.Println("Error executing batch:", err)
+		return err
+	}
+	return nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) FindById(id string) (*common.GeneratedAsset, error) {
+	generatedAssets, err := gasm.getIds([]string{id})
+	if err != nil {
+		return nil, err
+	}
+	if len(generatedAssets) == 0 {
+		return nil, common.ErrorNoGeneratedAssetsFoundForId
+	}
+	return generatedAssets[0], nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) FindByIds(ids []string) ([]*common.GeneratedAsset, error) {
+	return gasm.getIds(ids)
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) FindBySourceAssetId(id string) ([]*common.GeneratedAsset, error) {
+	results := make([]*common.GeneratedAsset, 0, 0)
+
+	session, err := gasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	iter := session.Query(`SELECT id, message FROM `+gasm.keyspace+`.generated_assets WHERE source = ?`, id).Consistency(gocql.One).Iter()
+	var generatedAssetId string
+	var message []byte
+	for iter.Scan(&generatedAssetId, &message) {
+		generatedAsset, err := common.NewGeneratedAssetFromJson(message)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, generatedAsset)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) FindWorkForService(serviceName string, workCount int) ([]*common.GeneratedAsset, error) {
+	templates, err := gasm.templateManager.FindByRenderService(serviceName)
+	if err != nil {
+		log.Println("error executing templateManager.FindByRenderService", err)
+		return nil, err
+	}
+	generatedAssetIds, err := gasm.getWaitingAssets(templates[0].Group, workCount)
+	if err != nil {
+		log.Println("error executing gasm.getWaitingAssets", err)
+		return nil, err
+	}
+
+	return gasm.getIds(generatedAssetIds)
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) getWaitingAssets(group string, count int) ([]string, error) {
+	results := make([]string, 0, 0)
+
+	session, err := gasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	query := `SELECT id FROM ` + gasm.keyspace + `.waiting_generated_assets WHERE template = ?`
+	log.Println("Executing query", query, "with template", group)
+	iter := session.Query(`SELECT id FROM `+gasm.keyspace+`.waiting_generated_assets WHERE template = ?`, group).Consistency(gocql.One).Iter()
+	var generatedAssetId string
+	for iter.Scan(&generatedAssetId) && len(results) <= count {
+		results = append(results, generatedAssetId)
+		log.Println("waiting_generated_assets from cassandra", generatedAssetId)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (gasm *cassandraGeneratedAssetStorageManager) getIds(ids []string) ([]*common.GeneratedAsset, error) {
+	results := make([]*common.GeneratedAsset, 0, 0)
+
+	args := make([]interface{}, len(ids))
+	for i, v := range ids {
+		args[i] = interface{}(v)
+	}
+
+	session, err := gasm.cassandraManager.cluster.CreateSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	iter := session.Query(`SELECT message FROM `+gasm.keyspace+`.generated_assets WHERE id in (`+common.BuildIn(len(ids))+`)`, args...).Consistency(gocql.One).Iter()
+	var message []byte
+	for iter.Scan(&message) {
+		generatedAsset, err := common.NewGeneratedAssetFromJson(message)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, generatedAsset)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}

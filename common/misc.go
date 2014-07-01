@@ -5,7 +5,7 @@ import (
 )
 
 // NKG: This is lazy, I know.
-func buildIn(count int) string {
+func BuildIn(count int) string {
 	results := make([]string, 0, 0)
 	for i := 0; i < count; i++ {
 		results = append(results, "?")

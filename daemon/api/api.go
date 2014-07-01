@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/render"
+	"github.com/ngerakines/preview/daemon/agent"
 	"github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"log"
@@ -17,7 +17,7 @@ import (
 
 type apiBlueprint struct {
 	base                         string
-	agentManager                 *render.RenderAgentManager
+	agentManager                 *agent.RenderAgentManager
 	gasm                         common.GeneratedAssetStorageManager
 	sasm                         common.SourceAssetStorageManager
 	s3Client                     common.S3Client
@@ -57,7 +57,7 @@ type GeneratedAssetList []*common.GeneratedAsset
 
 func NewApiBlueprint(
 	base string,
-	agentManager *render.RenderAgentManager,
+	agentManager *agent.RenderAgentManager,
 	gasm common.GeneratedAssetStorageManager,
 	sasm common.SourceAssetStorageManager,
 	registry metrics.Registry,

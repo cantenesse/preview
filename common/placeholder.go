@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"github.com/ngerakines/preview/config"
 	"image/png"
 	"io/ioutil"
 	"log"
@@ -51,17 +50,10 @@ var (
 	DefaultPlaceholderType = "unknown"
 )
 
-func NewPlaceholderManager(appConfig *config.AppConfig) PlaceholderManager {
+func NewPlaceholderManager(basePath string, placeholderGroups map[string]string) PlaceholderManager {
 	pm := new(defaultPlaceholderManager)
-	pm.basePath = appConfig.Common.PlaceholderBasePath
-	pm.groups = make(map[string]string)
-
-	for group, fileTypes := range appConfig.Common.PlaceholderGroups {
-		for _, fileType := range fileTypes {
-			pm.groups[fileType] = group
-		}
-	}
-
+	pm.basePath = basePath
+	pm.groups = placeholderGroups
 	pm.placeholders = make(map[string]placeholderSet)
 
 	go pm.loadPlaceholders()
