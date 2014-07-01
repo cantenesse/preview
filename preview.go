@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/docopt/docopt.go"
 	"github.com/ngerakines/preview/cli"
+	_ "github.com/ngerakines/preview/daemon"
 )
 
 var (
