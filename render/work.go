@@ -240,6 +240,7 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 }
 
 func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*common.Template, string, error) {
+	fileType = strings.ToLower(fileType)
 	var templateIds []string
 	if util.Contains(agentManager.supportedFileTypes["documentRenderAgent"], fileType) {
 		templateIds = []string{common.DocumentConversionTemplateId}

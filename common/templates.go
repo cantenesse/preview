@@ -28,6 +28,8 @@ var (
 	TemplateAttributeOutput = "output"
 	// TemplateAttributePlaceholderSize is a constant for the placeholderSize attribute that can be set for templates.
 	TemplateAttributePlaceholderSize = "placeholderSize"
+	// TemplateAttributeDensity is the density by which ImageMagick samples the image.
+	TemplateAttributeDensity = "density"
 )
 
 func (template *Template) AddAttribute(name string, value []string) Attribute {

@@ -90,6 +90,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
                 "width":["1040"],
                 "height":["780"],
                 "output":["jpg"],
+                "density": ["144"],
                 "placeholderSize":["jumbo"]
             }
         },
@@ -101,6 +102,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
                 "width":["520"],
                 "height":["390"],
                 "output":["jpg"],
+                "density": ["144"],
                 "placeholderSize":["large"]
             }
         },
@@ -112,6 +114,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
                 "width":["500"],
                 "height":["376"],
                 "output":["jpg"],
+                "density": ["144"],
                 "placeholderSize":["medium"]
             }
         },
@@ -123,6 +126,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
                 "width":["250"],
                 "height":["188"],
                 "output":["jpg"],
+                "density": ["144"],
                 "placeholderSize":["small"]
             }
         },
@@ -131,6 +135,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
             "renderAgent":"documentRenderAgent",
             "group":"A907",
             "attributes":{
+                "density": ["144"],
                 "output":["pdf"]
             }
         },
@@ -140,7 +145,7 @@ func buildDefaultConfig(basePathFunc basePath) []byte {
             "group":"7A96",
             "attributes":{
                 "output":["m3u8"],
-		"forceS3Location":["true"],
+		             "forceS3Location":["true"],
                 "zencoderNotificationUrl":["http://example.com/zencoderhandler"]
             }
         }

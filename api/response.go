@@ -23,3 +23,27 @@ type previewInfoResponse struct {
 	Version string                   `json:"version"`
 	Files   []*previewInfoCollection `json:"files"`
 }
+
+type simpleView struct {
+	Previews map[string]multipagePreviewView
+}
+
+type multipagePreviewView struct {
+	PageCount int32                `json:"pageCount"`
+	Pages     map[string]*pageView `json:"pages"`
+}
+
+type pageView struct {
+	Jumbo  *pageInfoView `json:"jumbo"`
+	Large  *pageInfoView `json:"large"`
+	Medium *pageInfoView `json:"medium"`
+	Small  *pageInfoView `json:"small"`
+}
+
+type pageInfoView struct {
+	Url     string `json:"url"`
+	Width   int32  `json:"width"`
+	Height  int32  `json:"height"`
+	Expires int64  `json:"expires"`
+	Status  string `json:"status"`
+}

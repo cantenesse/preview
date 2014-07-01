@@ -25,6 +25,5 @@
 #
 
 include_recipe 'preview_prod::storage'
-include_recipe 'preview_prod::proxy'
 include_recipe 'preview_prod::cache'
 include_recipe 'preview_prod::node'

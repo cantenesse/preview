@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/bmizerany/pat"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type simpleBlueprint struct {
@@ -26,6 +28,11 @@ type simpleBlueprint struct {
 	supportedFileTypes           map[string]int64
 	generatePreviewRequestsMeter metrics.Meter
 	previewInfoRequestsMeter     metrics.Meter
+}
+
+type templateTuple struct {
+	placeholderSize string
+	template        *common.Template
 }
 
 // NewSimpleBlueprint creates a new simpleBlueprint object.
@@ -60,36 +67,20 @@ func NewSimpleBlueprint(
 }
 
 func (blueprint *simpleBlueprint) AddRoutes(p *pat.PatternServeMux) {
-	p.Put(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
-	p.Put(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.GeneratePreviewHandler))
-	p.Get(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.PreviewInfoHandler))
-	p.Get(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.PreviewInfoHandler))
+	p.Put(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.generatePreviewHandler))
+	p.Put(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.generatePreviewHandler))
+	p.Get(blueprint.buildUrl("/v1/preview/"), http.HandlerFunc(blueprint.previewInfoHandler))
+	p.Get(blueprint.buildUrl("/v1/preview/:fileid"), http.HandlerFunc(blueprint.previewInfoHandler))
+	p.Get(blueprint.buildUrl("/v2/preview/"), http.HandlerFunc(blueprint.multipagePreviewInfoHandler))
+	p.Get(blueprint.buildUrl("/v2/preview/:fileid"), http.HandlerFunc(blueprint.multipagePreviewInfoHandler))
 }
 
-func (blueprint *simpleBlueprint) buildUrl(path string) string {
-	return blueprint.base + path
-}
-
-func (blueprint *simpleBlueprint) GeneratePreviewHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.generatePreviewRequestsMeter.Mark(1)
-	if req.Method != "PUT" {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
-		return
-	}
-
-	if !strings.HasPrefix(req.URL.Path, blueprint.buildUrl("/v1/preview")) {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
-		return
-	}
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(400)
+		http.Error(res, http.StatusText(400), 400)
 		return
 	}
 	defer req.Body.Close()
@@ -98,16 +89,14 @@ func (blueprint *simpleBlueprint) GeneratePreviewHandler(res http.ResponseWriter
 	if hasId {
 		gprs, err := newGeneratePreviewRequestFromText(id, string(body))
 		if err != nil {
-			res.Header().Set("Content-Length", "0")
-			res.WriteHeader(400)
+			http.Error(res, http.StatusText(400), 400)
 			return
 		}
 		blueprint.handleGeneratePreviewRequest(gprs)
 	} else {
 		gprs, err := newGeneratePreviewRequestFromJson(string(body))
 		if err != nil {
-			res.Header().Set("Content-Length", "0")
-			res.WriteHeader(400)
+			http.Error(res, http.StatusText(400), 400)
 			return
 		}
 		blueprint.handleGeneratePreviewRequest(gprs)
@@ -117,31 +106,34 @@ func (blueprint *simpleBlueprint) GeneratePreviewHandler(res http.ResponseWriter
 	res.WriteHeader(202)
 }
 
-func (blueprint *simpleBlueprint) PreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
+func (blueprint *simpleBlueprint) previewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewInfoRequestsMeter.Mark(1)
-	if req.Method != "GET" {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
-		return
-	}
 
-	if !strings.HasPrefix(req.URL.Path, blueprint.buildUrl("/v1/preview")) {
-		// TODO: Make sure this is the correct status code being returned.
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
-		return
-	}
 	fileIds := blueprint.parseFileIds(req)
 	previewInfo, err := blueprint.handlePreviewInfoRequest(fileIds)
 	if err != nil {
-		res.Header().Set("Content-Length", "0")
-		res.WriteHeader(500)
+		http.Error(res, http.StatusText(500), 500)
 		return
 	}
 
-	res.Header().Set("Content-Length", strconv.Itoa(len(previewInfo)))
-	res.Write(previewInfo)
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(previewInfo))
+}
+
+func (blueprint *simpleBlueprint) multipagePreviewInfoHandler(res http.ResponseWriter, req *http.Request) {
+	blueprint.previewInfoRequestsMeter.Mark(1)
+
+	fileIds := blueprint.parseFileIds(req)
+	previewInfo, err := blueprint.multipagePreviewInfoRequest(fileIds)
+	if err != nil {
+		http.Error(res, http.StatusText(500), 500)
+		return
+	}
+
+	http.ServeContent(res, req, "", time.Now(), bytes.NewReader(previewInfo))
+}
+
+func (blueprint *simpleBlueprint) buildUrl(path string) string {
+	return blueprint.base + path
 }
 
 func (blueprint *simpleBlueprint) urlHasFileId(url string) (string, bool) {
@@ -186,14 +178,15 @@ func (blueprint *simpleBlueprint) parseFileIds(req *http.Request) []string {
 	return results
 }
 
-type templateTuple struct {
-	placeholderSize string
-	template        *common.Template
+func (blueprint *simpleBlueprint) getSourceAssetType(sourceAsset *common.SourceAsset) string {
+	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
+	if err == nil {
+		return fileType
+	}
+	return "unknown"
 }
 
-func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]byte, error) {
-	collections := make([]*previewInfoCollection, 0, 0)
-
+func (blueprint *simpleBlueprint) legacyTemplates() (map[string]templateTuple, error) {
 	legacyTemplates, err := blueprint.templateManager.FindByIds(common.LegacyDefaultTemplates)
 	if err != nil {
 		return nil, err
@@ -206,6 +199,16 @@ func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]
 			return nil, err
 		}
 		templates[legacyTemplate.Id] = templateTuple{placeholderSize, legacyTemplate}
+	}
+	return templates, nil
+}
+
+func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]byte, error) {
+	collections := make([]*previewInfoCollection, 0, 0)
+
+	templates, err := blueprint.legacyTemplates()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, fileId := range fileIds {
@@ -342,7 +345,11 @@ func (blueprint *simpleBlueprint) getPreviewImage(generatedAsset *common.Generat
 	log.Println("Building preview image for", generatedAsset)
 	if generatedAsset.Status == common.GeneratedAssetStatusComplete {
 		signedUrl, expires := blueprint.signUrl(blueprint.scrubUrl(generatedAsset, placeholderSize))
-		return &imageInfo{signedUrl, 200, 200, expires, true, false, page}
+		width, height, err := blueprint.getImageSize(generatedAsset)
+		if err != nil {
+			return &imageInfo{signedUrl, 200, 200, expires, true, false, page}
+		}
+		return &imageInfo{signedUrl, width, height, expires, true, false, page}
 	}
 	if strings.HasPrefix(generatedAsset.Status, common.GeneratedAssetStatusFailed) {
 		// NKG: If the job failed, then before we return the placeholder, we set the "isFinal" field.
@@ -351,6 +358,30 @@ func (blueprint *simpleBlueprint) getPreviewImage(generatedAsset *common.Generat
 		return placeholder
 	}
 	return blueprint.getPlaceholder(fileType, placeholderSize, page)
+}
+
+func (blueprint *simpleBlueprint) getImageSize(ga *common.GeneratedAsset) (int32, int32, error) {
+	if !(ga.HasAttribute("imageWidth") && ga.HasAttribute("imageHeight")) {
+		log.Println("Asset does not have width and height attributes")
+		return 0, 0, common.ErrorNotImplemented
+	}
+	widths := ga.GetAttribute("imageWidth")
+	heights := ga.GetAttribute("imageHeight")
+	if len(widths) == 0 || len(heights) == 0 {
+		log.Println("Asset does not have width and height attributes")
+		return 0, 0, common.ErrorNotImplemented
+	}
+	width, err := strconv.Atoi(widths[0])
+	if err != nil {
+		log.Println("Error parsing template width")
+		return 0, 0, err
+	}
+	height, err := strconv.Atoi(heights[0])
+	if err != nil {
+		log.Println("Error parsing template height")
+		return 0, 0, err
+	}
+	return int32(width), int32(height), nil
 }
 
 func (blueprint *simpleBlueprint) getPlaceholder(fileType, placeholderSize string, page int32) *imageInfo {

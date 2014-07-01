@@ -86,9 +86,14 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
+	density, err := renderer.renderAgent.getDensity(template)
+	if err != nil {
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderDensity), nil}
+		return
+	}
 	renderer.renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
-			page, _ := renderer.getGeneratedAssetPage(generatedAsset)
+			page, _ := renderer.renderAgent.getGeneratedAssetPage(generatedAsset)
 			if page == 0 {
 				pages, err := util.GetPdfPageCount(sourceFile.Path())
 				if err != nil {
@@ -98,7 +103,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 				// Create derived work for all pages but first one
 				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
 			}
-			err = renderer.imageFromPdf(sourceFile.Path(), destination, size, page)
+			err = renderer.imageFromPdf(sourceFile.Path(), destination, size, page, density)
 		} else if fileType == "gif" {
 			err = renderer.firstGifFrame(sourceFile.Path(), destination, size)
 		} else {
@@ -163,14 +168,14 @@ func (renderer *imageMagickRenderer) resize(source, destination string, size int
 	return nil
 }
 
-func (renderer *imageMagickRenderer) imageFromPdf(source, destination string, size, page int) error {
+func (renderer *imageMagickRenderer) imageFromPdf(source, destination string, size, page, density int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
 		return err
 	}
 
-	cmd := exec.Command("convert", "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
+	cmd := exec.Command("convert", "-density", strconv.Itoa(density), "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
 	log.Println(cmd)
 
 	var buf bytes.Buffer
@@ -237,7 +242,19 @@ func (renderer *imageMagickRenderer) getSize(template *common.Template) (int, er
 	return 0, err
 }
 
-func (renderer *imageMagickRenderer) getGeneratedAssetPage(generatedAsset *common.GeneratedAsset) (int, error) {
+func (renderAgent *genericRenderAgent) getDensity(template *common.Template) (int, error) {
+	rawDensity, err := common.GetFirstAttribute(template, common.TemplateAttributeDensity)
+	if err == nil {
+		density, err := strconv.Atoi(rawDensity)
+		if err == nil {
+			return density, nil
+		}
+		return 0, err
+	}
+	return 0, err
+}
+
+func (renderAgent *genericRenderAgent) getGeneratedAssetPage(generatedAsset *common.GeneratedAsset) (int, error) {
 	rawPage, err := common.GetFirstAttribute(generatedAsset, common.GeneratedAssetAttributePage)
 	if err == nil {
 		pageValue, err := strconv.Atoi(rawPage)

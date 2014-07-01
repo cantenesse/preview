@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type VerifyCommand struct {
 	host     string
 	filepath string
 	verbose  int
+	timeout  int
 }
 
 type verifyJob struct {
@@ -49,6 +51,19 @@ func NewVerifyCommand(arguments map[string]interface{}) *VerifyCommand {
 	}
 	command.filepath = getConfigString(arguments, "<filepath>")
 	command.verbose = getConfigInt(arguments, "--verbose")
+	timeout := getConfigString(arguments, "--timeout")
+
+	if len(timeout) > 0 {
+		var err error
+		command.timeout, err = strconv.Atoi(timeout)
+		if err != nil {
+			log.Println("Invalid timeout; ignoring")
+		}
+	}
+
+	if command.timeout == 0 {
+		command.timeout = 30
+	}
 
 	return command
 }
@@ -74,14 +89,21 @@ func (command *VerifyCommand) Execute() {
 
 		renderCommand.(*RenderCommand).ExecuteWithId(job.id)
 	}
-
-	for i := 0; i < 60; i++ {
+	// Each loop waits for 0.5 seconds, so we must loop <2 * timeout> times in order to take <timeout> seconds
+	iterations := command.timeout * 2
+	for i := 0; i < iterations; i++ {
 		workDone := true
 		for _, job := range jobs {
 			if job.isComplete {
 				continue
 			}
-			response, _ := command.submitPreviewInfoRequest(job.id)
+			response, err := command.submitPreviewInfoRequest(job.id)
+			if err != nil {
+				log.Println("Error getting preview response:", err)
+				workDone = false
+				continue
+			}
+
 			job.isComplete = command.isComplete(response)
 
 			if job.isComplete {
