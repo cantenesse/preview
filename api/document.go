@@ -61,9 +61,11 @@ func (blueprint *documentBlueprint) serveDocumentHandler(res http.ResponseWriter
 	job, err := blueprint.conversionManager.GetJob(id)
 	if err != nil {
 		http.Error(res, "", 400)
+		return
 	}
 	if job.Status != "completed" {
 		http.Error(res, "", 400)
+		return
 	}
 
 	_, err = os.Stat(job.Location)
