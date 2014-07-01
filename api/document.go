@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -56,8 +57,22 @@ func (blueprint *documentBlueprint) convertDocumentHandler(res http.ResponseWrit
 }
 
 func (blueprint *documentBlueprint) serveDocumentHandler(res http.ResponseWriter, req *http.Request) {
-	//TODO
-	return
+	id := req.URL.Query().Get(":id")
+	job, err := blueprint.conversionManager.GetJob(id)
+	if err != nil {
+		http.Error(res, "", 400)
+	}
+	if job.Status != "completed" {
+		http.Error(res, "", 400)
+	}
+
+	_, err = os.Stat(job.Location)
+	if err == nil {
+		http.ServeFile(res, req, job.Location)
+		return
+	}
+	log.Println("File does not exist", job.Location)
+	http.Error(res, "", 500)
 }
 
 func (blueprint *documentBlueprint) documentInfoHandler(res http.ResponseWriter, req *http.Request) {

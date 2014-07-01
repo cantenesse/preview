@@ -13,6 +13,7 @@ type ConvertDocumentJob struct {
 	Filetype       string `json:"filetype"`
 	Location       string `json:"location"`
 	Status         string `json:"status"`
+	Url            string `json:"url"`
 }
 
 type ConversionManager struct {
@@ -22,13 +23,15 @@ type ConversionManager struct {
 	stop             chan bool
 	activeJobs       map[string]*ConvertDocumentJob
 	tempFileBasePath string
+	host             string
 }
 
-func NewConversionManager(downloader common.Downloader, tfm common.TemporaryFileManager, tempFileBasePath string) *ConversionManager {
+func NewConversionManager(downloader common.Downloader, tfm common.TemporaryFileManager, tempFileBasePath, host string) *ConversionManager {
 	manager := new(ConversionManager)
 	manager.downloader = downloader
 	manager.tfm = tfm
 	manager.tempFileBasePath = tempFileBasePath
+	manager.host = host
 	manager.workChan = make(workChannel, 200)
 	manager.stop = make(chan bool)
 	manager.activeJobs = make(map[string]*ConvertDocumentJob)
@@ -36,6 +39,8 @@ func NewConversionManager(downloader common.Downloader, tfm common.TemporaryFile
 }
 
 func (manager *ConversionManager) EnqueueWork(job *ConvertDocumentJob) {
+	// TODO: Manage active jobs; delete ones that have finished/failed and are older than
+	// certain time
 	log.Println("Enqueueing job", job)
 	manager.activeJobs[job.Id] = job
 	manager.workChan <- job

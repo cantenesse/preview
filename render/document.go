@@ -7,6 +7,7 @@ import (
 	"github.com/ngerakines/preview/docserver"
 	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -191,8 +192,9 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	destinationTemporaryFile := renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
 
+	var pdfUrl string
 	renderAgent.metrics.convertTime.Time(func() {
-		err = renderAgent.createPdf(urls[0], destination, fileType)
+		pdfUrl, err = renderAgent.createPdf(urls[0], fileType)
 		if err != nil {
 			log.Println(err)
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
@@ -200,24 +202,20 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 		}
 	})
 
-	files, err := renderAgent.getRenderedFiles(destination)
+	file, err := renderAgent.downloadPdfFile(pdfUrl, destination)
 
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-	if len(files) != 1 {
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-		return
-	}
 
-	pages, err := util.GetPdfPageCount(files[0])
+	pages, err := util.GetPdfPageCount(file)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
 
-	err = renderAgent.uploader.Upload(generatedAsset.Location, files[0])
+	err = renderAgent.uploader.Upload(generatedAsset.Location, file)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotUploadAsset), nil}
 		return
@@ -291,7 +289,7 @@ func (renderAgent *documentRenderAgent) getSourceAsset(generatedAsset *common.Ge
 	return nil, common.ErrorNoSourceAssetsFoundForId
 }
 
-func (renderAgent *documentRenderAgent) createPdf(source, destination, filetype string) error {
+func (renderAgent *documentRenderAgent) createPdf(source, filetype string) (string, error) {
 	jsonData := `{
     "location":"` + source + `",
     "filetype":"` + filetype + `"
@@ -300,52 +298,52 @@ func (renderAgent *documentRenderAgent) createPdf(source, destination, filetype 
 	log.Println("Creating pdf:", jsonData)
 	req, err := http.NewRequest("PUT", renderAgent.conversionServer+"/", strings.NewReader(jsonData))
 	if err != nil {
-		return err
+		return "", err
 	}
 	client := common.NewHttpClient(true, 10*time.Second)
 	httpResp, err := client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	resp, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Println("Received response", string(resp))
 
 	var job *docserver.ConvertDocumentJob
 	err = json.Unmarshal(resp, &job)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for iterations := 0; iterations < 30; iterations++ {
 		httpResp, err = http.Get(renderAgent.conversionServer + "/" + job.Id)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		resp, err := ioutil.ReadAll(httpResp.Body)
 		if err != nil {
-			return err
+			return "", err
 		}
 		log.Println("Received response", string(resp))
 		err = json.Unmarshal(resp, &job)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if job.Status == "completed" {
-			return nil
+			break
 		} else if job.Status == "failed" {
 			log.Println("document conversion failed")
-			return common.ErrorNotImplemented
+			return "", common.ErrorNotImplemented
 		}
 
 		time.Sleep(1 * time.Second)
 	}
 
-	return nil
+	return job.Url, nil
 }
 
 func (renderAgent *documentRenderAgent) tryDownload(urls []string, source string) (common.TemporaryFile, error) {
@@ -413,20 +411,31 @@ func (renderAgent *documentRenderAgent) createTemporaryDestinationDirectory() (s
 	return tmpPath, nil
 }
 
-func (renderAgent *documentRenderAgent) getRenderedFiles(path string) ([]string, error) {
-	files, err := ioutil.ReadDir(path)
+func (renderAgent *documentRenderAgent) downloadPdfFile(path, dest string) (string, error) {
+	outfile := filepath.Join(dest, "out.pdf")
+	out, err := os.Create(outfile)
 	if err != nil {
-		log.Println("Error reading files in placeholder base directory:", err)
-		return nil, err
+		return "", err
 	}
-	paths := make([]string, 0, 0)
-	for _, file := range files {
-		if !file.IsDir() {
-			// NKG: The convert command will create files of the same name but with the ".pdf" extension.
-			if strings.HasSuffix(file.Name(), ".pdf") {
-				paths = append(paths, filepath.Join(path, file.Name()))
-			}
-		}
+	defer out.Close()
+	log.Println("Trying download", path, "to", dest)
+	httpClient := common.NewHttpClient(false, 30*time.Second)
+
+	resp, err := httpClient.Get(path)
+	if err != nil {
+		return "", err
 	}
-	return paths, nil
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		log.Println("Error downloading file", path)
+		return "", common.ErrorNotImplemented
+	}
+
+	n, err := io.Copy(out, resp.Body)
+	if err != nil {
+		return "", err
+	}
+	log.Println("Downloaded", n, "bytes to file", outfile)
+	return outfile, nil
 }

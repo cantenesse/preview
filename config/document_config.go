@@ -37,6 +37,8 @@ type DocumentConfig struct {
 	Downloader struct {
 		BasePath string `json:"basePath"`
 	} `json:"downloader"`
+
+	Host string `json:"host"`
 }
 
 func LoadDocumentConfig(givenPath string) (*DocumentConfig, error) {

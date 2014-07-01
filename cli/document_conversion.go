@@ -52,7 +52,7 @@ func (command *DocumentDaemonCommand) Execute() {
 	app.temporaryFileManager = common.NewTemporaryFileManager()
 	app.downloader = common.NewDownloader(app.appConfig.Downloader.BasePath, app.appConfig.Common.LocalAssetStoragePath, app.temporaryFileManager, false, []string{}, nil)
 
-	app.conversionManager = docserver.NewConversionManager(app.downloader, app.temporaryFileManager, app.appConfig.Conversion.BasePath)
+	app.conversionManager = docserver.NewConversionManager(app.downloader, app.temporaryFileManager, app.appConfig.Conversion.BasePath, app.appConfig.Host)
 
 	for i := 0; i < app.appConfig.Conversion.MaxWork; i++ {
 		app.conversionManager.AddConversionAgent()

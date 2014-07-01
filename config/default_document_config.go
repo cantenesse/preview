@@ -27,13 +27,14 @@ func buildDefaultDocumentConfig(basePathFunc basePath) []byte {
    },
    "conversion":{
       "enabled":true,
-      "maxWork":8,
+      "maxWork":4,
       "basePath":"` + basePathFunc("conversionTmp") + `",
       "supportedFileTypes":["doc", "docx", "ppt", "pptx"]
    },
    "downloader":{
       "basePath":"` + basePathFunc("cache") + `",
       "tramEnabled": false
-   }
+   },
+   "host":"http://127.0.0.1:8081"
 }`)
 }

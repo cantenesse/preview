@@ -92,19 +92,28 @@ func (agent *conversionAgent) processJob(job *ConvertDocumentJob) { //*ConvertDo
 	}
 
 	job.Location = destinationTemporaryFile.Path() + "/out.pdf"
+	job.Url = agent.manager.host + "/document/" + job.Id + "/data"
+	log.Println(job.Location, job.Url)
 	job.Status = "completed"
 	return //job
 }
 
 func (agent *conversionAgent) movePdfFile(source, dest string) error {
 	dest = dest + "/out.pdf"
-	cmd := exec.Command("mv", source, dest)
-	log.Println(cmd)
-	err := cmd.Run()
+
+	err := os.Rename(source, dest)
 	if err != nil {
-		log.Println("error running command", err)
+		log.Println("Failed to move file", source, "to", dest)
 		return err
 	}
+	cmd := exec.Command("sync")
+	log.Println(cmd)
+	err = cmd.Run()
+	if err != nil {
+		log.Println("Sync failed")
+		return err
+	}
+
 	return nil
 }
 
