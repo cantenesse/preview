@@ -123,13 +123,15 @@ func (app *daemonContext) initAgentSupport() error {
 		}
 	}
 
-	app.placeholderManager = common.NewPlaceholderManager(app.config.Common.PlaceholderBasePath, placeholderGroups)
+	app.placeholderManager = newPlaceholderManager(app.config.Common.PlaceholderBasePath, placeholderGroups)
+
 	app.temporaryFileManager = common.NewTemporaryFileManager()
+
 	if app.config.Downloader.TramEnabled {
 		tramHosts := app.config.Downloader.TramHosts
-		app.downloader = common.NewDownloader(app.config.Downloader.BasePath, app.config.Common.LocalAssetStoragePath, app.temporaryFileManager, true, tramHosts, app.buildS3Client())
+		app.downloader = newDownloader(app.config.Downloader.BasePath, app.config.Common.LocalAssetStoragePath, app.temporaryFileManager, true, tramHosts, app.buildS3Client())
 	} else {
-		app.downloader = common.NewDownloader(app.config.Downloader.BasePath, app.config.Common.LocalAssetStoragePath, app.temporaryFileManager, false, []string{}, app.buildS3Client())
+		app.downloader = newDownloader(app.config.Downloader.BasePath, app.config.Common.LocalAssetStoragePath, app.temporaryFileManager, false, []string{}, app.buildS3Client())
 	}
 
 	switch app.config.Uploader.Engine {
@@ -137,11 +139,11 @@ func (app *daemonContext) initAgentSupport() error {
 		{
 			s3Client := app.buildS3Client()
 			buckets := app.config.S3.Buckets
-			app.uploader = common.NewUploader(buckets, s3Client)
+			app.uploader = newUploader(buckets, s3Client)
 		}
 	case "local":
 		{
-			app.uploader = common.NewLocalUploader(app.config.Common.LocalAssetStoragePath)
+			app.uploader = newLocalUploader(app.config.Common.LocalAssetStoragePath)
 		}
 	}
 
