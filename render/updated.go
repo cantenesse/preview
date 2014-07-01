@@ -1,4 +1,4 @@
-package cli
+package render
 
 import (
 	"encoding/json"
@@ -41,14 +41,14 @@ var templateAliases = map[string]string{
 	"video":    common.VideoConversionTemplateId,
 }
 
-func NewRenderV2Command(arguments map[string]interface{}) PreviewCliCommand {
+func NewRenderV2Command(arguments map[string]interface{}) common.Command {
 	command := new(RenderV2Command)
-	command.host = getConfigString(arguments, "<host>")
+	command.host = common.GetConfigString(arguments, "<host>")
 	if len(command.host) == 0 {
 		command.host = "localhost:8080"
 	}
-	command.files = getConfigStringArray(arguments, "<file>")
-	command.templateIds = getConfigStringArray(arguments, "<templateId>")
+	command.files = common.GetConfigStringArray(arguments, "<file>")
+	command.templateIds = common.GetConfigStringArray(arguments, "<templateId>")
 
 	for idx, id := range command.templateIds {
 		if alias, hasAlias := templateAliases[id]; hasAlias {
@@ -56,7 +56,7 @@ func NewRenderV2Command(arguments map[string]interface{}) PreviewCliCommand {
 		}
 	}
 
-	command.verbose = getConfigInt(arguments, "--verbose")
+	command.verbose = common.GetConfigInt(arguments, "--verbose")
 
 	return command
 }

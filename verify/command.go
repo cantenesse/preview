@@ -1,7 +1,10 @@
-package cli
+package verify
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/ngerakines/preview/common"
+	"github.com/ngerakines/preview/render"
 	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
@@ -35,6 +38,26 @@ type verifyJob struct {
 	endTime    time.Time
 }
 
+type imageInfo struct {
+	Url           string  `json:"url"`
+	Width         float64 `json:"width"`
+	Height        float64 `json:"height"`
+	Expires       float64 `json:"expires"`
+	IsFinal       bool    `json:"isFinal"`
+	IsPlaceholder bool    `json:"isPlaceholder"`
+}
+
+type previewInfoResponse struct {
+	Version string `json:"version"`
+	Files   []struct {
+		FileId string    `json:"file_id"`
+		Jumbo  imageInfo `json:"jumbo"`
+		Large  imageInfo `json:"large"`
+		Medium imageInfo `json:"medium"`
+		Small  imageInfo `json:"small"`
+	} `json:"files"`
+}
+
 func newVerifyJob(location string) *verifyJob {
 	job := new(verifyJob)
 	job.location = location
@@ -43,15 +66,15 @@ func newVerifyJob(location string) *verifyJob {
 	return job
 }
 
-func NewVerifyCommand(arguments map[string]interface{}) *VerifyCommand {
+func NewVerifyCommand(arguments map[string]interface{}) common.Command {
 	command := new(VerifyCommand)
-	command.host = getConfigString(arguments, "<host>")
+	command.host = common.GetConfigString(arguments, "<host>")
 	if len(command.host) == 0 {
 		command.host = "localhost:8080"
 	}
-	command.filepath = getConfigString(arguments, "<filepath>")
-	command.verbose = getConfigInt(arguments, "--verbose")
-	timeout := getConfigString(arguments, "--timeout")
+	command.filepath = common.GetConfigString(arguments, "<filepath>")
+	command.verbose = common.GetConfigInt(arguments, "--verbose")
+	timeout := common.GetConfigString(arguments, "--timeout")
 
 	if len(timeout) > 0 {
 		var err error
@@ -84,10 +107,11 @@ func (command *VerifyCommand) Execute() {
 		args["<host>"] = command.host
 		args["<file>"] = []string{job.location}
 		args["--verbose"] = command.verbose
-		renderCommand := NewRenderCommand(args)
+		// TODO[NKG]: Improve this.
+		renderCommand := render.NewRenderCommand(args)
 		job.startTime = time.Now()
 
-		renderCommand.(*RenderCommand).ExecuteWithId(job.id)
+		renderCommand.ExecuteWithId(job.id)
 	}
 	// Each loop waits for 0.5 seconds, so we must loop <2 * timeout> times in order to take <timeout> seconds
 	iterations := command.timeout * 2
@@ -190,4 +214,13 @@ func (command *VerifyCommand) isComplete(response *previewInfoResponse) bool {
 		}
 	}
 	return complete
+}
+
+func newPreviewInfoResponse(body []byte) (*previewInfoResponse, error) {
+	var response previewInfoResponse
+	e := json.Unmarshal(body, &response)
+	if e != nil {
+		return nil, e
+	}
+	return &response, nil
 }

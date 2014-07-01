@@ -1,10 +1,11 @@
-package cli
+package render
 
 import (
 	"bytes"
 	"code.google.com/p/go-uuid/uuid"
 	"encoding/json"
 	"fmt"
+	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
@@ -14,10 +15,6 @@ import (
 	"strings"
 	"time"
 )
-
-type PreviewCliCommand interface {
-	Execute()
-}
 
 type RenderCommand struct {
 	host    string
@@ -57,15 +54,15 @@ type previewInfoResponse struct {
 	} `json:"files"`
 }
 
-func NewRenderCommand(arguments map[string]interface{}) PreviewCliCommand {
+func NewRenderCommand(arguments map[string]interface{}) *RenderCommand {
 	command := new(RenderCommand)
-	command.host = getConfigString(arguments, "<host>")
+	command.host = common.GetConfigString(arguments, "<host>")
 	if len(command.host) == 0 {
 		command.host = "localhost:8080"
 	}
-	command.files = getConfigStringArray(arguments, "<file>")
-	command.verbose = getConfigInt(arguments, "--verbose")
-	command.verify = getConfigBool(arguments, "--verify")
+	command.files = common.GetConfigStringArray(arguments, "<file>")
+	command.verbose = common.GetConfigInt(arguments, "--verbose")
+	command.verify = common.GetConfigBool(arguments, "--verify")
 	return command
 }
 

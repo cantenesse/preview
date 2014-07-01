@@ -2,8 +2,10 @@ package main
 
 import (
 	"github.com/docopt/docopt.go"
-	"github.com/ngerakines/preview/cli"
+	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/daemon"
+	"github.com/ngerakines/preview/render"
+	"github.com/ngerakines/preview/verify"
 	"log"
 )
 
@@ -32,11 +34,11 @@ Options:
 
 	arguments, _ := docopt.Parse(usage, nil, true, version(), false)
 
-	var command cli.PreviewCliCommand
-	switch cli.GetCommand(arguments) {
+	var command common.Command
+	switch getCommand(arguments) {
 	case "render":
 		{
-			command = cli.NewRenderCommand(arguments)
+			command = render.NewRenderCommand(arguments)
 		}
 	case "daemon":
 		{
@@ -44,11 +46,11 @@ Options:
 		}
 	case "renderV2":
 		{
-			command = cli.NewRenderV2Command(arguments)
+			command = render.NewRenderV2Command(arguments)
 		}
 	case "verify":
 		{
-			command = cli.NewVerifyCommand(arguments)
+			command = verify.NewVerifyCommand(arguments)
 		}
 	}
 	command.Execute()
@@ -60,4 +62,15 @@ func version() string {
 		return previewVersion + "+" + githash
 	}
 	return previewVersion
+}
+
+func getCommand(arguments map[string]interface{}) string {
+	if common.GetConfigBool(arguments, "render") {
+		return "render"
+	} else if common.GetConfigBool(arguments, "renderV2") {
+		return "renderV2"
+	} else if common.GetConfigBool(arguments, "verify") {
+		return "verify"
+	}
+	return "daemon"
 }
