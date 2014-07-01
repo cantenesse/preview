@@ -79,13 +79,14 @@ func (blueprint *documentBlueprint) serveDocumentHandler(res http.ResponseWriter
 
 func (blueprint *documentBlueprint) documentInfoHandler(res http.ResponseWriter, req *http.Request) {
 	id := req.URL.Query().Get(":id")
+	blueprint.conversionManager.JobMutex.Lock()
 	job, err := blueprint.conversionManager.GetJob(id)
 	if err != nil {
 		log.Println(err)
 		http.Error(res, "", 500)
 		return
 	}
-	blueprint.conversionManager.JobMutex.Lock()
+
 	jsonData, err := marshalJob(job)
 	blueprint.conversionManager.JobMutex.Unlock()
 	if err != nil {
