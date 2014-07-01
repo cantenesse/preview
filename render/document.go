@@ -317,8 +317,8 @@ func (renderAgent *documentRenderAgent) createPdf(source, filetype string) (stri
 	if err != nil {
 		return "", err
 	}
-	var iterations int
-	for iterations = 0; iterations < 60; iterations++ {
+
+	for iterations := 0; iterations < 60; iterations++ {
 		httpResp, err = http.Get(renderAgent.conversionServer + "/" + job.Id)
 		if err != nil {
 			return "", err
@@ -334,19 +334,17 @@ func (renderAgent *documentRenderAgent) createPdf(source, filetype string) (stri
 			return "", err
 		}
 		if job.Status == "completed" {
-			break
-		} else if job.Status == "failed" {
+			return job.Url, nil
+		}
+		if job.Status == "failed" {
 			log.Println("document conversion failed")
 			return "", common.ErrorNotImplemented
 		}
 
 		time.Sleep(1 * time.Second)
 	}
-	if iterations >= 60 {
-		log.Println("Document server timed out")
-		return "", common.ErrorNotImplemented
-	}
-	return job.Url, nil
+	log.Println("Document server timed out")
+	return "", common.ErrorNotImplemented
 }
 
 func (renderAgent *documentRenderAgent) tryDownload(urls []string, source string) (common.TemporaryFile, error) {
