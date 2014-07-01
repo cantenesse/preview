@@ -3,6 +3,7 @@ package docserver
 import (
 	"github.com/ngerakines/preview/common"
 	"log"
+	"sync"
 )
 
 type workChannel chan *ConvertDocumentJob
@@ -24,6 +25,7 @@ type ConversionManager struct {
 	activeJobs       map[string]*ConvertDocumentJob
 	tempFileBasePath string
 	host             string
+	JobMutex         sync.Mutex
 }
 
 func NewConversionManager(downloader common.Downloader, tfm common.TemporaryFileManager, tempFileBasePath, host string) *ConversionManager {

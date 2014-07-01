@@ -41,13 +41,19 @@ func (agent *conversionAgent) start() {
 	}()
 }
 
+func (agent *conversionAgent) failJob(job *ConvertDocumentJob) {
+	agent.manager.JobMutex.Lock()
+	job.Status = "failed"
+	agent.manager.JobMutex.Unlock()
+}
+
 func (agent *conversionAgent) processJob(job *ConvertDocumentJob) { //*ConvertDocumentJob {
 	log.Println("Processing job", job)
 	log.Println("Downloading file")
 	log.Println(job.SourceLocation)
 	docFile, err := agent.tryDownload([]string{job.SourceLocation}, "")
 	if err != nil {
-		job.Status = "failed"
+		agent.failJob(job)
 		return //job
 	}
 	defer docFile.Release()
@@ -56,14 +62,14 @@ func (agent *conversionAgent) processJob(job *ConvertDocumentJob) { //*ConvertDo
 	destination, err := agent.createTemporaryDestinationDirectory()
 	if err != nil {
 		log.Println("Failed to create temporary destination directory")
-		job.Status = "failed"
+		agent.failJob(job)
 		return //job
 	}
 	log.Println("Creating TempFile")
 	destinationTemporaryFile := agent.manager.tfm.Create(destination)
 	if err != nil {
 		log.Println("Failed to create temporary file")
-		job.Status = "failed"
+		agent.failJob(job)
 		return //job
 	}
 	defer destinationTemporaryFile.Release()
@@ -71,7 +77,7 @@ func (agent *conversionAgent) processJob(job *ConvertDocumentJob) { //*ConvertDo
 	err = agent.createPdf(docFile.Path(), job.Filetype)
 	if err != nil {
 		log.Println("Failed to create PDF")
-		job.Status = "failed"
+		agent.failJob(job)
 		return //job
 	}
 
@@ -79,7 +85,7 @@ func (agent *conversionAgent) processJob(job *ConvertDocumentJob) { //*ConvertDo
 	pdfFile, err := agent.getPdfFile(path.Base(docFile.Path()))
 	if err != nil {
 		log.Println("Failed to get PDF")
-		job.Status = "failed"
+		agent.failJob(job)
 		return //job
 	}
 
@@ -87,14 +93,15 @@ func (agent *conversionAgent) processJob(job *ConvertDocumentJob) { //*ConvertDo
 	err = agent.movePdfFile(pdfFile, destinationTemporaryFile.Path())
 	if err != nil {
 		log.Println("Failed to move PDF")
-		job.Status = "failed"
+		agent.failJob(job)
 		return //job
 	}
 
+	agent.manager.JobMutex.Lock()
 	job.Location = destinationTemporaryFile.Path() + "/out.pdf"
 	job.Url = agent.manager.host + "/document/" + job.Id + "/data"
-	log.Println(job.Location, job.Url)
 	job.Status = "completed"
+	agent.manager.JobMutex.Unlock()
 	return //job
 }
 
@@ -106,11 +113,18 @@ func (agent *conversionAgent) movePdfFile(source, dest string) error {
 		log.Println("Failed to move file", source, "to", dest)
 		return err
 	}
-	cmd := exec.Command("sync")
-	log.Println(cmd)
-	err = cmd.Run()
+	//cmd := exec.Command("sync")
+	//log.Println(cmd)
+	//err = cmd.Run()
+	fi, err := os.Open(dest)
 	if err != nil {
-		log.Println("Sync failed")
+		log.Println("open failed")
+		return err
+	}
+	defer fi.Close()
+	err = fi.Sync()
+	if err != nil {
+		log.Println("sync failed")
 		return err
 	}
 

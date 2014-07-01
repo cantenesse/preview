@@ -85,7 +85,9 @@ func (blueprint *documentBlueprint) documentInfoHandler(res http.ResponseWriter,
 		http.Error(res, "", 500)
 		return
 	}
+	blueprint.conversionManager.JobMutex.Lock()
 	jsonData, err := marshalJob(job)
+	blueprint.conversionManager.JobMutex.Unlock()
 	if err != nil {
 		log.Println(err)
 		http.Error(res, "", 500)

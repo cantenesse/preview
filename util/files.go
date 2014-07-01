@@ -52,6 +52,7 @@ func GetPdfPageCount(file string) (int, error) {
 	}
 	out, err := exec.Command("pdfinfo", file).Output()
 	if err != nil {
+		log.Println(file)
 		log.Println(string(out))
 		log.Fatal(err)
 		return 0, err

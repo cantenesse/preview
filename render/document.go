@@ -342,7 +342,6 @@ func (renderAgent *documentRenderAgent) createPdf(source, filetype string) (stri
 
 		time.Sleep(1 * time.Second)
 	}
-
 	return job.Url, nil
 }
 
