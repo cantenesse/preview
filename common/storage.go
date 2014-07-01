@@ -2,6 +2,7 @@ package common
 
 import (
 	"log"
+	"strings"
 	"time"
 )
 
@@ -50,6 +51,15 @@ func NewTemplateManager() TemplateManager {
 	tm := new(inMemoryTemplateManager)
 	tm.templates = make([]*Template, 0, 0)
 	return tm
+}
+
+// NKG: This is lazy, I know.
+func BuildIn(count int) string {
+	results := make([]string, 0, 0)
+	for i := 0; i < count; i++ {
+		results = append(results, "?")
+	}
+	return strings.Join(results, ",")
 }
 
 func (sasm *inMemorySourceAssetStorageManager) Store(sourceAsset *SourceAsset) error {
