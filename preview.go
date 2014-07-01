@@ -55,7 +55,7 @@ Options:
 }
 
 func version() string {
-	previewVersion := "1.1.0"
+	previewVersion := "1.2.0"
 	if len(githash) > 0 {
 		return previewVersion + "+" + githash
 	}
