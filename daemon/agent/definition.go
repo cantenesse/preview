@@ -113,7 +113,7 @@ func (renderAgent *genericRenderAgent) start() {
 		select {
 		case ch, ok := <-renderAgent.stop:
 			{
-				log.Println("Stopping")
+				// log.Println("Stopping")
 				if !ok {
 					return
 				}
