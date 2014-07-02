@@ -11,8 +11,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 	"net/url"
+	"path/filepath"
 	"time"
 )
 
@@ -22,6 +22,7 @@ type apiBlueprint struct {
 	gasm                         common.GeneratedAssetStorageManager
 	sasm                         common.SourceAssetStorageManager
 	s3Client                     common.S3Client
+	onDemandEnabled              bool
 	generatePreviewRequestsMeter metrics.Meter
 	previewQueriesMeter          metrics.Meter
 	previewInfoRequestsMeter     metrics.Meter
@@ -62,13 +63,15 @@ func NewApiBlueprint(
 	gasm common.GeneratedAssetStorageManager,
 	sasm common.SourceAssetStorageManager,
 	registry metrics.Registry,
-	s3Client common.S3Client) *apiBlueprint {
+	s3Client common.S3Client,
+	onDemandEnabled bool) *apiBlueprint {
 	bp := new(apiBlueprint)
 	bp.base = base
 	bp.agentManager = agentManager
 	bp.gasm = gasm
 	bp.sasm = sasm
 	bp.s3Client = s3Client
+	bp.onDemandEnabled = onDemandEnabled
 
 	bp.generatePreviewRequestsMeter = metrics.NewMeter()
 	bp.previewQueriesMeter = metrics.NewMeter()
@@ -104,7 +107,7 @@ func getUrl(id string) string {
 
 func (blueprint *apiBlueprint) createWorkForOnDemandRender(ids []string) {
 	pendingIds := make([]string, 0)
-	
+
 	for _, id := range ids {
 		sas, _ := blueprint.sasm.FindBySourceAssetId(id)
 		if len(sas) == 0 {
@@ -139,7 +142,6 @@ func (blueprint *apiBlueprint) createWorkForOnDemandRender(ids []string) {
 		}
 	}
 }
-	
 
 func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewQueriesMeter.Mark(1)
@@ -150,7 +152,7 @@ func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req 
 		return
 	}
 
-	if true {
+	if blueprint.onDemandEnabled {
 		blueprint.createWorkForOnDemandRender(ids)
 	}
 
@@ -168,7 +170,7 @@ func (blueprint *apiBlueprint) previewInfoHandler(res http.ResponseWriter, req *
 	blueprint.previewInfoRequestsMeter.Mark(1)
 	id := req.URL.Query().Get(":id")
 
-	if true {
+	if blueprint.onDemandEnabled {
 		blueprint.createWorkForOnDemandRender([]string{id})
 	}
 
@@ -189,7 +191,7 @@ func (blueprint *apiBlueprint) previewGAInfoHandler(res http.ResponseWriter, req
 	templateId := req.URL.Query().Get(":templateid")
 	page := req.URL.Query().Get(":page")
 
-	if true {
+	if blueprint.onDemandEnabled {
 		blueprint.createWorkForOnDemandRender([]string{id})
 	}
 
@@ -210,7 +212,7 @@ func (blueprint *apiBlueprint) previewGADataHandler(res http.ResponseWriter, req
 	templateId := req.URL.Query().Get(":templateid")
 	page := req.URL.Query().Get(":page")
 
-	if true {
+	if blueprint.onDemandEnabled {
 		blueprint.createWorkForOnDemandRender([]string{id})
 	}
 

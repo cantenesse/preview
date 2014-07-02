@@ -20,6 +20,7 @@ type daemonConfig struct {
 		LocalAssetStoragePath string              `json:"localAssetStoragePath"`
 		NodeId                string              `json:"nodeId"`
 		WorkDispatcherEnabled bool                `json:"workDispatcherEnabled"`
+		OnDemandEnabled       bool                `json:"onDemandEnabled"`
 	} `json:"common"`
 
 	Http struct {
@@ -157,6 +158,7 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
       "localAssetStoragePath":"` + basePathFunc("assets") + `",
       "nodeId":"E876F147E331",
       "workDispatcherEnabled":true
+      "onDemandEnabled":true
    },
    "http":{
       "listen":":8080"

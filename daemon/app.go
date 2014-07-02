@@ -250,7 +250,7 @@ func (app *daemonContext) initApis() error {
 	s3Client := app.buildS3Client()
 
 	// TODO: proper config
-	app.apiBlueprint = api.NewApiBlueprint(app.config.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry, s3Client)
+	app.apiBlueprint = api.NewApiBlueprint(app.config.SimpleApi.BaseUrl, app.agentManager, app.generatedAssetStorageManager, app.sourceAssetStorageManager, app.registry, s3Client, app.config.Common.OnDemandEnabled)
 	app.apiBlueprint.AddRoutes(p)
 
 	app.assetBlueprint = api.NewAssetBlueprint(app.registry, app.config.Common.LocalAssetStoragePath, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.placeholderManager, s3Client, app.signatureManager)

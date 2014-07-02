@@ -302,11 +302,11 @@ func (agentManager *RenderAgentManager) AddListener(listener RenderStatusChannel
 
 func (agentManager *RenderAgentManager) Stop() {
 	for name, renderAgents := range agentManager.renderAgents {
-		log.Println("Stopping", name + "s.")
+		log.Println("Stopping", name+"s.")
 		for _, renderAgent := range renderAgents {
 			renderAgent.Stop()
 		}
-		log.Println("All", name + "s", "successfully stopped.")
+		log.Println("All", name+"s", "successfully stopped.")
 	}
 	for _, workChannel := range agentManager.workChannels {
 		close(workChannel)
