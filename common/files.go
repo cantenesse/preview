@@ -56,7 +56,7 @@ func (tfm *defaultTemporaryFileManager) Notify(path string) {
 			return
 		}
 		delete(tfm.files, path)
-		err := os.Remove(path)
+		err := os.RemoveAll(path)
 		if err != nil {
 			log.Println(err)
 		}
