@@ -44,7 +44,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	// 1. Get the generated asset
 	generatedAsset, err := renderer.renderAgent.gasm.FindById(id)
 	if err != nil {
-		log.Fatal("No Generated Asset with that ID can be retreived from storage: ", id)
+		log.Println("No Generated Asset with that ID can be retreived from storage: ", id)
 		return
 	}
 

@@ -26,7 +26,7 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 
 	generatedAsset, err := renderer.renderAgent.gasm.FindById(id)
 	if err != nil {
-		log.Fatal("No Generated Asset with that ID can be retreived from storage: ", id)
+		log.Println("No Generated Asset with that ID can be retreived from storage: ", id)
 		return
 	}
 

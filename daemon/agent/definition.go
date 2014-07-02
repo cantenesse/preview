@@ -173,7 +173,7 @@ func (renderAgent *genericRenderAgent) commitStatus(id string, existingAttribute
 						}
 						generatedAsset, err := renderAgent.gasm.FindById(id)
 						if err != nil {
-							panic(err)
+							log.Println(err)
 							return
 						}
 						generatedAsset.Status = status
