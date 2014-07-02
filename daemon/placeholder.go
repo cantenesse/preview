@@ -38,6 +38,16 @@ func newPlaceholderManager(basePath string, placeholderGroups map[string]string)
 	return pm
 }
 
+func newPlaceholder(url, path string, height, width int, fileSize int64) *common.Placeholder {
+	return &common.Placeholder{
+		Url:      url,
+		Path:     path,
+		Height:   height,
+		Width:    width,
+		FileSize: fileSize,
+	}
+}
+
 func (pm *defaultPlaceholderManager) AllFileTypes() []string {
 	results := make([]string, 0, 0)
 	for fileType := range pm.placeholders {
@@ -52,7 +62,12 @@ func (pm *defaultPlaceholderManager) Url(fileType, placeholderSize string) *comm
 	if hasFileTypePlaceholder {
 		fileTypeSize, hasfileTypeSize := fileTypePlaceholder[placeholderSize]
 		if hasfileTypeSize {
-			return &common.Placeholder{"/" + fileType + "/" + placeholderSize + ".png", fileTypeSize.path, fileTypeSize.height, fileTypeSize.width, fileTypeSize.fileSize}
+			return newPlaceholder(
+				"/"+fileType+"/"+placeholderSize+".png",
+				fileTypeSize.path,
+				fileTypeSize.height,
+				fileTypeSize.width,
+				fileTypeSize.fileSize)
 		}
 	}
 
@@ -63,7 +78,12 @@ func (pm *defaultPlaceholderManager) Url(fileType, placeholderSize string) *comm
 		if hasFileTypeGroupPlaceholder {
 			fileTypeGroupSize, hasfileTypeGroupSize := fileTypeGroupPlaceholder[placeholderSize]
 			if hasfileTypeGroupSize {
-				return &common.Placeholder{"/" + fileTypeGroup + "/" + placeholderSize + ".png", fileTypeGroupSize.path, fileTypeGroupSize.height, fileTypeGroupSize.width, fileTypeGroupSize.fileSize}
+				return newPlaceholder(
+					"/"+fileTypeGroup+"/"+placeholderSize+".png",
+					fileTypeGroupSize.path,
+					fileTypeGroupSize.height,
+					fileTypeGroupSize.width,
+					fileTypeGroupSize.fileSize)
 			}
 		}
 	}
@@ -72,11 +92,16 @@ func (pm *defaultPlaceholderManager) Url(fileType, placeholderSize string) *comm
 	if hasUnknownPlaceholder {
 		jumboUnknownPlaceholder, hasJumboUnknownPlaceholder := unknownPlaceholder[common.PlaceholderSizeJumbo]
 		if hasJumboUnknownPlaceholder {
-			return &common.Placeholder{"/" + common.DefaultPlaceholderType + "/" + common.PlaceholderSizeJumbo + ".png", jumboUnknownPlaceholder.path, jumboUnknownPlaceholder.height, jumboUnknownPlaceholder.width, jumboUnknownPlaceholder.fileSize}
+			return newPlaceholder(
+				"/"+common.DefaultPlaceholderType+"/"+common.PlaceholderSizeJumbo+".png",
+				jumboUnknownPlaceholder.path,
+				jumboUnknownPlaceholder.height,
+				jumboUnknownPlaceholder.width,
+				jumboUnknownPlaceholder.fileSize)
 		}
 	}
 
-	return &common.Placeholder{"/unknown/jumbo.png", "", 0, 0, 0}
+	return newPlaceholder("/unknown/jumbo.png", "", 0, 0, 0)
 }
 
 func (pm *defaultPlaceholderManager) loadPlaceholders() {
