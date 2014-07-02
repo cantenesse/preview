@@ -288,7 +288,6 @@ func (app *daemonContext) initZencoder() error {
 }
 
 func (app *daemonContext) Stop() {
-	panic("ok")
 	app.agentManager.Stop()
 	if app.cassandraManager != nil {
 		app.cassandraManager.Stop()
