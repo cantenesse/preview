@@ -126,7 +126,7 @@ func (blueprint *apiBlueprint) createWorkForOnDemandRender(ids []string) {
 			finished := true
 			for _, sa := range data.SourceAssets {
 				for _, ga := range sa.GeneratedAssets {
-					if ga.Status != common.GeneratedAssetStatusComplete {
+					if ga.Status != common.GeneratedAssetStatusComplete && ga.Status != common.GeneratedAssetStatusFailed {
 						finished = false
 						break
 					}
