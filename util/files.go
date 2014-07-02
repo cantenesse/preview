@@ -50,9 +50,10 @@ func GetPdfPageCount(file string) (int, error) {
 		log.Println("pdfinfo command not found")
 		return 0, err
 	}
-	out, err := exec.Command("pdfinfo", file).Output()
+	cmd := exec.Command("pdfinfo", file)
+	log.Println(cmd)
+	out, err := cmd.Output()
 	if err != nil {
-		log.Println(file)
 		log.Println(string(out))
 		log.Fatal(err)
 		return 0, err

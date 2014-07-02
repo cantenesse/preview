@@ -107,20 +107,17 @@ func (agent *conversionAgent) movePdfFile(source, dest string) error {
 		log.Println("Failed to move file", source, "to", dest)
 		return err
 	}
-	//cmd := exec.Command("sync")
-	//log.Println(cmd)
-	//err = cmd.Run()
-	fi, err := os.Open(dest)
-	if err != nil {
-		log.Println("open failed")
-		return err
-	}
-	defer fi.Close()
-	err = fi.Sync()
+	cmd := exec.Command("sync")
+	log.Println(cmd)
+	err = cmd.Run()
 	if err != nil {
 		log.Println("sync failed")
 		return err
 	}
+
+	// Temporary fix for the sync problem...
+	// TODO: Find a proper solution for this
+	time.Sleep(1 * time.Second)
 
 	return nil
 }
