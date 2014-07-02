@@ -171,8 +171,8 @@ func (app *daemonContext) initStorage() error {
 	switch app.config.Storage.Engine {
 	case "memory":
 		{
-			app.sourceAssetStorageManager = common.NewSourceAssetStorageManager()
-			app.generatedAssetStorageManager = common.NewGeneratedAssetStorageManager(app.templateManager)
+			app.sourceAssetStorageManager = storage.NewSourceAssetStorageManager()
+			app.generatedAssetStorageManager = storage.NewGeneratedAssetStorageManager(app.templateManager)
 			return nil
 		}
 	case "mysql":

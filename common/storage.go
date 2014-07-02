@@ -1,9 +1,7 @@
 package common
 
 import (
-	"log"
 	"strings"
-	"time"
 )
 
 type SourceAssetStorageManager interface {
@@ -26,25 +24,8 @@ type TemplateManager interface {
 	FindByRenderService(renderService string) ([]*Template, error)
 }
 
-type inMemorySourceAssetStorageManager struct {
-	sourceAssets []*SourceAsset
-}
-
-type inMemoryGeneratedAssetStorageManager struct {
-	generatedAssets []*GeneratedAsset
-	templateManager TemplateManager
-}
-
 type inMemoryTemplateManager struct {
 	templates []*Template
-}
-
-func NewSourceAssetStorageManager() SourceAssetStorageManager {
-	return &inMemorySourceAssetStorageManager{make([]*SourceAsset, 0, 0)}
-}
-
-func NewGeneratedAssetStorageManager(templateManager TemplateManager) GeneratedAssetStorageManager {
-	return &inMemoryGeneratedAssetStorageManager{make([]*GeneratedAsset, 0, 0), templateManager}
 }
 
 func NewTemplateManager() TemplateManager {
@@ -60,100 +41,6 @@ func BuildIn(count int) string {
 		results = append(results, "?")
 	}
 	return strings.Join(results, ",")
-}
-
-func (sasm *inMemorySourceAssetStorageManager) Store(sourceAsset *SourceAsset) error {
-	sasm.sourceAssets = append(sasm.sourceAssets, sourceAsset)
-	return nil
-}
-
-func (sasm *inMemorySourceAssetStorageManager) FindBySourceAssetId(id string) ([]*SourceAsset, error) {
-	results := make([]*SourceAsset, 0, 0)
-	for _, sourceAsset := range sasm.sourceAssets {
-		if sourceAsset.Id == id {
-			results = append(results, sourceAsset)
-		}
-	}
-	return results, nil
-}
-
-func (gasm *inMemoryGeneratedAssetStorageManager) Store(generatedAsset *GeneratedAsset) error {
-	gasm.generatedAssets = append(gasm.generatedAssets, generatedAsset)
-	return nil
-}
-
-func (gasm *inMemoryGeneratedAssetStorageManager) FindById(id string) (*GeneratedAsset, error) {
-	for _, generatedAsset := range gasm.generatedAssets {
-		if generatedAsset.Id == id {
-			return generatedAsset, nil
-		}
-	}
-	return nil, ErrorNoGeneratedAssetsFoundForId
-}
-
-func (gasm *inMemoryGeneratedAssetStorageManager) FindByIds(ids []string) ([]*GeneratedAsset, error) {
-	results := make([]*GeneratedAsset, 0, 0)
-	for _, generatedAsset := range gasm.generatedAssets {
-		for _, id := range ids {
-			if generatedAsset.Id == id {
-				results = append(results, generatedAsset)
-			}
-		}
-	}
-	return results, nil
-}
-
-func (gasm *inMemoryGeneratedAssetStorageManager) FindBySourceAssetId(id string) ([]*GeneratedAsset, error) {
-	results := make([]*GeneratedAsset, 0, 0)
-	for _, generatedAsset := range gasm.generatedAssets {
-		if generatedAsset.SourceAssetId == id {
-			results = append(results, generatedAsset)
-		}
-	}
-	return results, nil
-}
-
-func (gasm *inMemoryGeneratedAssetStorageManager) FindWorkForService(serviceName string, workCount int) ([]*GeneratedAsset, error) {
-	templates, _ := gasm.templateManager.FindByRenderService(serviceName)
-	log.Println("templates for", serviceName, ":", templates)
-	results := make([]*GeneratedAsset, 0, 0)
-	for _, generatedAsset := range gasm.generatedAssets {
-		for _, template := range templates {
-			if generatedAsset.TemplateId == template.Id {
-				if generatedAsset.Status == GeneratedAssetStatusWaiting {
-					generatedAsset.Status = GeneratedAssetStatusScheduled
-					generatedAsset.UpdatedAt = time.Now().UnixNano()
-					results = append(results, generatedAsset)
-				}
-				if len(results) >= workCount {
-					return results, nil
-				}
-			}
-		}
-	}
-	log.Println("generated assets for service", serviceName, ":", buildGeneratedAssetIds(results))
-	return results, nil
-}
-
-func buildGeneratedAssetIds(generatedAssets []*GeneratedAsset) []string {
-	results := make([]string, len(generatedAssets))
-	for index, generatedAsset := range generatedAssets {
-		results[index] = generatedAsset.Id
-	}
-	return results
-}
-
-func (gasm *inMemoryGeneratedAssetStorageManager) Update(givenGeneratedAsset *GeneratedAsset) error {
-	for _, generatedAsset := range gasm.generatedAssets {
-		if generatedAsset.Id == givenGeneratedAsset.Id {
-			generatedAsset.Status = givenGeneratedAsset.Status
-			generatedAsset.Attributes = givenGeneratedAsset.Attributes
-			generatedAsset.UpdatedAt = time.Now().UnixNano()
-			return nil
-		}
-
-	}
-	return ErrorGeneratedAssetCouldNotBeUpdated
 }
 
 func (tm *inMemoryTemplateManager) Store(template *Template) error {
