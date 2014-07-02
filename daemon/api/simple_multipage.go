@@ -2,14 +2,13 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/ngerakines/preview/common"
 	"log"
 	"strings"
 )
 
 func (blueprint *simpleBlueprint) multipagePreviewInfoRequest(fileIds []string) ([]byte, error) {
-	responseCollection := make(map[string]*multipagePreviewView)
+	responseCollection := common.NewMultipageView()
 
 	templates, err := blueprint.legacyTemplates()
 	if err != nil {
@@ -24,16 +23,14 @@ func (blueprint *simpleBlueprint) multipagePreviewInfoRequest(fileIds []string) 
 	return json.Marshal(responseCollection)
 }
 
-func (blueprint *simpleBlueprint) composeMultipagePreviewView(fileId string, templates map[string]templateTuple) *multipagePreviewView {
+func (blueprint *simpleBlueprint) composeMultipagePreviewView(fileId string, templates map[string]templateTuple) *common.MultipagePreviewView {
 	sourceAsset, err := blueprint.getOriginSourceAsset(fileId)
-	view := new(multipagePreviewView)
-	view.Pages = make(map[string]*pageView)
+	view := common.NewMultipagePreviewView()
 
-	view.PageCount = 1
-	emptyPage := new(pageView)
+	emptyPage := common.NewPageView()
 	blueprint.fillMultipagePlaceholders(emptyPage, "unknown")
 
-	view.Pages["0"] = emptyPage
+	view.SetPage(0, emptyPage)
 
 	if err != nil {
 		return view
@@ -48,7 +45,7 @@ func (blueprint *simpleBlueprint) composeMultipagePreviewView(fileId string, tem
 
 	pagedGeneratedAssetSet := blueprint.groupGeneratedAssetsByPage(generatedAssets)
 	for page, pagedGeneratedAssets := range pagedGeneratedAssetSet {
-		pv := new(pageView)
+		pv := new(common.PageView)
 		for _, generatedAsset := range pagedGeneratedAssets {
 			templateTuple, hasTemplateTuple := templates[generatedAsset.TemplateId]
 			if hasTemplateTuple {
@@ -65,19 +62,19 @@ func (blueprint *simpleBlueprint) composeMultipagePreviewView(fileId string, tem
 			}
 		}
 		blueprint.fillMultipagePlaceholders(pv, fileType)
-		view.Pages[fmt.Sprintf("%d", page)] = pv
+		view.SetPage(page, pv)
 	}
 
 	return view
 }
 
-func (blueprint *simpleBlueprint) composePageInfoView(generatedAsset *common.GeneratedAsset, fileType, placeholderSize string, page int32) *pageInfoView {
+func (blueprint *simpleBlueprint) composePageInfoView(generatedAsset *common.GeneratedAsset, fileType, placeholderSize string, page int32) *common.PageInfoView {
 	log.Println("Building preview image for", generatedAsset)
 	if generatedAsset.Status == common.GeneratedAssetStatusComplete {
 		signedUrl, expires := blueprint.signUrl(blueprint.scrubUrl(generatedAsset, placeholderSize))
 		width, height, err := blueprint.getImageSize(generatedAsset)
 		if err == nil {
-			return newPageInfoView(signedUrl, width, height, expires, "complete")
+			return common.NewPageInfoView(signedUrl, width, height, expires, "complete")
 		}
 	}
 	if strings.HasPrefix(generatedAsset.Status, common.GeneratedAssetStatusFailed) {
@@ -86,13 +83,13 @@ func (blueprint *simpleBlueprint) composePageInfoView(generatedAsset *common.Gen
 	return blueprint.getMultipagePlaceholder(fileType, placeholderSize, "incomplete")
 }
 
-func (blueprint *simpleBlueprint) getMultipagePlaceholder(fileType, placeholderSize string, status string) *pageInfoView {
+func (blueprint *simpleBlueprint) getMultipagePlaceholder(fileType, placeholderSize string, status string) *common.PageInfoView {
 	placeholder := blueprint.placeholderManager.Url(fileType, placeholderSize)
 	signedUrl, expires := blueprint.signUrl(blueprint.edgeContentHost + "/static" + placeholder.Url)
-	return newPageInfoView(signedUrl, int32(placeholder.Height), int32(placeholder.Width), expires, "incomplete")
+	return common.NewPageInfoView(signedUrl, int32(placeholder.Height), int32(placeholder.Width), expires, "incomplete")
 }
 
-func (blueprint *simpleBlueprint) fillMultipagePlaceholders(view *pageView, fileType string) {
+func (blueprint *simpleBlueprint) fillMultipagePlaceholders(view *common.PageView, fileType string) {
 	if view.Small == nil {
 		view.Small = blueprint.getMultipagePlaceholder(fileType, common.PlaceholderSizeSmall, "incomplete")
 	}
@@ -104,15 +101,5 @@ func (blueprint *simpleBlueprint) fillMultipagePlaceholders(view *pageView, file
 	}
 	if view.Jumbo == nil {
 		view.Jumbo = blueprint.getMultipagePlaceholder(fileType, common.PlaceholderSizeJumbo, "incomplete")
-	}
-}
-
-func newPageInfoView(url string, height, width int32, expires int64, status string) *pageInfoView {
-	return &pageInfoView{
-		Url:     url,
-		Width:   width,
-		Height:  height,
-		Expires: expires,
-		Status:  status,
 	}
 }

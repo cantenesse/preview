@@ -204,7 +204,7 @@ func (blueprint *simpleBlueprint) legacyTemplates() (map[string]templateTuple, e
 }
 
 func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]byte, error) {
-	collections := make([]*previewInfoCollection, 0, 0)
+	response := common.NewPreviewInfoResponse("v1")
 
 	templates, err := blueprint.legacyTemplates()
 	if err != nil {
@@ -227,9 +227,8 @@ func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]
 
 			pagedGeneratedAssetSet := blueprint.groupGeneratedAssetsByPage(generatedAssets)
 			for page, pagedGeneratedAssets := range pagedGeneratedAssetSet {
-				collection := &previewInfoCollection{}
+				collection := common.NewPreviewInfoCollection()
 				collection.FileId = fileId
-				collection.Page = page
 
 				for _, generatedAsset := range pagedGeneratedAssets {
 					templateTuple, hasTemplateTuple := templates[generatedAsset.TemplateId]
@@ -258,13 +257,11 @@ func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]
 				if collection.Jumbo == nil {
 					collection.Jumbo = blueprint.getPlaceholder(fileType, common.PlaceholderSizeJumbo, page)
 				}
-
-				collections = append(collections, collection)
+				response.AddCollection(collection)
 			}
 		} else {
-			collection := &previewInfoCollection{}
+			collection := common.NewPreviewInfoCollection()
 			collection.FileId = fileId
-			collection.Page = 0
 			if collection.Small == nil {
 				collection.Small = blueprint.getPlaceholder("unknown", common.PlaceholderSizeSmall, 0)
 			}
@@ -278,11 +275,9 @@ func (blueprint *simpleBlueprint) handlePreviewInfoRequest(fileIds []string) ([]
 				collection.Jumbo = blueprint.getPlaceholder("unknown", common.PlaceholderSizeJumbo, 0)
 			}
 
-			collections = append(collections, collection)
+			response.AddCollection(collection)
 		}
 	}
-
-	response := &previewInfoResponse{"1", collections}
 
 	return json.Marshal(response)
 }
@@ -341,15 +336,15 @@ func (blueprint *simpleBlueprint) templatePlaceholderSize(template *common.Templ
 	return placeholderSize, nil
 }
 
-func (blueprint *simpleBlueprint) getPreviewImage(generatedAsset *common.GeneratedAsset, fileType, placeholderSize string, page int32) *imageInfo {
+func (blueprint *simpleBlueprint) getPreviewImage(generatedAsset *common.GeneratedAsset, fileType, placeholderSize string, page int32) *common.ImageInfo {
 	log.Println("Building preview image for", generatedAsset)
 	if generatedAsset.Status == common.GeneratedAssetStatusComplete {
 		signedUrl, expires := blueprint.signUrl(blueprint.scrubUrl(generatedAsset, placeholderSize))
 		width, height, err := blueprint.getImageSize(generatedAsset)
 		if err != nil {
-			return &imageInfo{signedUrl, 200, 200, expires, true, false, page}
+			return common.NewImageInfo(signedUrl, 200, 200, expires, true, false)
 		}
-		return &imageInfo{signedUrl, width, height, expires, true, false, page}
+		return common.NewImageInfo(signedUrl, width, height, expires, true, false)
 	}
 	if strings.HasPrefix(generatedAsset.Status, common.GeneratedAssetStatusFailed) {
 		// NKG: If the job failed, then before we return the placeholder, we set the "isFinal" field.
@@ -384,10 +379,10 @@ func (blueprint *simpleBlueprint) getImageSize(ga *common.GeneratedAsset) (int32
 	return int32(width), int32(height), nil
 }
 
-func (blueprint *simpleBlueprint) getPlaceholder(fileType, placeholderSize string, page int32) *imageInfo {
+func (blueprint *simpleBlueprint) getPlaceholder(fileType, placeholderSize string, page int32) *common.ImageInfo {
 	placeholder := blueprint.placeholderManager.Url(fileType, placeholderSize)
 	signedUrl, expires := blueprint.signUrl(blueprint.edgeContentHost + "/static" + placeholder.Url)
-	return &imageInfo{signedUrl, 200, 200, expires, false, true, page}
+	return common.NewImageInfo(signedUrl, 200, 200, expires, false, true)
 }
 
 func (blueprint *simpleBlueprint) getFileType(sourceAssets []*common.SourceAsset) string {
