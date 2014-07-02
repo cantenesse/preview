@@ -9,10 +9,10 @@ import (
 )
 
 func init() {
-	Renderers = make(map[string]rendererConstructor)
+	renderers = make(map[string]rendererConstructor)
 }
 
-var Renderers map[string]rendererConstructor
+var renderers map[string]rendererConstructor
 
 type RenderAgentWorkChannel chan string
 
@@ -101,7 +101,7 @@ func newGenericRenderAgent(
 	renderAgent.workChannel = workChannel
 	renderAgent.statusListeners = make([]RenderStatusChannel, 0, 0)
 	renderAgent.stop = make(chan (chan bool))
-	renderAgent.renderer = Renderers[name](renderAgent, params)
+	renderAgent.renderer = renderers[name](renderAgent, params)
 
 	go renderAgent.start()
 

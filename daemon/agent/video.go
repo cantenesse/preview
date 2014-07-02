@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	Renderers["videoRenderAgent"] = newVideoRenderer
+	renderers["videoRenderAgent"] = newVideoRenderer
 }
 
 type videoRenderer struct {
@@ -43,15 +43,12 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
-	if _, supports := renderer.renderAgent.metrics.fileTypeCount[fileType]; !supports {
-		log.Println("VideoRenderAgent doesn't support filetype", fileType)
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+	fileType, err := getSourceAssetFileType(sourceAsset)
+	if err != nil {
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
 		return
 	}
-	if err == nil {
-		renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
-	}
+	renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
 	input := urls[0]

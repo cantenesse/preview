@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Renderers["imageMagickRenderAgent"] = newImageMagickRenderer
+	renderers["imageMagickRenderAgent"] = newImageMagickRenderer
 }
 
 type imageMagickRenderer struct {
@@ -47,7 +47,6 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
 		return
 	}
-
 	renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
 	templates, err := renderer.renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})

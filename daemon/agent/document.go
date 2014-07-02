@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	Renderers["documentRenderAgent"] = newDocumentRenderer
+	renderers["documentRenderAgent"] = newDocumentRenderer
 }
 
 type documentRenderer struct {
@@ -61,10 +61,12 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
-	if err == nil {
-		renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
+	fileType, err := getSourceAssetFileType(sourceAsset)
+	if err != nil {
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
+		return
 	}
+	renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
 	// 3. Get the template... not needed yet
 
