@@ -287,7 +287,9 @@ func (agentManager *RenderAgentManager) canDispatch(generatedAssetId, status str
 	agentManager.activeWork[template.RenderAgent] = uniqueListWith(agentManager.activeWork[template.RenderAgent], generatedAssetId)
 
 	return common.GeneratedAssetStatusScheduled, func() {
-		renderAgent.Dispatch() <- generatedAssetId
+		go func() {
+			renderAgent.Dispatch() <- generatedAssetId
+		}()
 	}
 }
 
