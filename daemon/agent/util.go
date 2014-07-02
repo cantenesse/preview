@@ -27,7 +27,7 @@ func getPdfPageCount(file string) (int, error) {
 	}
 	out, err := exec.Command("pdfinfo", file).Output()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return 0, err
 	}
 	matches := pdfPageCount.FindStringSubmatch(string(out))

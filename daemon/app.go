@@ -103,13 +103,13 @@ func (app *daemonContext) Start() {
 
 		alive = app.listener.ConnCount.Get()
 		if alive > 0 {
-			log.Fatalf("Server stopped after 5 seconds with %d client(s) still connected.", alive)
+			log.Printf("Server stopped after 5 seconds with %d client(s) still connected.", alive)
 		} else {
 			log.Println("Server stopped gracefully.")
 			os.Exit(0)
 		}
 	} else if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 

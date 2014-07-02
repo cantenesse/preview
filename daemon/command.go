@@ -25,12 +25,12 @@ func (command *DaemonCommand) String() string {
 func (command *DaemonCommand) Execute() {
 	config, err := loadDaemonConfig(command.config)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Println(err.Error())
 		return
 	}
 	context, err := NewDaemonContext(config)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Println(err.Error())
 		return
 	}
 
