@@ -70,6 +70,7 @@ func (blueprint *documentBlueprint) serveDocumentHandler(res http.ResponseWriter
 
 	_, err = os.Stat(job.Location)
 	if err == nil {
+		log.Println("Serving file", job.Location, "to job ID", job.Id)
 		http.ServeFile(res, req, job.Location)
 		return
 	}

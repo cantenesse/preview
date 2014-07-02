@@ -3,6 +3,8 @@ package docserver
 import (
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/util"
+	"hash/crc32"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -102,7 +104,13 @@ func (agent *conversionAgent) processJob(job *ConvertDocumentJob) *ConvertDocume
 func (agent *conversionAgent) movePdfFile(source, dest string) error {
 	dest = dest + "/out.pdf"
 
-	err := os.Rename(source, dest)
+	sourceChecksum, err := computeCRC32(source)
+	if err != nil {
+		log.Println("Failed to compute checksum")
+		return err
+	}
+
+	err = os.Rename(source, dest)
 	if err != nil {
 		log.Println("Failed to move file", source, "to", dest)
 		return err
@@ -115,11 +123,28 @@ func (agent *conversionAgent) movePdfFile(source, dest string) error {
 		return err
 	}
 
-	// Temporary fix for the sync problem...
-	// TODO: Find a proper solution for this
-	time.Sleep(1 * time.Second)
+	for i := 0; i < 10; i++ {
+		checksum, err := computeCRC32(dest)
+		if err != nil {
+			log.Println("Failed to compute checksum")
+			return err
+		}
+		if checksum == sourceChecksum {
+			log.Println("CRC Validated for file", dest)
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	log.Println("File timeout")
+	return common.ErrorNotImplemented
+}
 
-	return nil
+func computeCRC32(path string) (uint32, error) {
+	in, err := ioutil.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	return crc32.ChecksumIEEE(in), nil
 }
 
 func (agent *conversionAgent) createPdf(source, fileType string) error {

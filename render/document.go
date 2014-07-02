@@ -193,17 +193,20 @@ func (renderAgent *documentRenderAgent) renderGeneratedAsset(id string) {
 	defer destinationTemporaryFile.Release()
 
 	var pdfUrl string
+	fail := false
 	renderAgent.metrics.convertTime.Time(func() {
 		pdfUrl, err = renderAgent.createPdf(urls[0], fileType)
 		if err != nil {
 			log.Println(err)
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
-			return
+			fail = true
 		}
 	})
+	if fail {
+		return
+	}
 
 	file, err := renderAgent.downloadPdfFile(pdfUrl, destination)
-
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
