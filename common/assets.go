@@ -68,6 +68,7 @@ var (
 	// These IDs are required for the old API to work
 	DocumentConversionTemplateId = "9B17C6CE-7B09-4FD5-92AD-D85DD218D6D7"
 	VideoConversionTemplateId    = "4128966B-9F69-4E56-AD5C-1FDB3C24F910"
+	MsOfficeTemplateId           = "0507D650-0731-4D86-8394-8082BB520A21"
 
 	// TemplateAttributeHeight is a constant for the height attribute that can be set for templates.
 	TemplateAttributeHeight = "height"

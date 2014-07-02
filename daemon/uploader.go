@@ -97,6 +97,8 @@ func (uploader *localUploader) Upload(destination, existingFile string) error {
 func (uploader *localUploader) Url(sourceAsset *common.SourceAsset, template *common.Template, page int32) string {
 	if template.Id == common.DocumentConversionTemplateId {
 		return fmt.Sprintf("local:///%s/pdf", sourceAsset.Id)
+	} else if template.Id == common.MsOfficeTemplateId {
+		return fmt.Sprintf("local:///%s/pdf", sourceAsset.Id)
 	}
 	placeholderSize := template.GetAttribute(common.TemplateAttributePlaceholderSize)[0]
 	return fmt.Sprintf("local:///%s/%s/%d", sourceAsset.Id, placeholderSize, page)
