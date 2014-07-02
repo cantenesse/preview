@@ -2,14 +2,17 @@ package agent
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/ngerakines/preview/common"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func init() {
@@ -19,12 +22,16 @@ func init() {
 type documentRenderer struct {
 	renderAgent      *genericRenderAgent
 	tempFileBasePath string
+	engine           string
+	officeRenderUrl  string
 }
 
 func newDocumentRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(documentRenderer)
 	renderer.renderAgent = renderAgent
 	renderer.tempFileBasePath = params["tempFileBasePath"]
+	renderer.engine = params["engine"]
+	renderer.officeRenderUrl = params["officeRenderUrl"]
 
 	return renderer
 }
@@ -74,53 +81,84 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 
 	// 4. Fetch the source asset file
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
-	sourceFile, err := renderer.renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
-	if err != nil {
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNoDownloadUrlsWork), nil}
-		return
-	}
-	defer sourceFile.Release()
-
-	// 5. Create a temporary destination directory.
-	destination, err := renderer.createTemporaryDestinationDirectory()
-	if err != nil {
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-		return
-	}
-	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
-	defer destinationTemporaryFile.Release()
-
-	renderer.renderAgent.metrics.convertTime.Time(func() {
-		err = renderer.createPdf(sourceFile.Path(), destination)
+	var sourceFile common.TemporaryFile
+	if renderer.engine != "msoffice" {
+		sourceFile, err = renderer.renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
 		if err != nil {
-			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNoDownloadUrlsWork), nil}
 			return
 		}
+		defer sourceFile.Release()
+	}
+
+	var destination string
+	// 5. Create a temporary destination directory.
+	if renderer.engine == "libreoffice" {
+		destination, err := renderer.createTemporaryDestinationDirectory()
+		if err != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+			return
+		}
+		destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
+		defer destinationTemporaryFile.Release()
+	}
+
+	var pdfGAid string
+	renderer.renderAgent.metrics.convertTime.Time(func() {
+		switch renderer.engine {
+		case "libreoffice":
+			err = renderer.createPdf(sourceFile.Path(), destination)
+		case "msoffice":
+			if len(urls) == 0 {
+				err = common.ErrorNoDownloadUrlsWork
+				return // Returns from this anon function
+			}
+			pdfGAid, err = renderer.createPdfWithOffice(urls[0], fileType)
+		}
 	})
+	if err != nil {
+		log.Println("Conversion error:", err)
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
+		return
+	}
 
-	files, err := renderer.getRenderedFiles(destination)
+	var pdfFile string
+	switch renderer.engine {
+	case "libreoffice":
+		files, err := renderer.getRenderedFiles(destination)
+		if err != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+			return
+		}
+		if len(files) != 1 {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+			return
+		}
+		pdfFile = files[0]
+	case "msoffice":
+		tf, err := renderer.getPdfFile(pdfGAid)
+		defer tf.Release()
+		if err != nil {
+			log.Println("Could not retrieve rendered PDF file from MS Office render agent")
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+			return
+		}
+		pdfFile = tf.Path()
+	}
+
+	pages, err := common.GetPdfPageCount(pdfFile)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-	if len(files) != 1 {
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-		return
-	}
 
-	pages, err := common.GetPdfPageCount(files[0])
-	if err != nil {
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-		return
-	}
-
-	err = renderer.renderAgent.uploader.Upload(generatedAsset.Location, files[0])
+	err = renderer.renderAgent.uploader.Upload(generatedAsset.Location, pdfFile)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotUploadAsset), nil}
 		return
 	}
 
-	pdfFileSize, err := common.FileSize(destination)
+	pdfFileSize, err := common.FileSize(pdfFile)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileSize), nil}
 		return
@@ -206,4 +244,95 @@ func (renderer *documentRenderer) createTemporaryDestinationDirectory() (string,
 		return "", err
 	}
 	return tmpPath, nil
+}
+
+func (renderer *documentRenderer) createPdfWithOffice(source, fileType string) (string, error) {
+	id, _ := common.NewUuid()
+	jsonRequest := `{
+"sourceAssets": [
+		{
+			"fileId": "` + id + `",
+			"url": "` + source + `",
+			"attributes": {
+				"type": [
+					"` + fileType + `"
+				]
+			}
+		}
+	],
+	"templateIds": [
+		"0507D650-0731-4D86-8394-8082BB520A21"
+	]
+}`
+
+	req, err := http.NewRequest("PUT", renderer.officeRenderUrl, strings.NewReader(jsonRequest))
+	if err != nil {
+		return "", err
+	}
+	client := common.NewHttpClient(true, 10*time.Second)
+	httpResp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return "", err
+	}
+	log.Println("Received response", string(resp))
+	// TODO: Get rid of these anonymous structures when API V2 structs are made public in common
+	var apiResp struct {
+		SourceAssets []struct {
+			SourceAsset     *common.SourceAsset      `json:"sourceAsset"`
+			GeneratedAssets []*common.GeneratedAsset `json:"generatedAssets"`
+		} `json:"sourceAssets"`
+	}
+	err = json.Unmarshal(resp, &apiResp)
+	if err != nil {
+		log.Println("Error unmarshaling api response")
+		return "", err
+	}
+
+	for i := 0; i < 60; i++ {
+		status, err := renderer.submitStatusRequest(id)
+		if err != nil {
+			log.Println("Error getting status")
+			return "", err
+		}
+		ga, err := common.NewGeneratedAssetFromJson(status)
+		if err != nil {
+			log.Println("Error unmarshaling GA")
+			return "", err
+		}
+		switch ga.Status {
+		case common.GeneratedAssetStatusFailed:
+			log.Println("MS Office render agent failed to convert document")
+			return "", common.ErrorNotImplemented
+		case common.GeneratedAssetStatusComplete:
+			return id, nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+	log.Println("Timeout waiting for MS Office render agent")
+	return "", common.ErrorNotImplemented
+}
+
+func (renderer *documentRenderer) submitStatusRequest(id string) ([]byte, error) {
+	url := renderer.officeRenderUrl + id + "/" + common.MsOfficeTemplateId + "/0"
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func (renderer *documentRenderer) getPdfFile(id string) (common.TemporaryFile, error) {
+	url := renderer.officeRenderUrl + id + "/" + common.MsOfficeTemplateId + "/0/data"
+	// TODO: Tram support
+	return renderer.renderAgent.downloader.Download(url, "")
 }

@@ -28,14 +28,12 @@ This render agent requires the following template in the config file:
 
 type msOfficeRenderer struct {
 	renderAgent        *genericRenderAgent
-	tempFileBasePath   string
 	pdfOutputDirectory string
 }
 
 func newMsOfficeRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(msOfficeRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.tempFileBasePath = params["tempFileBasePath"]
 	renderer.pdfOutputDirectory = params["pdfOutputDirectory"]
 
 	return renderer
@@ -44,7 +42,6 @@ func newMsOfficeRenderer(renderAgent *genericRenderAgent, params map[string]stri
 func (renderer *msOfficeRenderer) renderGeneratedAsset(id string) {
 	renderer.renderAgent.metrics.workProcessed.Mark(1)
 
-	// 1. Get the generated asset
 	generatedAsset, err := renderer.renderAgent.gasm.FindById(id)
 	if err != nil {
 		log.Fatal("No Generated Asset with that ID can be retreived from storage: ", id)
@@ -57,7 +54,6 @@ func (renderer *msOfficeRenderer) renderGeneratedAsset(id string) {
 	generatedAsset.Status = common.GeneratedAssetStatusProcessing
 	renderer.renderAgent.gasm.Update(generatedAsset)
 
-	// 2. Get the source asset
 	sourceAsset, err := renderer.renderAgent.getSourceAsset(generatedAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
@@ -76,16 +72,6 @@ func (renderer *msOfficeRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 	defer sourceFile.Release()
-
-	destination, err := renderer.createTemporaryDestinationDirectory()
-	if err != nil {
-		log.Println("Failed to create temporary destination directory")
-		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
-		return
-	}
-
-	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
-	defer destinationTemporaryFile.Release()
 
 	log.Println("Creating PDF")
 	renderer.renderAgent.metrics.convertTime.Time(func() {
@@ -144,10 +130,8 @@ func createPdf(source, fileType string) error {
 }
 
 func (renderer *msOfficeRenderer) getPdfFileLocation(id string) (string, error) {
-	iterations := 0
-	log.Println(id)
 	// This is necessary because the applescript command can exit before the PDF printer finishes printing
-	for {
+	for i := 0; i < 10; i++ {
 		// PDFs get put here from PDFwriter; the UUID in the filename lets us find it easily
 		pdfs, err := filepath.Glob(filepath.Join(renderer.pdfOutputDirectory, "*"+id+".pdf"))
 		if err != nil {
@@ -162,24 +146,7 @@ func (renderer *msOfficeRenderer) getPdfFileLocation(id string) (string, error) 
 			return "", common.ErrorNotImplemented
 		}
 		time.Sleep(1 * time.Second)
-		if iterations > 10 {
-			log.Println("Timeout")
-			return "", common.ErrorNotImplemented
-		}
-		iterations++
 	}
-}
-
-func (renderer *msOfficeRenderer) createTemporaryDestinationDirectory() (string, error) {
-	uuid, err := common.NewUuid()
-	if err != nil {
-		return "", err
-	}
-	tmpPath := filepath.Join(renderer.tempFileBasePath, uuid)
-	err = os.MkdirAll(tmpPath, 0777)
-	if err != nil {
-		log.Println("error creating tmp dir", err)
-		return "", err
-	}
-	return tmpPath, nil
+	log.Println("Timeout")
+	return "", common.ErrorNotImplemented
 }

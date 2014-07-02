@@ -170,7 +170,8 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
          "count":16,
          "supportedFileTypes":["doc", "docx", "ppt", "pptx"],
          "rendererParams":{
-             "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
+             "basePath":"` + basePathFunc("documentRenderAgentTmp") + `",
+             "engine":"libreoffice"
          }
       },
       "videoRenderAgent":{
@@ -187,7 +188,15 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
          "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"],
          "rendererParams":{
          }
-      }
+      },
+      "msOfficeRenderAgent":{
+	    "enabled":false,
+	    "count":4,
+	    "supportedFileTypes":["docx", "pptx", "xlsx", "doc", "ppt", "xls"],
+	    "rendererParams":{
+		"pdfOutputDirectory":"/Users/Shared/PDFWriter/` + os.Getenv("USER") + `/"
+	    }
+	}
    },
    "zencoder":{
       "enabled":false,
@@ -275,7 +284,15 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
 		             "forceS3Location":["true"],
                 "zencoderNotificationUrl":["http://example.com/zencoderhandler"]
             }
-        }
+        },
+        {
+	    "id":"0507D650-0731-4D86-8394-8082BB520A21",
+	    "renderAgent":"msOfficeRenderAgent",
+	    "group":"B4CD",
+	    "attributes":{
+		"output":["pdf"]
+	    }
+	}
     ]
 }`)
 }
