@@ -6,32 +6,21 @@ import (
 	"strconv"
 )
 
-type generatePreviewRequest struct {
-	id          string
-	requestType string
-	url         string
-	size        int64
-}
-
-func newGeneratePreviewRequestFromText(id, body string) ([]*generatePreviewRequest, error) {
+func newGeneratePreviewRequestFromText(id, body string) ([]*common.GeneratePreviewRequest, error) {
 	if len(id) == 0 {
 		return nil, common.ErrorInvalidFileId
 	}
 	vals := splitText(body)
-	gpr := new(generatePreviewRequest)
-	gpr.id = id
 
 	requestType, hasRequestType := vals["type"]
 	if !hasRequestType {
 		return nil, common.ErrorMissingFieldType
 	}
-	gpr.requestType = requestType
 
 	url, hasUrl := vals["url"]
 	if !hasUrl {
 		return nil, common.ErrorMissingFieldUrl
 	}
-	gpr.url = url
 
 	size, hasSize := vals["size"]
 	if !hasSize {
@@ -42,14 +31,15 @@ func newGeneratePreviewRequestFromText(id, body string) ([]*generatePreviewReque
 		// TODO: This should return a different error.
 		return nil, common.ErrorMissingFieldSize
 	}
-	gpr.size = sizeValue
 
-	gprs := make([]*generatePreviewRequest, 0, 0)
+	gpr := common.NewGeneratePreviewRequest(id, requestType, url, sizeValue)
+
+	gprs := make([]*common.GeneratePreviewRequest, 0, 0)
 	gprs = append(gprs, gpr)
 	return gprs, nil
 }
 
-func newGeneratePreviewRequestFromJson(body string) ([]*generatePreviewRequest, error) {
+func newGeneratePreviewRequestFromJson(body string) ([]*common.GeneratePreviewRequest, error) {
 	var data struct {
 		Version int `json:"version"`
 		Files   []struct {
@@ -64,17 +54,13 @@ func newGeneratePreviewRequestFromJson(body string) ([]*generatePreviewRequest, 
 		return nil, err
 	}
 
-	gprs := make([]*generatePreviewRequest, 0, 0)
+	gprs := make([]*common.GeneratePreviewRequest, 0, 0)
 	for _, file := range data.Files {
-		gpr := new(generatePreviewRequest)
-		gpr.id = file.Id
-		gpr.requestType = file.RequestType
 		sizeValue, err := strconv.ParseInt(file.Size, 10, 64)
 		if err != nil {
 			return nil, common.ErrorMissingFieldSize
 		}
-		gpr.size = sizeValue
-		gpr.url = file.Url
+		gpr := common.NewGeneratePreviewRequest(file.Id, file.RequestType, file.Url, sizeValue)
 		gprs = append(gprs, gpr)
 	}
 	return gprs, nil

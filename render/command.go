@@ -1,7 +1,6 @@
 package render
 
 import (
-	"bytes"
 	"code.google.com/p/go-uuid/uuid"
 	"encoding/json"
 	"fmt"
@@ -33,26 +32,6 @@ type generateResponse struct {
 	body string
 }
 
-type imageInfo struct {
-	Url           string  `json:"url"`
-	Width         float64 `json:"width"`
-	Height        float64 `json:"height"`
-	Expires       float64 `json:"expires"`
-	IsFinal       bool    `json:"isFinal"`
-	IsPlaceholder bool    `json:"isPlaceholder"`
-}
-
-type previewInfoResponse struct {
-	Version string `json:"version"`
-	Files   []struct {
-		FileId string    `json:"file_id"`
-		Jumbo  imageInfo `json:"jumbo"`
-		Large  imageInfo `json:"large"`
-		Medium imageInfo `json:"medium"`
-		Small  imageInfo `json:"small"`
-	} `json:"files"`
-}
-
 func NewRenderCommand(arguments map[string]interface{}) *RenderCommand {
 	command := new(RenderCommand)
 	command.host = common.GetConfigString(arguments, "<host>")
@@ -76,13 +55,13 @@ func (command *RenderCommand) Execute() {
 			log.Println("Peparing to send file", file)
 		}
 		request := newGenerateRequestFromFile(file, "")
-		pendingIds[request.id] = false
+		pendingIds[request.Id()] = false
 		if command.verbose > 1 {
-			log.Println(request.ToLegacyRequestPayload())
+			log.Println(request.String())
 		}
 		command.submitGenerateRequest(request)
 		if command.verbose > 0 {
-			log.Printf("http://%s/asset/%s/jumbo/0", command.host, request.id)
+			log.Printf("http://%s/asset/%s/jumbo/0", command.host, request.Id())
 		}
 	}
 	if command.verify {
@@ -112,13 +91,13 @@ func (command *RenderCommand) ExecuteWithId(id string) {
 			log.Println("Peparing to send file", file)
 		}
 		request := newGenerateRequestFromFile(file, id)
-		pendingIds[request.id] = false
+		pendingIds[request.Id()] = false
 		if command.verbose > 1 {
-			log.Println(request.ToLegacyRequestPayload())
+			log.Println(request.String())
 		}
 		command.submitGenerateRequest(request)
 		if command.verbose > 0 {
-			log.Printf("http://%s/asset/%s/jumbo/0", command.host, request.id)
+			log.Printf("http://%s/asset/%s/jumbo/0", command.host, request.Id())
 		}
 	}
 }
@@ -172,15 +151,7 @@ func (command *RenderCommand) absFilePath(file string) (bool, string) {
 	return true, filepath.Join(common.Cwd(), file)
 }
 
-func (request *generateRequest) ToLegacyRequestPayload() string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("type: %s\n", request.fileType))
-	buffer.WriteString(fmt.Sprintf("url: %s\n", request.url))
-	buffer.WriteString(fmt.Sprintf("size: %d\n", request.size))
-	return buffer.String()
-}
-
-func newGenerateRequestFromFile(file, id string) *generateRequest {
+func newGenerateRequestFromFile(file, id string) *common.GeneratePreviewRequest {
 	localFilePath := file[5:]
 	log.Println("Creating new request for file", localFilePath)
 	fi, err := os.Stat(localFilePath)
@@ -188,26 +159,17 @@ func newGenerateRequestFromFile(file, id string) *generateRequest {
 		id = uuid.New()
 	}
 	if err != nil {
-		return newGenerateRequest(id, filepath.Ext(localFilePath)[1:], file, 1)
+		return common.NewGeneratePreviewRequest(id, filepath.Ext(localFilePath)[1:], file, 1)
 	}
-	return newGenerateRequest(id, filepath.Ext(localFilePath)[1:], file, fi.Size())
+	return common.NewGeneratePreviewRequest(id, filepath.Ext(localFilePath)[1:], file, fi.Size())
 }
 
-func newGenerateRequest(id, fileType, url string, size int64) *generateRequest {
-	request := new(generateRequest)
-	request.id = id
-	request.fileType = fileType
-	request.url = url
-	request.size = size
-	return request
-}
-
-func (command *RenderCommand) submitGenerateRequest(request *generateRequest) error {
-	url := command.buildSubmitGenerateRequestUrl(request.id)
+func (command *RenderCommand) submitGenerateRequest(request *common.GeneratePreviewRequest) error {
+	url := command.buildSubmitGenerateRequestUrl(request.Id())
 	if command.verbose > 0 {
 		log.Println("Submitting request to", url)
 	}
-	req, err := http.NewRequest("PUT", url, strings.NewReader(request.ToLegacyRequestPayload()))
+	req, err := http.NewRequest("PUT", url, strings.NewReader(request.String()))
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
@@ -221,7 +183,7 @@ func (command *RenderCommand) submitGenerateRequest(request *generateRequest) er
 	return nil
 }
 
-func (command *RenderCommand) submitPreviewInfoRequest(id string) (*previewInfoResponse, error) {
+func (command *RenderCommand) submitPreviewInfoRequest(id string) (*common.PreviewInfoResponse, error) {
 	url := command.buildSubmitPreviewInfoRequest(id)
 	if command.verbose > 0 {
 		log.Println("Submitting request to", url)
@@ -248,7 +210,7 @@ func (command *RenderCommand) buildSubmitPreviewInfoRequest(id string) string {
 	return fmt.Sprintf("http://%s/api/v1/preview/%s", command.host, id)
 }
 
-func (command *RenderCommand) isComplete(response *previewInfoResponse) bool {
+func (command *RenderCommand) isComplete(response *common.PreviewInfoResponse) bool {
 	complete := true
 	for _, file := range response.Files {
 		if file.Jumbo.IsFinal == false {
@@ -287,8 +249,8 @@ func (command *RenderCommand) isComplete(response *previewInfoResponse) bool {
 	return complete
 }
 
-func newPreviewInfoResponse(body []byte) (*previewInfoResponse, error) {
-	var response previewInfoResponse
+func newPreviewInfoResponse(body []byte) (*common.PreviewInfoResponse, error) {
+	var response common.PreviewInfoResponse
 	e := json.Unmarshal(body, &response)
 	if e != nil {
 		return nil, e

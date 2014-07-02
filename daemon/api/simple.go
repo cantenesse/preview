@@ -144,9 +144,9 @@ func (blueprint *simpleBlueprint) urlHasFileId(url string) (string, bool) {
 	return "", false
 }
 
-func (blueprint *simpleBlueprint) handleGeneratePreviewRequest(gprs []*generatePreviewRequest) {
+func (blueprint *simpleBlueprint) handleGeneratePreviewRequest(gprs []*common.GeneratePreviewRequest) {
 	for _, gpr := range gprs {
-		blueprint.renderAgentManager.CreateWork(gpr.id, gpr.url, gpr.requestType, gpr.size)
+		blueprint.renderAgentManager.CreateWork(gpr.Id(), gpr.Url(), gpr.RequestType(), gpr.Size())
 	}
 }
 
