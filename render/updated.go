@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -70,7 +69,7 @@ func (command *RenderV2Command) Execute() {
 		}
 		attrs := make(map[string][]string)
 		attrs["type"] = []string{filepath.Ext(file[5:])[1:]}
-		uuid, _ := util.NewUuid()
+		uuid, _ := common.NewUuid()
 		saids = append(saids, uuid)
 		req := sourceAssetRequest{
 			Id:         uuid,
@@ -128,10 +127,10 @@ func (command *RenderV2Command) filesToSubmit() []string {
 		if shouldTry {
 			files = append(files, urlsFromDirectory(path)...)
 		} else {
-			if util.IsHttpUrl(file) {
+			if common.IsHttpUrl(file) {
 				files = append(files, path)
 			}
-			if util.IsS3Url(file) {
+			if common.IsS3Url(file) {
 				files = append(files, path)
 			}
 		}
@@ -141,7 +140,7 @@ func (command *RenderV2Command) filesToSubmit() []string {
 
 func urlsFromDirectory(path string) []string {
 	files := make([]string, 0, 0)
-	isDir, err := util.IsDirectory(path)
+	isDir, err := common.IsDirectory(path)
 	if err == nil {
 		if isDir {
 			subdirFiles, err := ioutil.ReadDir(path)
@@ -160,17 +159,17 @@ func urlsFromDirectory(path string) []string {
 }
 
 func (command *RenderV2Command) absFilePath(file string) (bool, string) {
-	if util.IsHttpUrl(file) {
+	if common.IsHttpUrl(file) {
 		return false, file
 	}
-	if util.IsS3Url(file) {
+	if common.IsS3Url(file) {
 		return false, file
 	}
-	if util.IsFileUrl(file) {
+	if common.IsFileUrl(file) {
 		return true, file[7:]
 	}
 	if strings.HasPrefix(file, "/") {
 		return true, file
 	}
-	return true, filepath.Join(util.Cwd(), file)
+	return true, filepath.Join(common.Cwd(), file)
 }

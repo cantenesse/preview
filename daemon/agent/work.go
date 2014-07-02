@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jherman3/zencoder"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
 	"log"
 	"strconv"
@@ -242,11 +241,11 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*common.Template, string, error) {
 	fileType = strings.ToLower(fileType)
 	var templateIds []string
-	if util.Contains(agentManager.supportedFileTypes["documentRenderAgent"], fileType) {
+	if common.Contains(agentManager.supportedFileTypes["documentRenderAgent"], fileType) {
 		templateIds = []string{common.DocumentConversionTemplateId}
-	} else if util.Contains(agentManager.supportedFileTypes["videoRenderAgent"], fileType) {
+	} else if common.Contains(agentManager.supportedFileTypes["videoRenderAgent"], fileType) {
 		templateIds = []string{common.VideoConversionTemplateId}
-	} else if util.Contains(agentManager.supportedFileTypes["imageMagickRenderAgent"], fileType) {
+	} else if common.Contains(agentManager.supportedFileTypes["imageMagickRenderAgent"], fileType) {
 		templateIds = common.LegacyDefaultTemplates
 	} else {
 		return nil, common.GeneratedAssetStatusFailed, common.ErrorNoRenderersSupportFileType

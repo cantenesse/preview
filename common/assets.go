@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ngerakines/preview/util"
 	"log"
 	"time"
 )
@@ -142,7 +141,7 @@ func NewSourceAssetFromJson(payload []byte) (*SourceAsset, error) {
 
 // NewGeneratedAssetFromSourceAsset creates a new generated asset from a given source asset and template, filling in everything but location.
 func NewGeneratedAssetFromSourceAsset(sourceAsset *SourceAsset, templateId, location string) (*GeneratedAsset, error) {
-	uuid, err := util.NewUuid()
+	uuid, err := NewUuid()
 	if err != nil {
 		return nil, err
 	}

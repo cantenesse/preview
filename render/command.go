@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -130,7 +129,7 @@ func (command *RenderCommand) filesToSubmit() []string {
 		shouldTry, path := command.absFilePath(file)
 		log.Println(shouldTry, path)
 		if shouldTry {
-			isDir, err := util.IsDirectory(path)
+			isDir, err := common.IsDirectory(path)
 			if err == nil {
 				if isDir {
 					subdirFiles, err := ioutil.ReadDir(path)
@@ -146,10 +145,10 @@ func (command *RenderCommand) filesToSubmit() []string {
 				}
 			}
 		} else {
-			if util.IsHttpUrl(file) {
+			if common.IsHttpUrl(file) {
 				files = append(files, path)
 			}
-			if util.IsS3Url(file) {
+			if common.IsS3Url(file) {
 				files = append(files, path)
 			}
 		}
@@ -158,19 +157,19 @@ func (command *RenderCommand) filesToSubmit() []string {
 }
 
 func (command *RenderCommand) absFilePath(file string) (bool, string) {
-	if util.IsHttpUrl(file) {
+	if common.IsHttpUrl(file) {
 		return false, file
 	}
-	if util.IsS3Url(file) {
+	if common.IsS3Url(file) {
 		return false, file
 	}
-	if util.IsFileUrl(file) {
+	if common.IsFileUrl(file) {
 		return true, file[7:]
 	}
 	if strings.HasPrefix(file, "/") {
 		return true, file
 	}
-	return true, filepath.Join(util.Cwd(), file)
+	return true, filepath.Join(common.Cwd(), file)
 }
 
 func (request *generateRequest) ToLegacyRequestPayload() string {

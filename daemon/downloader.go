@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ngerakines/ketama"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -74,7 +73,7 @@ func (downloader *defaultDownloader) handleLocal(url string) (common.TemporaryFi
 	log.Println("Attempting to download file", url[8:])
 	path := filepath.Join(downloader.localStoragePath, url[8:])
 
-	uuid, err := util.NewUuid()
+	uuid, err := common.NewUuid()
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func (downloader *defaultDownloader) handleFile(url string) (common.TemporaryFil
 	path := url[7:]
 	log.Println("actual path", path)
 
-	uuid, err := util.NewUuid()
+	uuid, err := common.NewUuid()
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +127,7 @@ func (downloader *defaultDownloader) handleFile(url string) (common.TemporaryFil
 }
 
 func (downloader *defaultDownloader) handleS3Object(url, source string) (common.TemporaryFile, error) {
-	uuid, err := util.NewUuid()
+	uuid, err := common.NewUuid()
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +161,7 @@ func (downloader *defaultDownloader) handleS3Object(url, source string) (common.
 }
 
 func (downloader *defaultDownloader) handleHttp(url, source string) (common.TemporaryFile, error) {
-	uuid, err := util.NewUuid()
+	uuid, err := common.NewUuid()
 	if err != nil {
 		return nil, err
 	}

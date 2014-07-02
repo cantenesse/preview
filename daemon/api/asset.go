@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/bmizerany/pat"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"github.com/rcrowley/go-metrics"
 	"log"
 	"net/http"
@@ -163,24 +162,24 @@ func (blueprint *assetBlueprint) getAsset(fileId, placeholderSize, page string) 
 			if len(surl) > 0 && len(surl[0]) > 0 {
 				return assetActionVideoURL, surl[0]
 			}
-			if util.IsLocalUrl(generatedAsset.Location) {
+			if common.IsLocalUrl(generatedAsset.Location) {
 				fullPath := filepath.Join(blueprint.localAssetStoragePath, generatedAsset.Location[8:])
-				if util.CanLoadFile(fullPath) {
+				if common.CanLoadFile(fullPath) {
 					return assetActionServeFile, fullPath
 				}
 				placeholder := blueprint.placeholderManager.Url(fileId, placeholderSize)
-				if util.CanLoadFile(placeholder.Path) {
+				if common.CanLoadFile(placeholder.Path) {
 					return assetActionServeFile, placeholder.Path
 				}
 			}
-			if util.IsS3Url(generatedAsset.Location) {
+			if common.IsS3Url(generatedAsset.Location) {
 				return assetActionS3Proxy, generatedAsset.Location
 			}
 		}
 	}
 
 	placeholder := blueprint.placeholderManager.Url(fileId, placeholderSize)
-	if util.CanLoadFile(placeholder.Path) {
+	if common.CanLoadFile(placeholder.Path) {
 		return assetActionServeFile, placeholder.Path
 	}
 

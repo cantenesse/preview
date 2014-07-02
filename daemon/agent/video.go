@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"log"
 )
 
@@ -32,7 +31,7 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 	}
 
 	surl := fmt.Sprintf("%s/%s.m3u8", generatedAsset.Location, id)
-	generatedAsset.AddAttribute("streamingUrl", []string{util.S3ToHttps(surl)})
+	generatedAsset.AddAttribute("streamingUrl", []string{common.S3ToHttps(surl)})
 	statusCallback := renderer.renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
@@ -69,7 +68,7 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 	}
 	// Zencoder will put the files the folder generatedAsset.Location
 	// The filename for the HLS playlist will be generatedAsset.Id with .m3u8 extension
-	settings := util.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, zencoderNotificationUrl)
+	settings := common.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, zencoderNotificationUrl)
 	arr, _ := json.MarshalIndent(settings, "", "	")
 	log.Println(string(arr))
 	job, err := renderer.renderAgent.agentManager.zencoder.CreateJob(settings)

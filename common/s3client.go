@@ -3,7 +3,6 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"github.com/ngerakines/preview/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -127,7 +126,7 @@ func (client *AmazonS3Client) Proxy(bucket, file string, rw http.ResponseWriter)
 func (client *AmazonS3Client) createSignature(method, contentType, resource string) (string, string) {
 	date := time.Now().UTC().Format(time.RFC1123Z)
 	stringToSign := fmt.Sprintf("%s\n\n%s\n%s\n%s", method, contentType, date, resource)
-	signature := util.ComputeHmac256(stringToSign, client.config.secret)
+	signature := ComputeHmac256(stringToSign, client.config.secret)
 	return date, signature
 }
 

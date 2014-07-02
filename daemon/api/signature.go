@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"github.com/ngerakines/preview/util"
+	"github.com/ngerakines/preview/common"
 	"log"
 	neturl "net/url"
 	"strconv"
@@ -72,6 +72,6 @@ func (signatureManager *defaultSignatureManager) parseUrl(uri string) (*neturl.U
 
 func (signatureManager *defaultSignatureManager) createSignature(path, expires string) string {
 	stringToSign := fmt.Sprintf("%s\n%s", path, expires)
-	signature := util.ComputeHmac256(stringToSign, signatureManager.key)
+	signature := common.ComputeHmac256(stringToSign, signatureManager.key)
 	return signature
 }

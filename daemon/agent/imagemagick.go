@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"image"
 	"image/jpeg"
 	"log"
@@ -95,7 +94,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		if fileType == "pdf" {
 			page, _ := renderer.renderAgent.getGeneratedAssetPage(generatedAsset)
 			if page == 0 {
-				pages, err := util.GetPdfPageCount(sourceFile.Path())
+				pages, err := common.GetPdfPageCount(sourceFile.Path())
 				if err != nil {
 					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 					return
@@ -115,7 +114,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		}
 	})
 
-	log.Println("---- generated asset is at", destination, "can load file?", util.CanLoadFile(destination))
+	log.Println("---- generated asset is at", destination, "can load file?", common.CanLoadFile(destination))
 
 	err = renderer.renderAgent.uploader.Upload(generatedAsset.Location, destination)
 	if err != nil {
@@ -129,7 +128,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	generatedAssetFileSize, err := util.FileSize(destination)
+	generatedAssetFileSize, err := common.FileSize(destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileSize), nil}
 		return

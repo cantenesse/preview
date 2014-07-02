@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ngerakines/preview/common"
 	"github.com/ngerakines/preview/render"
-	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -62,7 +61,7 @@ func newVerifyJob(location string) *verifyJob {
 	job := new(verifyJob)
 	job.location = location
 	job.isComplete = false
-	job.id, _ = util.NewUuid()
+	job.id, _ = common.NewUuid()
 	return job
 }
 
@@ -99,7 +98,7 @@ func (command *VerifyCommand) Execute() {
 	jobs := make([]*verifyJob, 0, len(inputFiles))
 
 	for _, loc := range inputFiles {
-		jobs = append(jobs, newVerifyJob(util.JoinUrl(command.filepath, loc)))
+		jobs = append(jobs, newVerifyJob(common.JoinUrl(command.filepath, loc)))
 	}
 
 	for _, job := range jobs {

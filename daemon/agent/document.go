@@ -3,7 +3,6 @@ package agent
 import (
 	"bytes"
 	"github.com/ngerakines/preview/common"
-	"github.com/ngerakines/preview/util"
 	"io/ioutil"
 	"log"
 	"os"
@@ -109,7 +108,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	pages, err := util.GetPdfPageCount(files[0])
+	pages, err := common.GetPdfPageCount(files[0])
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
@@ -121,7 +120,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	pdfFileSize, err := util.FileSize(destination)
+	pdfFileSize, err := common.FileSize(destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileSize), nil}
 		return
@@ -196,7 +195,7 @@ func (renderer *documentRenderer) getRenderedFiles(path string) ([]string, error
 }
 
 func (renderer *documentRenderer) createTemporaryDestinationDirectory() (string, error) {
-	uuid, err := util.NewUuid()
+	uuid, err := common.NewUuid()
 	if err != nil {
 		return "", err
 	}

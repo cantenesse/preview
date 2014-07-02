@@ -2,7 +2,7 @@ package daemon
 
 import (
 	"encoding/json"
-	"github.com/ngerakines/preview/util"
+	"github.com/ngerakines/preview/common"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -110,12 +110,12 @@ func newDaemonConfig(data []byte) (*daemonConfig, error) {
 func determineConfigPath(givenPath string) string {
 	paths := []string{
 		givenPath,
-		filepath.Join(util.Cwd(), "preview.config"),
+		filepath.Join(common.Cwd(), "preview.config"),
 		filepath.Join(userHomeDir(), ".preview.config"),
 		"/etc/preview.config",
 	}
 	for _, path := range paths {
-		if util.CanLoadFile(path) {
+		if common.CanLoadFile(path) {
 			return path
 		}
 	}
@@ -281,7 +281,7 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
 }
 
 func defaultBasePath(section string) string {
-	cacheDirectory := filepath.Join(util.Cwd(), ".cache", section)
+	cacheDirectory := filepath.Join(common.Cwd(), ".cache", section)
 	os.MkdirAll(cacheDirectory, 00777)
 	return cacheDirectory
 }
