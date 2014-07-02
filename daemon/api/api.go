@@ -102,6 +102,25 @@ func getUrl(id string) string {
 	return "file:///Users/james.bloxham/Documents/LittleBitOfEverything.docx"
 }
 
+func (blueprint *apiBlueprint) createWorkForOnDemandRender(ids []string) {
+	workToDo := 0
+	
+	for _, id := range ids {
+		sas, _ := blueprint.sasm.FindBySourceAssetId(id)
+		if len(sas) == 0 {
+			workToDo++
+			url := getUrl(id)
+			attributes := make(map[string][]string)
+			attributes["type"] = []string{filepath.Ext(url[5:])[1:]}
+			templateIds := []string{common.DocumentConversionTemplateId}
+			blueprint.agentManager.CreateWorkFromTemplates(id, url, attributes, templateIds)
+		}
+	}
+
+	time.Sleep(15 * workToDo * time.Second)
+}
+	
+
 func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewQueriesMeter.Mark(1)
 
@@ -112,20 +131,7 @@ func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req 
 	}
 
 	if true {
-		log.Println("1")
-		for _, id := range ids {
-			log.Println("2")
-			sas, _ := blueprint.sasm.FindBySourceAssetId(id)
-			if len(sas) == 0 {
-				url := getUrl(id)
-				attributes := make(map[string][]string)
-				attributes["type"] = []string{filepath.Ext(url[5:])[1:]}
-				templateIds := []string{common.DocumentConversionTemplateId}
-				blueprint.agentManager.CreateWorkFromTemplates(id, url, attributes, templateIds)
-			}
-		}
-
-		time.Sleep(15 * time.Second)
+		blueprint.createWorkForOnDemandRender(ids)
 	}
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds(ids)
@@ -141,6 +147,10 @@ func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req 
 func (blueprint *apiBlueprint) previewInfoHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewInfoRequestsMeter.Mark(1)
 	id := req.URL.Query().Get(":id")
+
+	if true {
+		blueprint.createWorkForOnDemandRender([]string{id})
+	}
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds([]string{id})
 	if err != nil {
@@ -159,6 +169,10 @@ func (blueprint *apiBlueprint) previewGAInfoHandler(res http.ResponseWriter, req
 	templateId := req.URL.Query().Get(":templateid")
 	page := req.URL.Query().Get(":page")
 
+	if true {
+		blueprint.createWorkForOnDemandRender([]string{id})
+	}
+
 	jsonData, err := blueprint.marshalGeneratedAssets(id, templateId, page)
 	if err != nil {
 		log.Println(err)
@@ -175,6 +189,10 @@ func (blueprint *apiBlueprint) previewGADataHandler(res http.ResponseWriter, req
 	id := req.URL.Query().Get(":id")
 	templateId := req.URL.Query().Get(":templateid")
 	page := req.URL.Query().Get(":page")
+
+	if true {
+		blueprint.createWorkForOnDemandRender([]string{id})
+	}
 
 	http.Redirect(res, req, fmt.Sprintf("/asset/%s/%s/%s", id, templateId, page), 303)
 }
