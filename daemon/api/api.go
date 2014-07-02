@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 	"net/url"
 	"time"
 )
@@ -97,6 +98,10 @@ func (blueprint *apiBlueprint) buildUrl(path string) string {
 	return blueprint.base + path
 }
 
+func getUrl(id string) string {
+	return "file:///Users/james.bloxham/Documents/LittleBitOfEverything.docx"
+}
+
 func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req *http.Request) {
 	blueprint.previewQueriesMeter.Mark(1)
 
@@ -104,6 +109,23 @@ func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req 
 	if !hasIds {
 		http.Error(res, "", 400)
 		return
+	}
+
+	if true {
+		log.Println("1")
+		for _, id := range ids {
+			log.Println("2")
+			sas, _ := blueprint.sasm.FindBySourceAssetId(id)
+			if len(sas) == 0 {
+				url := getUrl(id)
+				attributes := make(map[string][]string)
+				attributes["type"] = []string{filepath.Ext(url[5:])[1:]}
+				templateIds := []string{common.DocumentConversionTemplateId}
+				blueprint.agentManager.CreateWorkFromTemplates(id, url, attributes, templateIds)
+			}
+		}
+
+		time.Sleep(15 * time.Second)
 	}
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds(ids)
