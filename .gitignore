@@ -49,4 +49,4 @@ bin/*
 .kitchen/
 .kitchen.local.yml
 
-preview.config
+preview.config*

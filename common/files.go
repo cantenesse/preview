@@ -3,14 +3,8 @@ package common
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"os/exec"
-	"regexp"
-	"strconv"
 )
-
-var pdfPageCount = regexp.MustCompile(`Pages:\s+(\d+)`)
 
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherise, attempt to create a hard link
@@ -103,23 +97,4 @@ func Cwd() string {
 		panic(err)
 	}
 	return pwd
-}
-
-// pdfinfo ~/Desktop/ChefConf2014schedule.pdf
-func GetPdfPageCount(file string) (int, error) {
-	_, err := exec.LookPath("pdfinfo")
-	if err != nil {
-		log.Println("pdfinfo command not found")
-		return 0, err
-	}
-	out, err := exec.Command("pdfinfo", file).Output()
-	if err != nil {
-		log.Fatal(err)
-		return 0, err
-	}
-	matches := pdfPageCount.FindStringSubmatch(string(out))
-	if len(matches) == 2 {
-		return strconv.Atoi(matches[1])
-	}
-	return 0, nil
 }

@@ -1,14 +1,8 @@
 package agent
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/ngerakines/preview/common"
-	"image"
-	"image/jpeg"
 	"log"
-	"os"
-	"os/exec"
 	"strconv"
 )
 
@@ -48,7 +42,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	fileType, err := renderer.getSourceAssetFileType(sourceAsset)
+	fileType, err := getSourceAssetFileType(sourceAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
 		return
@@ -79,22 +73,22 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
 
-	size, err := renderer.getSize(template)
+	size, err := getSize(template)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderSize), nil}
 		return
 	}
 
-	density, err := renderer.renderAgent.getDensity(template)
+	density, err := getDensity(template)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderDensity), nil}
 		return
 	}
 	renderer.renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
-			page, _ := renderer.renderAgent.getGeneratedAssetPage(generatedAsset)
+			page, _ := getGeneratedAssetPage(generatedAsset)
 			if page == 0 {
-				pages, err := common.GetPdfPageCount(sourceFile.Path())
+				pages, err := getPdfPageCount(sourceFile.Path())
 				if err != nil {
 					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 					return
@@ -102,11 +96,11 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 				// Create derived work for all pages but first one
 				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
 			}
-			err = renderer.imageFromPdf(sourceFile.Path(), destination, size, page, density)
+			err = imageFromPdf(sourceFile.Path(), destination, size, page, density)
 		} else if fileType == "gif" {
-			err = renderer.firstGifFrame(sourceFile.Path(), destination, size)
+			err = firstGifFrame(sourceFile.Path(), destination, size)
 		} else {
-			err = renderer.resize(sourceFile.Path(), destination, size)
+			err = resize(sourceFile.Path(), destination, size)
 		}
 		if err != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
@@ -122,7 +116,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	bounds, err := renderer.getBounds(destination)
+	bounds, err := getBounds(destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderSize), nil}
 		return
@@ -142,133 +136,4 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	}
 
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, newAttributes}
-}
-
-func (renderer *imageMagickRenderer) resize(source, destination string, size int) error {
-	_, err := exec.LookPath("convert")
-	if err != nil {
-		log.Println("convert command not found")
-		return err
-	}
-
-	cmd := exec.Command("convert", source, "-resize", strconv.Itoa(size), destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	log.Println(buf.String())
-
-	return nil
-}
-
-func (renderer *imageMagickRenderer) imageFromPdf(source, destination string, size, page, density int) error {
-	_, err := exec.LookPath("convert")
-	if err != nil {
-		log.Println("convert command not found")
-		return err
-	}
-
-	cmd := exec.Command("convert", "-density", strconv.Itoa(density), "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	log.Println(buf.String())
-
-	return nil
-}
-
-func (renderer *imageMagickRenderer) firstGifFrame(source, destination string, size int) error {
-	_, err := exec.LookPath("convert")
-	if err != nil {
-		log.Println("convert command not found")
-		return err
-	}
-
-	cmd := exec.Command("convert", fmt.Sprintf("%s[0]", source), "-resize", strconv.Itoa(size), destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	log.Println(buf.String())
-
-	return nil
-}
-
-func (renderer *imageMagickRenderer) getBounds(path string) (*image.Rectangle, error) {
-	reader, err := os.Open(path)
-	if err != nil {
-		log.Println("os.Open error", err)
-		return nil, err
-	}
-	defer reader.Close()
-	image, err := jpeg.Decode(reader)
-	if err != nil {
-		log.Println("jpeg.Decode error", err)
-		return nil, err
-	}
-	bounds := image.Bounds()
-	return &bounds, nil
-}
-
-func (renderer *imageMagickRenderer) getSize(template *common.Template) (int, error) {
-	rawSize, err := common.GetFirstAttribute(template, common.TemplateAttributeHeight)
-	if err == nil {
-		sizeValue, err := strconv.Atoi(rawSize)
-		if err == nil {
-			return sizeValue, nil
-		}
-		return 0, err
-	}
-	return 0, err
-}
-
-func (renderAgent *genericRenderAgent) getDensity(template *common.Template) (int, error) {
-	rawDensity, err := common.GetFirstAttribute(template, common.TemplateAttributeDensity)
-	if err == nil {
-		density, err := strconv.Atoi(rawDensity)
-		if err == nil {
-			return density, nil
-		}
-		return 0, err
-	}
-	return 0, err
-}
-
-func (renderAgent *genericRenderAgent) getGeneratedAssetPage(generatedAsset *common.GeneratedAsset) (int, error) {
-	rawPage, err := common.GetFirstAttribute(generatedAsset, common.GeneratedAssetAttributePage)
-	if err == nil {
-		pageValue, err := strconv.Atoi(rawPage)
-		if err == nil {
-			return pageValue, nil
-		}
-		return 0, err
-	}
-	return 0, err
-}
-
-func (renderer *imageMagickRenderer) getSourceAssetFileType(sourceAsset *common.SourceAsset) (string, error) {
-	fileType, err := common.GetFirstAttribute(sourceAsset, common.SourceAssetAttributeType)
-	if err == nil {
-		return fileType, nil
-	}
-	return "unknown", err
 }

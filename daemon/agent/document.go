@@ -1,15 +1,11 @@
 package agent
 
 import (
-	"bytes"
 	"github.com/ngerakines/preview/common"
-	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
 func init() {
@@ -91,14 +87,14 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	defer destinationTemporaryFile.Release()
 
 	renderer.renderAgent.metrics.convertTime.Time(func() {
-		err = renderer.createPdf(sourceFile.Path(), destination)
+		err = createPdf(sourceFile.Path(), destination)
 		if err != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
 			return
 		}
 	})
 
-	files, err := renderer.getRenderedFiles(destination)
+	files, err := getRenderedFiles(destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
@@ -108,7 +104,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	pages, err := common.GetPdfPageCount(files[0])
+	pages, err := getPdfPageCount(files[0])
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
@@ -149,49 +145,6 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	renderer.renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, 1)
 
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, nil}
-}
-
-func (renderer *documentRenderer) createPdf(source, destination string) error {
-	_, err := exec.LookPath("soffice")
-	if err != nil {
-		log.Println("soffice command not found")
-		return err
-	}
-
-	// TODO: Make this path configurable.
-	cmd := exec.Command("soffice", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", source, "--outdir", destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	log.Println(buf.String())
-	if err != nil {
-		log.Println("error running command", err)
-		return err
-	}
-
-	return nil
-}
-
-func (renderer *documentRenderer) getRenderedFiles(path string) ([]string, error) {
-	files, err := ioutil.ReadDir(path)
-	if err != nil {
-		log.Println("Error reading files in placeholder base directory:", err)
-		return nil, err
-	}
-	paths := make([]string, 0, 0)
-	for _, file := range files {
-		if !file.IsDir() {
-			// NKG: The convert command will create files of the same name but with the ".pdf" extension.
-			if strings.HasSuffix(file.Name(), ".pdf") {
-				paths = append(paths, filepath.Join(path, file.Name()))
-			}
-		}
-	}
-	return paths, nil
 }
 
 func (renderer *documentRenderer) createTemporaryDestinationDirectory() (string, error) {

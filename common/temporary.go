@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 )
-	
 
 type TemporaryFile interface {
 	Path() string
