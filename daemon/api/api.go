@@ -103,21 +103,41 @@ func getUrl(id string) string {
 }
 
 func (blueprint *apiBlueprint) createWorkForOnDemandRender(ids []string) {
-	workToDo := 0
+	pendingIds := make([]string, 0)
 	
 	for _, id := range ids {
 		sas, _ := blueprint.sasm.FindBySourceAssetId(id)
 		if len(sas) == 0 {
-			workToDo++
 			url := getUrl(id)
 			attributes := make(map[string][]string)
 			attributes["type"] = []string{filepath.Ext(url[5:])[1:]}
 			templateIds := []string{common.DocumentConversionTemplateId}
 			blueprint.agentManager.CreateWorkFromTemplates(id, url, attributes, templateIds)
+			pendingIds = append(pendingIds, id)
 		}
 	}
 
-	time.Sleep(15 * workToDo * time.Second)
+	for _, id := range pendingIds {
+		for {
+			jsonData, _ := blueprint.marshalSourceAssetsFromIds([]string{id})
+			log.Println(string(jsonData))
+			var data sourceAssetView
+			json.Unmarshal(jsonData, &data)
+			finished := true
+			for _, sa := range data.SourceAssets {
+				for _, ga := range sa.GeneratedAssets {
+					if ga.Status != common.GeneratedAssetStatusComplete {
+						finished = false
+						break
+					}
+				}
+			}
+			if finished {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+	}
 }
 	
 
