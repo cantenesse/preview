@@ -387,7 +387,7 @@ func (blueprint *simpleBlueprint) getImageSize(ga *common.GeneratedAsset) (int32
 func (blueprint *simpleBlueprint) getPlaceholder(fileType, placeholderSize string, page int32) *imageInfo {
 	placeholder := blueprint.placeholderManager.Url(fileType, placeholderSize)
 	signedUrl, expires := blueprint.signUrl(blueprint.edgeContentHost + "/static" + placeholder.Url)
-	return &imageInfo{signedUrl, 200, 200, expires, false, true, page}
+	return &imageInfo{signedUrl, placeholder.Width, placeholder.Height, expires, false, true, page}
 }
 
 func (blueprint *simpleBlueprint) getFileType(sourceAssets []*common.SourceAsset) string {
