@@ -80,7 +80,7 @@ func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		http.Error(res, http.StatusText(400), 400)
+		httpErrorResponse(res, err, 400)
 		return
 	}
 	defer req.Body.Close()
@@ -89,14 +89,14 @@ func (blueprint *simpleBlueprint) generatePreviewHandler(res http.ResponseWriter
 	if hasId {
 		gprs, err := newGeneratePreviewRequestFromText(id, string(body))
 		if err != nil {
-			http.Error(res, http.StatusText(400), 400)
+			httpErrorResponse(res, err, 400)
 			return
 		}
 		blueprint.handleGeneratePreviewRequest(gprs)
 	} else {
 		gprs, err := newGeneratePreviewRequestFromJson(string(body))
 		if err != nil {
-			http.Error(res, http.StatusText(400), 400)
+			httpErrorResponse(res, err, 400)
 			return
 		}
 		blueprint.handleGeneratePreviewRequest(gprs)
@@ -112,7 +112,7 @@ func (blueprint *simpleBlueprint) previewInfoHandler(res http.ResponseWriter, re
 	fileIds := blueprint.parseFileIds(req)
 	previewInfo, err := blueprint.handlePreviewInfoRequest(fileIds)
 	if err != nil {
-		http.Error(res, http.StatusText(500), 500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -125,7 +125,7 @@ func (blueprint *simpleBlueprint) multipagePreviewInfoHandler(res http.ResponseW
 	fileIds := blueprint.parseFileIds(req)
 	previewInfo, err := blueprint.multipagePreviewInfoRequest(fileIds)
 	if err != nil {
-		http.Error(res, http.StatusText(500), 500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 

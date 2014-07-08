@@ -102,14 +102,14 @@ func (blueprint *apiBlueprint) previewQueryHandler(res http.ResponseWriter, req 
 
 	ids, hasIds := req.URL.Query()["id"]
 	if !hasIds {
-		http.Error(res, "", 400)
+		httpErrorResponse(res, common.ErrorNotImplemented, 400)
 		return
 	}
 
 	jsonData, err := blueprint.marshalSourceAssetsFromIds(ids)
 	if err != nil {
 		log.Println(err)
-		http.Error(res, "", 500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (blueprint *apiBlueprint) previewInfoHandler(res http.ResponseWriter, req *
 	jsonData, err := blueprint.marshalSourceAssetsFromIds([]string{id})
 	if err != nil {
 		log.Println(err)
-		http.Error(res, "", 500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (blueprint *apiBlueprint) previewGAInfoHandler(res http.ResponseWriter, req
 	jsonData, err := blueprint.marshalGeneratedAssets(id, templateId, page)
 	if err != nil {
 		log.Println(err)
-		http.Error(res, "", 500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -162,14 +162,14 @@ func (blueprint *apiBlueprint) generatePreviewHandler(res http.ResponseWriter, r
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		http.Error(res, "", 400)
+		httpErrorResponse(res, err, 400)
 		return
 	}
 	defer req.Body.Close()
 
 	gprs, err := newApiGeneratePreviewRequest(string(body))
 	if err != nil {
-		http.Error(res, "", 400)
+		httpErrorResponse(res, err, 400)
 		return
 	}
 
@@ -203,7 +203,11 @@ func (blueprint *apiBlueprint) marshalSourceAssetsFromIds(ids []string) ([]byte,
 		if err != nil {
 			return nil, err
 		}
-		sas, _ := blueprint.sasm.FindBySourceAssetId(id)
+		sas, err := blueprint.sasm.FindBySourceAssetId(id)
+		if err != nil {
+			return nil, err
+		}
+
 		for _, sa := range sas {
 			uniqgas := make([]*common.GeneratedAsset, 0, len(gas))
 			for _, ga := range gas {

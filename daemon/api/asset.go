@@ -209,6 +209,5 @@ func (blueprint *staticBlueprint) RequestHandler(res http.ResponseWriter, req *h
 		}
 	}
 
-	res.Header().Set("Content-Length", "0")
-	res.WriteHeader(500)
+	httpErrorResponse(res, common.ErrorNotImplemented, 400)
 }

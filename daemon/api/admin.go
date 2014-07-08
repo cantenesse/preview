@@ -99,7 +99,7 @@ func (blueprint *adminBlueprint) placeholdersHandler(res http.ResponseWriter, re
 
 	body, err := json.Marshal(view)
 	if err != nil {
-		res.WriteHeader(500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -116,7 +116,7 @@ func (blueprint *adminBlueprint) renderAgentsHandler(res http.ResponseWriter, re
 
 	body, err := json.Marshal(view)
 	if err != nil {
-		res.WriteHeader(500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -137,7 +137,7 @@ func (blueprint *adminBlueprint) errorsHandler(res http.ResponseWriter, req *htt
 	}
 	body, err := json.Marshal(view)
 	if err != nil {
-		res.WriteHeader(500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
@@ -151,7 +151,7 @@ func (blueprint *adminBlueprint) temporaryFilesHandler(res http.ResponseWriter, 
 
 	body, err := json.Marshal(view)
 	if err != nil {
-		res.WriteHeader(500)
+		httpErrorResponse(res, err, 500)
 		return
 	}
 
