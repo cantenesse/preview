@@ -82,7 +82,6 @@ func (renderer *msOfficeRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	log.Println("Getting PDF Location")
 	pdfFile, err := renderer.getPdfFileLocation(path.Base(sourceFile.Path()))
 	defer func() {
 		os.Remove(pdfFile)
@@ -98,6 +97,10 @@ func (renderer *msOfficeRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotUploadAsset), nil}
 		return
 	}
+
+	// Sleep because the Upload method returns prematurely before changes have been updated in the filesystem
+	// TODO: Determine whether this bug happens in production and find a real fix for it
+	time.Sleep(1 * time.Second)
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, nil}
 }
 

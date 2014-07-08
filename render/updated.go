@@ -38,6 +38,7 @@ var templateAliases = map[string]string{
 	"small":    "eaa7be0e-354f-482c-ac75-75cbdafecb6e",
 	"document": common.DocumentConversionTemplateId,
 	"video":    common.VideoConversionTemplateId,
+	"msoffice": common.MsOfficeTemplateId,
 }
 
 func NewRenderV2Command(arguments map[string]interface{}) common.Command {
