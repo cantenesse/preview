@@ -187,7 +187,7 @@ func (blueprint *simpleBlueprint) getSourceAssetType(sourceAsset *common.SourceA
 }
 
 func (blueprint *simpleBlueprint) legacyTemplates() (map[string]templateTuple, error) {
-	legacyTemplates, err := blueprint.templateManager.FindByIds(common.LegacyDefaultTemplates)
+	legacyTemplates, err := blueprint.templateManager.FindByIds(append(common.LegacyDefaultTemplates, common.OptimizedJumboTemplateId))
 	if err != nil {
 		return nil, err
 	}

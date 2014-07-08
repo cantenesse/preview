@@ -246,7 +246,11 @@ func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*co
 	} else if common.Contains(agentManager.supportedFileTypes["videoRenderAgent"], fileType) {
 		templateIds = []string{common.VideoConversionTemplateId}
 	} else if common.Contains(agentManager.supportedFileTypes["imageMagickRenderAgent"], fileType) {
-		templateIds = common.LegacyDefaultTemplates
+		if fileType == "pdf" {
+			templateIds = []string{common.OptimizedJumboTemplateId}
+		} else {
+			templateIds = common.LegacyDefaultTemplates
+		}
 	} else {
 		return nil, common.GeneratedAssetStatusFailed, common.ErrorNoRenderersSupportFileType
 	}
@@ -302,11 +306,11 @@ func (agentManager *RenderAgentManager) AddListener(listener RenderStatusChannel
 
 func (agentManager *RenderAgentManager) Stop() {
 	for name, renderAgents := range agentManager.renderAgents {
-		log.Println("Stopping", name + "s.")
+		log.Println("Stopping", name+"s.")
 		for _, renderAgent := range renderAgents {
 			renderAgent.Stop()
 		}
-		log.Println("All", name + "s", "successfully stopped.")
+		log.Println("All", name+"s", "successfully stopped.")
 	}
 	for _, workChannel := range agentManager.workChannels {
 		close(workChannel)

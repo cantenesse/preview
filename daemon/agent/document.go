@@ -138,13 +138,14 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 
 	log.Println("pdfSourceAsset", pdfSourceAsset)
 	renderer.renderAgent.sasm.Store(pdfSourceAsset)
-	legacyDefaultTemplates, err := renderer.renderAgent.templateManager.FindByIds(common.LegacyDefaultTemplates)
+
+	templates, err := renderer.renderAgent.templateManager.FindByIds([]string{common.OptimizedJumboTemplateId})
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
 	// Only process first page because imageMagickRenderAgent will automatically create derived work for the other pages
-	renderer.renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, 1)
+	renderer.renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, templates, 0, 1)
 
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, nil}
 }

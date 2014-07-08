@@ -32,12 +32,13 @@ type previewGenerateRequest struct {
 }
 
 var templateAliases = map[string]string{
-	"jumbo":    "04a2c710-8872-4c88-9c75-a67175d3a8e7",
-	"large":    "2eee7c27-75e2-4682-9920-9a4e14caa433",
-	"medium":   "a89a6a0d-51d9-4d99-b278-0c5dfc538984",
-	"small":    "eaa7be0e-354f-482c-ac75-75cbdafecb6e",
-	"document": common.DocumentConversionTemplateId,
-	"video":    common.VideoConversionTemplateId,
+	"jumbo":     "04a2c710-8872-4c88-9c75-a67175d3a8e7",
+	"large":     "2eee7c27-75e2-4682-9920-9a4e14caa433",
+	"medium":    "a89a6a0d-51d9-4d99-b278-0c5dfc538984",
+	"small":     "eaa7be0e-354f-482c-ac75-75cbdafecb6e",
+	"document":  common.DocumentConversionTemplateId,
+	"video":     common.VideoConversionTemplateId,
+	"optimized": common.OptimizedJumboTemplateId,
 }
 
 func NewRenderV2Command(arguments map[string]interface{}) common.Command {

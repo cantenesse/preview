@@ -275,6 +275,18 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
 		             "forceS3Location":["true"],
                 "zencoderNotificationUrl":["http://example.com/zencoderhandler"]
             }
+        },
+        {
+            "id":"d0d11d21-4661-4c09-9079-52c90f9aacb7",
+            "renderAgent":"imageMagickRenderAgent",
+            "group":"4C96",
+            "attributes":{
+                "width":["1040"],
+                "height":["780"],
+                "output":["jpg"],
+                "placeholderSize":["jumbo"],
+                "density":["144"]
+            }
         }
     ]
 }`)

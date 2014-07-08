@@ -137,7 +137,6 @@ func (blueprint *assetBlueprint) assetHandler(res http.ResponseWriter, req *http
 }
 
 func (blueprint *assetBlueprint) getAsset(fileId, placeholderSize, page string) (assetAction, string) {
-
 	generatedAssets, err := blueprint.generatedAssetStorageManager.FindBySourceAssetId(fileId)
 	if err != nil {
 		blueprint.unknownGeneratedAssetsMeter.Mark(1)
@@ -157,7 +156,8 @@ func (blueprint *assetBlueprint) getAsset(fileId, placeholderSize, page string) 
 			pageVal = "0"
 		}
 		pageMatch := pageVal == page
-		if generatedAsset.TemplateId == templateId && pageMatch {
+		// TODO[JSH]: Find proper solution for two templates having the "jumbo" placeholder
+		if (generatedAsset.TemplateId == templateId || (generatedAsset.TemplateId == common.OptimizedJumboTemplateId && placeholderSize == common.PlaceholderSizeJumbo)) && pageMatch {
 			surl := generatedAsset.GetAttribute("streamingUrl")
 			if len(surl) > 0 && len(surl[0]) > 0 {
 				return assetActionVideoURL, surl[0]

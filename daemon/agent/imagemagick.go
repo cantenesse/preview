@@ -83,11 +83,13 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderDensity), nil}
 		return
 	}
+	pages := 0
+	page := 0
 	renderer.renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
-			page, _ := getGeneratedAssetPage(generatedAsset)
+			page, _ = getGeneratedAssetPage(generatedAsset)
 			if page == 0 {
-				pages, err := getPdfPageCount(sourceFile.Path())
+				pages, err = getPdfPageCount(sourceFile.Path())
 				if err != nil {
 					statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 					return
@@ -135,4 +137,25 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	}
 
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, newAttributes}
+
+	// Once we've rendered this asset, if the template is for optimized conversion, create work for templates large, medium, and small with
+	// the jpg generated asset as the source asset
+	if generatedAsset.TemplateId == common.OptimizedJumboTemplateId {
+		// TODO[JSH]: Find better solution for source asset type
+		imageSourceAsset, err := common.NewSourceAsset(sourceAsset.Id, common.SourceAssetTypeJumboJpg+strconv.Itoa(page))
+		if err != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+			return
+		}
+		imageSourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{generatedAsset.Location})
+		imageSourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{"jpg"})
+		log.Println("Storing image source asset", imageSourceAsset)
+		renderer.renderAgent.sasm.Store(imageSourceAsset)
+		legacyDefaultTemplates, err := renderer.renderAgent.templateManager.FindByIds(common.OptimizedLegacyDefaultTemplates)
+		if err != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
+			return
+		}
+		renderer.renderAgent.agentManager.CreateDerivedWork(imageSourceAsset, legacyDefaultTemplates, page, page+1)
+	}
 }
