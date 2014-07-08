@@ -171,20 +171,16 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
          "supportedFileTypes":["doc", "docx", "ppt", "pptx"],
          "fileTypes":{
              "doc":{
-                 "timeout":60,
-                 "maxPages":10
+                 "timeout":60
              },
              "docx":{
-                 "timeout":60,
-                 "maxPages":10
+                 "timeout":60
              },
              "ppt":{
-                 "timeout":60,
-                 "maxPages":10
+                 "timeout":60
              },
              "pptx":{
-                 "timeout":60,
-                 "maxPages":10
+                 "timeout":60
              }
          },
          "rendererParams":{

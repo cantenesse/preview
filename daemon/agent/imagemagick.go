@@ -93,7 +93,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 					return
 				}
 				// Create derived work for all pages but first one
-				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
+				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, common.Min(pages, renderer.renderAgent.fileTypes[fileType]["maxPages"]))
 			}
 			err = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType]["timeout"])
 		} else if fileType == "gif" {

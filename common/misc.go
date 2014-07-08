@@ -8,3 +8,12 @@ func Contains(container map[string]map[string]int, key string) bool {
 	}
 	return false
 }
+
+// Seriously, Go?
+func Min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
