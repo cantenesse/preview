@@ -217,7 +217,8 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
              },
              "gif":{
                  "timeout":60
-             },
+             }
+         },
          "rendererParams":{
          }
       }
