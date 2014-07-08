@@ -71,9 +71,11 @@ func createPdf(source, destination string, timeout int) error {
 		}
 		<-done // allow goroutine to exit
 		log.Println("process killed")
+		return common.ErrorRenderingTimedOut
 	case err := <-done:
 		if err != nil {
 			log.Printf("error running command", err)
+			return err
 		}
 	}
 	log.Println(buf.String())
@@ -113,9 +115,11 @@ func imageFromPdf(source, destination string, size, page, density, timeout int) 
 		}
 		<-done // allow goroutine to exit
 		log.Println("process killed")
+		return common.ErrorRenderingTimedOut
 	case err := <-done:
 		if err != nil {
 			log.Printf("error running command", err)
+			return err
 		}
 	}
 
@@ -156,9 +160,11 @@ func resize(source, destination string, size, timeout int) error {
 		}
 		<-done // allow goroutine to exit
 		log.Println("process killed")
+		return common.ErrorRenderingTimedOut
 	case err := <-done:
 		if err != nil {
 			log.Printf("error running command", err)
+			return err
 		}
 	}
 
@@ -199,9 +205,11 @@ func firstGifFrame(source, destination string, size, timeout int) error {
 		}
 		<-done // allow goroutine to exit
 		log.Println("process killed")
+		return common.ErrorRenderingTimedOut
 	case err := <-done:
 		if err != nil {
 			log.Printf("error running command", err)
+			return err
 		}
 	}
 
