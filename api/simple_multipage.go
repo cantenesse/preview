@@ -66,6 +66,9 @@ func (blueprint *simpleBlueprint) composeMultipagePreviewView(fileId string, tem
 		}
 		blueprint.fillMultipagePlaceholders(pv, fileType)
 		view.Pages[fmt.Sprintf("%d", page)] = pv
+		if page > view.PageCount {
+			view.PageCount = page
+		}
 	}
 
 	return view
