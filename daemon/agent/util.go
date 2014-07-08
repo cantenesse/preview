@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var pdfPageCount = regexp.MustCompile(`Pages:\s+(\d+)`)
@@ -37,7 +38,7 @@ func getPdfPageCount(file string) (int, error) {
 	return 0, nil
 }
 
-func createPdf(source, destination string) error {
+func createPdf(source, destination string, timeout int) error {
 	_, err := exec.LookPath("soffice")
 	if err != nil {
 		log.Println("soffice command not found")
@@ -52,17 +53,35 @@ func createPdf(source, destination string) error {
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	err = cmd.Run()
-	log.Println(buf.String())
+	err = cmd.Start()
 	if err != nil {
 		log.Println("error running command", err)
 		return err
 	}
 
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill: ", err)
+		}
+		<-done // allow goroutine to exit
+		log.Println("process killed")
+	case err := <-done:
+		if err != nil {
+			log.Printf("error running command", err)
+		}
+	}
+	log.Println(buf.String())
+
 	return nil
 }
 
-func imageFromPdf(source, destination string, size, page, density int) error {
+func imageFromPdf(source, destination string, size, page, density, timeout int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
@@ -76,16 +95,36 @@ func imageFromPdf(source, destination string, size, page, density int) error {
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	err = cmd.Run()
+	err = cmd.Start()
 	if err != nil {
+		log.Println("error running command", err)
 		return err
 	}
+
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill: ", err)
+		}
+		<-done // allow goroutine to exit
+		log.Println("process killed")
+	case err := <-done:
+		if err != nil {
+			log.Printf("error running command", err)
+		}
+	}
+
 	log.Println(buf.String())
 
 	return nil
 }
 
-func resize(source, destination string, size int) error {
+func resize(source, destination string, size, timeout int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
@@ -99,10 +138,73 @@ func resize(source, destination string, size int) error {
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 
-	err = cmd.Run()
+	err = cmd.Start()
 	if err != nil {
+		log.Println("error running command", err)
 		return err
 	}
+
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill: ", err)
+		}
+		<-done // allow goroutine to exit
+		log.Println("process killed")
+	case err := <-done:
+		if err != nil {
+			log.Printf("error running command", err)
+		}
+	}
+
+	log.Println(buf.String())
+
+	return nil
+}
+
+func firstGifFrame(source, destination string, size, timeout int) error {
+	_, err := exec.LookPath("convert")
+	if err != nil {
+		log.Println("convert command not found")
+		return err
+	}
+
+	cmd := exec.Command("convert", fmt.Sprintf("%s[0]", source), "-resize", strconv.Itoa(size), destination)
+	log.Println(cmd)
+
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+
+	err = cmd.Start()
+	if err != nil {
+		log.Println("error running command", err)
+		return err
+	}
+
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill: ", err)
+		}
+		<-done // allow goroutine to exit
+		log.Println("process killed")
+	case err := <-done:
+		if err != nil {
+			log.Printf("error running command", err)
+		}
+	}
+
 	log.Println(buf.String())
 
 	return nil
@@ -124,29 +226,6 @@ func getRenderedFiles(path string) ([]string, error) {
 		}
 	}
 	return paths, nil
-}
-
-func firstGifFrame(source, destination string, size int) error {
-	_, err := exec.LookPath("convert")
-	if err != nil {
-		log.Println("convert command not found")
-		return err
-	}
-
-	cmd := exec.Command("convert", fmt.Sprintf("%s[0]", source), "-resize", strconv.Itoa(size), destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	log.Println(buf.String())
-
-	return nil
 }
 
 func getBounds(path string) (*image.Rectangle, error) {
