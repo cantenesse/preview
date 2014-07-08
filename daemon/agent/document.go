@@ -89,7 +89,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	defer destinationTemporaryFile.Release()
 
 	renderer.renderAgent.metrics.convertTime.Time(func() {
-		err = createPdf(sourceFile.Path(), destination, 60)
+		err = createPdf(sourceFile.Path(), destination, renderer.renderAgent.fileTypes[fileType]["timeout"])
 		if err != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
 			return

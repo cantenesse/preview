@@ -95,11 +95,11 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 				// Create derived work for all pages but first one
 				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
 			}
-			err = imageFromPdf(sourceFile.Path(), destination, size, page, density, 60)
+			err = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType]["timeout"])
 		} else if fileType == "gif" {
-			err = firstGifFrame(sourceFile.Path(), destination, size, 60)
+			err = firstGifFrame(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType]["timeout"])
 		} else {
-			err = resize(sourceFile.Path(), destination, size, 60)
+			err = resize(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType]["timeout"])
 		}
 		if err != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
