@@ -47,7 +47,7 @@ func (blueprint *simpleBlueprint) composeMultipagePreviewView(fileId string, tem
 	fileType := blueprint.getSourceAssetType(sourceAsset)
 
 	pagedGeneratedAssetSet := blueprint.groupGeneratedAssetsByPage(generatedAssets)
-	view.PageCount = len(pagedGeneratedAssetSet)
+	view.PageCount = int32(len(pagedGeneratedAssetSet))
 	for page, pagedGeneratedAssets := range pagedGeneratedAssetSet {
 		pv := new(pageView)
 		for _, generatedAsset := range pagedGeneratedAssets {
