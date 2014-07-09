@@ -54,11 +54,11 @@ type genericRenderAgent struct {
 	statusListeners      []RenderStatusChannel
 	temporaryFileManager common.TemporaryFileManager
 	agentManager         *RenderAgentManager
-	fileTypes            map[string]map[string]int
+	fileTypes            map[string]int
 	stop                 chan (chan bool)
 }
 
-func newRenderAgentMetrics(registry metrics.Registry, name string, fileTypes map[string]map[string]int) *RenderAgentMetrics {
+func newRenderAgentMetrics(registry metrics.Registry, name string, fileTypes map[string]int) *RenderAgentMetrics {
 	agentMetrics := new(RenderAgentMetrics)
 	agentMetrics.workProcessed = metrics.NewMeter()
 	agentMetrics.convertTime = metrics.NewTimer()
@@ -79,7 +79,7 @@ func newRenderAgentMetrics(registry metrics.Registry, name string, fileTypes map
 func newGenericRenderAgent(
 	name string,
 	params map[string]string,
-	fileTypes map[string]map[string]int,
+	fileTypes map[string]int,
 	metrics *RenderAgentMetrics,
 	agentManager *RenderAgentManager,
 	sasm common.SourceAssetStorageManager,

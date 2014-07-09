@@ -25,7 +25,7 @@ type RenderAgentManager struct {
 	maxWork                      map[string]int
 	enabledRenderAgents          map[string]bool
 	renderAgentCount             map[string]int
-	agentFileTypes               map[string]map[string]map[string]int
+	agentFileTypes               map[string]map[string]int
 	metrics                      map[string]*RenderAgentMetrics
 	stop                         chan (chan bool)
 	mu                           sync.Mutex
@@ -42,7 +42,7 @@ func NewRenderAgentManager(
 	uploader common.Uploader,
 	workDispatcherEnabled bool,
 	zencoder *zencoder.Zencoder,
-	agentFileTypes map[string]map[string]map[string]int) *RenderAgentManager {
+	agentFileTypes map[string]map[string]int) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
 	agentManager.sourceAssetStorageManager = sourceAssetStorageManager
@@ -241,11 +241,11 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*common.Template, string, error) {
 	fileType = strings.ToLower(fileType)
 	var templateIds []string
-	if common.Contains(agentManager.agentFileTypes["documentRenderAgent"], fileType) {
+	if _, ok := agentManager.agentFileTypes["documentRenderAgent"][fileType]; ok {
 		templateIds = []string{common.DocumentConversionTemplateId}
-	} else if common.Contains(agentManager.agentFileTypes["videoRenderAgent"], fileType) {
+	} else if _, ok := agentManager.agentFileTypes["videoRenderAgent"][fileType]; ok {
 		templateIds = []string{common.VideoConversionTemplateId}
-	} else if common.Contains(agentManager.agentFileTypes["imageMagickRenderAgent"], fileType) {
+	} else if _, ok := agentManager.agentFileTypes["imageMagickRenderAgent"][fileType]; ok {
 		templateIds = common.LegacyDefaultTemplates
 	} else {
 		return nil, common.GeneratedAssetStatusFailed, common.ErrorNoRenderersSupportFileType

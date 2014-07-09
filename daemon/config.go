@@ -37,10 +37,10 @@ type daemonConfig struct {
 	} `json:"storage"`
 
 	RenderAgents map[string]struct {
-		Enabled        bool                      `json:"enabled"`
-		Count          int                       `json:"count"`
-		FileTypes      map[string]map[string]int `json:"fileTypes"`
-		RendererParams map[string]string         `json:"rendererParams"`
+		Enabled        bool              `json:"enabled"`
+		Count          int               `json:"count"`
+		FileTypes      map[string]int    `json:"fileTypes"`
+		RendererParams map[string]string `json:"rendererParams"`
 	} `json:"renderAgents"`
 
 	Zencoder struct {
@@ -168,20 +168,11 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
       "documentRenderAgent":{
          "enabled":true,
          "count":16,
-         "supportedFileTypes":["doc", "docx", "ppt", "pptx"],
          "fileTypes":{
-             "doc":{
-                 "timeout":60
-             },
-             "docx":{
-                 "timeout":60
-             },
-             "ppt":{
-                 "timeout":60
-             },
-             "pptx":{
-                 "timeout":60
-             }
+	    "doc":60,
+            "docx":60,
+	    "ppt":60,
+	    "pptx":60
          },
          "rendererParams":{
              "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
@@ -190,36 +181,24 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
       "videoRenderAgent":{
          "enabled":false,
          "count":16,
-         "supportedFileTypes":["mp4"],
          "fileTypes":{
-             "mp4":{}
+             "mp4":0
          },
          "rendererParams":{
-          }         
+         }         
       },
       "imageMagickRenderAgent":{
          "enabled":true,
          "count":16,
-         "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"],
          "fileTypes":{
-             "pdf":{
-                 "timeout":60,
-                 "maxPages":10
-             },
-             "jpg":{
-                 "timeout":60
-             },
-             "jpeg":{
-                 "timeout":60
-             },
-             "png":{
-                 "timeout":60
-             },
-             "gif":{
-                 "timeout":60
-             }
+	    "pdf":60,
+	    "jpg":60,
+	    "jpeg":60,
+	    "png":60,
+	    "gif":60
          },
          "rendererParams":{
+            "maxPages":"10"
          }
       }
    },

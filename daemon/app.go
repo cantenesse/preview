@@ -213,7 +213,7 @@ func (app *daemonContext) initStorage() error {
 func (app *daemonContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	fileTypes := make(map[string]map[string]map[string]int)
+	fileTypes := make(map[string]map[string]int)
 	for k, v := range app.config.RenderAgents {
 		fileTypes[k] = v.FileTypes
 	}
