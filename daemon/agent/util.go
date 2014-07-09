@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var pdfPageCount = regexp.MustCompile(`Pages:\s+(\d+)`)
@@ -37,7 +38,42 @@ func getPdfPageCount(file string) (int, error) {
 	return 0, nil
 }
 
-func createPdf(source, destination string) error {
+func executeConversionCommand(cmd *exec.Cmd, timeout int) error {
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+
+	err := cmd.Start()
+	if err != nil {
+		log.Println("error running command", err)
+		return err
+	}
+
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill: ", err)
+		}
+		<-done // allow goroutine to exit
+		log.Println("process killed")
+		return common.ErrorRenderingTimedOut
+	case err := <-done:
+		if err != nil {
+			log.Printf("error running command", err)
+			return err
+		}
+	}
+	log.Println(buf.String())
+
+	return nil
+}
+
+func createPdf(source, destination string, timeout int) error {
 	_, err := exec.LookPath("soffice")
 	if err != nil {
 		log.Println("soffice command not found")
@@ -48,21 +84,10 @@ func createPdf(source, destination string) error {
 	cmd := exec.Command("soffice", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", source, "--outdir", destination)
 	log.Println(cmd)
 
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	log.Println(buf.String())
-	if err != nil {
-		log.Println("error running command", err)
-		return err
-	}
-
-	return nil
+	return executeConversionCommand(cmd, timeout)
 }
 
-func imageFromPdf(source, destination string, size, page, density int) error {
+func imageFromPdf(source, destination string, size, page, density, timeout int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
@@ -72,20 +97,10 @@ func imageFromPdf(source, destination string, size, page, density int) error {
 	cmd := exec.Command("convert", "-density", strconv.Itoa(density), "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
 	log.Println(cmd)
 
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	log.Println(buf.String())
-
-	return nil
+	return executeConversionCommand(cmd, timeout)
 }
 
-func resize(source, destination string, size int) error {
+func resize(source, destination string, size, timeout int) error {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
@@ -95,17 +110,20 @@ func resize(source, destination string, size int) error {
 	cmd := exec.Command("convert", source, "-resize", strconv.Itoa(size), destination)
 	log.Println(cmd)
 
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
+	return executeConversionCommand(cmd, timeout)
+}
 
-	err = cmd.Run()
+func firstGifFrame(source, destination string, size, timeout int) error {
+	_, err := exec.LookPath("convert")
 	if err != nil {
+		log.Println("convert command not found")
 		return err
 	}
-	log.Println(buf.String())
 
-	return nil
+	cmd := exec.Command("convert", fmt.Sprintf("%s[0]", source), "-resize", strconv.Itoa(size), destination)
+	log.Println(cmd)
+
+	return executeConversionCommand(cmd, timeout)
 }
 
 func getRenderedFiles(path string) ([]string, error) {
@@ -124,29 +142,6 @@ func getRenderedFiles(path string) ([]string, error) {
 		}
 	}
 	return paths, nil
-}
-
-func firstGifFrame(source, destination string, size int) error {
-	_, err := exec.LookPath("convert")
-	if err != nil {
-		log.Println("convert command not found")
-		return err
-	}
-
-	cmd := exec.Command("convert", fmt.Sprintf("%s[0]", source), "-resize", strconv.Itoa(size), destination)
-	log.Println(cmd)
-
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-	log.Println(buf.String())
-
-	return nil
 }
 
 func getBounds(path string) (*image.Rectangle, error) {

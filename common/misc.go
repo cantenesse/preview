@@ -1,10 +1,10 @@
 package common
 
-func Contains(container []string, key string) bool {
-	for _, s := range container {
-		if s == key {
-			return true
-		}
+// Seriously, Go?
+func Min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
 	}
-	return false
 }

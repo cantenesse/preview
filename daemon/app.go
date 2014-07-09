@@ -202,11 +202,11 @@ func (app *daemonContext) initStorage() error {
 func (app *daemonContext) initRenderers() error {
 	// NKG: This is where the RendererManager is constructed and renderers
 	// are configured and enabled through it.
-	supportedFileTypes := make(map[string][]string)
+	fileTypes := make(map[string]map[string]int)
 	for k, v := range app.config.RenderAgents {
-		supportedFileTypes[k] = v.SupportedFileTypes
+		fileTypes[k] = v.FileTypes
 	}
-	app.agentManager = agent.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.config.Common.WorkDispatcherEnabled, app.zencoder, supportedFileTypes)
+	app.agentManager = agent.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.config.Common.WorkDispatcherEnabled, app.zencoder, fileTypes)
 	for k, v := range app.config.RenderAgents {
 		app.agentManager.SetRenderAgentInfo(k, v.Enabled, v.Count)
 		if v.Enabled {

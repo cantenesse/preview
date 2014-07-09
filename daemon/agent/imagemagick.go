@@ -63,11 +63,13 @@ func init() {
 
 type imageMagickRenderer struct {
 	renderAgent *genericRenderAgent
+	maxPages    int
 }
 
 func newImageMagickRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(imageMagickRenderer)
 	renderer.renderAgent = renderAgent
+	renderer.maxPages, _ = strconv.Atoi(params["maxPages"])
 
 	return renderer
 }
@@ -144,13 +146,13 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 					return
 				}
 				// Create derived work for all pages but first one
-				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
+				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, common.Min(pages, renderer.maxPages))
 			}
-			err = imageFromPdf(sourceFile.Path(), destination, size, page, density)
+			err = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType])
 		} else if fileType == "gif" {
-			err = firstGifFrame(sourceFile.Path(), destination, size)
+			err = firstGifFrame(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
 		} else {
-			err = resize(sourceFile.Path(), destination, size)
+			err = resize(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
 		}
 		if err != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}

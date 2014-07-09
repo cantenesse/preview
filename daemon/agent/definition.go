@@ -56,19 +56,20 @@ type genericRenderAgent struct {
 	statusListeners      []RenderStatusChannel
 	temporaryFileManager common.TemporaryFileManager
 	agentManager         *RenderAgentManager
+	fileTypes            map[string]int
 	stop                 chan (chan bool)
 }
 
-func newRenderAgentMetrics(registry metrics.Registry, name string, supportedFileTypes []string) *RenderAgentMetrics {
+func newRenderAgentMetrics(registry metrics.Registry, name string, fileTypes map[string]int) *RenderAgentMetrics {
 	agentMetrics := new(RenderAgentMetrics)
 	agentMetrics.workProcessed = metrics.NewMeter()
 	agentMetrics.convertTime = metrics.NewTimer()
 
 	agentMetrics.fileTypeCount = make(map[string]metrics.Counter)
 
-	for _, filetype := range supportedFileTypes {
-		agentMetrics.fileTypeCount[filetype] = metrics.NewCounter()
-		registry.Register(fmt.Sprintf("%s.%sCount", name, filetype), agentMetrics.fileTypeCount[filetype])
+	for fileType := range fileTypes {
+		agentMetrics.fileTypeCount[fileType] = metrics.NewCounter()
+		registry.Register(fmt.Sprintf("%s.%sCount", name, fileType), agentMetrics.fileTypeCount[fileType])
 	}
 
 	registry.Register(fmt.Sprintf("%s.workProcessed", name), agentMetrics.workProcessed)
@@ -80,6 +81,7 @@ func newRenderAgentMetrics(registry metrics.Registry, name string, supportedFile
 func newGenericRenderAgent(
 	name string,
 	params map[string]string,
+	fileTypes map[string]int,
 	metrics *RenderAgentMetrics,
 	agentManager *RenderAgentManager,
 	sasm common.SourceAssetStorageManager,
@@ -93,6 +95,7 @@ func newGenericRenderAgent(
 	renderAgent := new(genericRenderAgent)
 	renderAgent.name = name
 	renderAgent.metrics = metrics
+	renderAgent.fileTypes = fileTypes
 	renderAgent.agentManager = agentManager
 	renderAgent.sasm = sasm
 	renderAgent.gasm = gasm
