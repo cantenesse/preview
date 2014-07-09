@@ -57,6 +57,18 @@ func init() {
 				common.Attribute{common.TemplateAttributePlaceholderSize, []string{common.PlaceholderSizeSmall}},
 			},
 		},
+		&common.Template{
+			Id:          common.OptimizedJumboTemplateId,
+			RenderAgent: "imageMagickRenderAgent",
+			Group:       "4C96",
+			Attributes: []common.Attribute{
+				common.Attribute{common.TemplateAttributeWidth, []string{"1040"}},
+				common.Attribute{common.TemplateAttributeHeight, []string{"780"}},
+				common.Attribute{common.TemplateAttributeDensity, []string{"144"}},
+				common.Attribute{common.TemplateAttributeOutput, []string{"jpg"}},
+				common.Attribute{common.TemplateAttributePlaceholderSize, []string{common.PlaceholderSizeJumbo}},
+			},
+		},
 	}
 	templates = append(templates, localTemplates...)
 }
