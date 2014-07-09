@@ -29,7 +29,7 @@ type defaultDownloader struct {
 	s3Client         common.S3Client
 }
 
-// NewDownloader creates, configures and returns a new defaultDownloader.
+// newDownloader creates, configures and returns a new defaultDownloader.
 func newDownloader(basePath, localStoragePath string, tfm common.TemporaryFileManager, tramEnabled bool, tramHosts []string, s3Client common.S3Client) Downloader {
 	downloader := new(defaultDownloader)
 	downloader.basePath = basePath
