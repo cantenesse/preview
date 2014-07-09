@@ -10,9 +10,11 @@ import (
 
 func init() {
 	renderers = make(map[string]rendererConstructor)
+	templates = make([]*common.Template, 0)
 }
 
 var renderers map[string]rendererConstructor
+var templates []*common.Template
 
 type RenderAgentWorkChannel chan string
 
