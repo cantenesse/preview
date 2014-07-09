@@ -10,10 +10,10 @@ func init() {
 	renderers["imageMagickRenderAgent"] = newImageMagickRenderer
 	localTemplates := []*common.Template{
 		&common.Template{
-			"04a2c710-8872-4c88-9c75-a67175d3a8e7",
-			"imageMagickRenderAgent",
-			"4C96",
-			[]common.Attribute{
+			Id:          "04a2c710-8872-4c88-9c75-a67175d3a8e7",
+			RenderAgent: "imageMagickRenderAgent",
+			Group:       "4C96",
+			Attributes: []common.Attribute{
 				common.Attribute{common.TemplateAttributeWidth, []string{"1040"}},
 				common.Attribute{common.TemplateAttributeHeight, []string{"780"}},
 				common.Attribute{common.TemplateAttributeDensity, []string{"144"}},
@@ -22,10 +22,10 @@ func init() {
 			},
 		},
 		&common.Template{
-			"2eee7c27-75e2-4682-9920-9a4e14caa433",
-			"imageMagickRenderAgent",
-			"4C96",
-			[]common.Attribute{
+			Id:          "2eee7c27-75e2-4682-9920-9a4e14caa433",
+			RenderAgent: "imageMagickRenderAgent",
+			Group:       "4C96",
+			Attributes: []common.Attribute{
 				common.Attribute{common.TemplateAttributeWidth, []string{"520"}},
 				common.Attribute{common.TemplateAttributeHeight, []string{"390"}},
 				common.Attribute{common.TemplateAttributeDensity, []string{"144"}},
@@ -34,10 +34,10 @@ func init() {
 			},
 		},
 		&common.Template{
-			"a89a6a0d-51d9-4d99-b278-0c5dfc538984",
-			"imageMagickRenderAgent",
-			"4C96",
-			[]common.Attribute{
+			Id:          "a89a6a0d-51d9-4d99-b278-0c5dfc538984",
+			RenderAgent: "imageMagickRenderAgent",
+			Group:       "4C96",
+			Attributes: []common.Attribute{
 				common.Attribute{common.TemplateAttributeWidth, []string{"500"}},
 				common.Attribute{common.TemplateAttributeHeight, []string{"376"}},
 				common.Attribute{common.TemplateAttributeDensity, []string{"144"}},
@@ -46,10 +46,10 @@ func init() {
 			},
 		},
 		&common.Template{
-			"eaa7be0e-354f-482c-ac75-75cbdafecb6e",
-			"imageMagickRenderAgent",
-			"4C96",
-			[]common.Attribute{
+			Id:          "eaa7be0e-354f-482c-ac75-75cbdafecb6e",
+			RenderAgent: "imageMagickRenderAgent",
+			Group:       "4C96",
+			Attributes: []common.Attribute{
 				common.Attribute{common.TemplateAttributeWidth, []string{"250"}},
 				common.Attribute{common.TemplateAttributeHeight, []string{"188"}},
 				common.Attribute{common.TemplateAttributeDensity, []string{"144"}},
