@@ -6,11 +6,11 @@ import (
 	"github.com/ngerakines/preview/daemon/agent"
 	"github.com/ngerakines/preview/daemon/storage"
 	"github.com/ngerakines/testutils"
+	. "github.com/onsi/gomega"
 	"github.com/rcrowley/go-metrics"
 	"log"
-	"testing"
-	//	. "github.com/onsi/gomega"
 	"path/filepath"
+	"testing"
 	"time"
 )
 
@@ -21,9 +21,11 @@ type testInfo struct {
 	expectedCount int
 }
 
-func Test(t *testing.T) {
-	g := Goblin(t)
-	_ = g
+func TestAgents(t *testing.T) {
+	g := Goblin(t, "-goblin.timeout=60s")
+	RegisterFailHandler(func(m string, _ ...int) {
+		g.Fail(m)
+	})
 
 	dm := testutils.NewDirectoryManager()
 	defer dm.Close()
@@ -64,86 +66,75 @@ func Test(t *testing.T) {
 
 	tests := make([]testInfo, 0)
 	tests = append(tests, testInfo{"Multipage.docx", "docx", []string{common.DocumentConversionTemplateId}, 13})
+	tests = append(tests, testInfo{"Multipage.pdf", "pdf", common.LegacyDefaultTemplates, 12})
 
-	for _, info := range tests {
-		sourceAssetId, err := common.NewUuid()
-		if err != nil {
-			t.Errorf("Unexpected error returned: %s", err)
-			return
-		}
-
-		sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
-		if err != nil {
-			t.Errorf("Unexpected error returned: %s", err)
-			return
-		}
-
-		sourceAsset.AddAttribute(common.SourceAssetAttributeSize, []string{"12345"})
-		sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", info.file)})
-		sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{info.fileType})
-
-		err = sasm.Store(sourceAsset)
-		if err != nil {
-			t.Errorf("Unexpected error returned: %s", err)
-			return
-		}
-
-		templates, err := tm.FindByIds(info.templateIds)
-		if err != nil {
-			t.Errorf("Unexpected error returned: %s", err)
-			return
-		}
-		for _, template := range templates {
-			ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, uploader.Url(sourceAsset, template, 0))
+	g.Describe("render agent", func() {
+		for _, info := range tests {
+			sourceAssetId, err := common.NewUuid()
 			if err != nil {
 				t.Errorf("Unexpected error returned: %s", err)
 				return
 			}
-			gasm.Store(ga)
-			log.Println(ga)
-		}
 
-		if assertGeneratedAssetCount(sourceAssetId, gasm, common.GeneratedAssetStatusComplete, info.expectedCount) {
-			t.Errorf("Could not verify that %d generated assets had status '%s' for source asset '%s'", info.expectedCount, common.GeneratedAssetStatusComplete, sourceAssetId)
-			return
+			sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
+			g.It("creates source asset", func() {
+				Expect(err).To(BeNil())
+			})
+
+			sourceAsset.AddAttribute(common.SourceAssetAttributeSize, []string{"12345"})
+			sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", info.file)})
+			sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{info.fileType})
+
+			err = sasm.Store(sourceAsset)
+			g.It("stores source asset", func() {
+				Expect(err).To(BeNil())
+			})
+
+			templates, err := tm.FindByIds(info.templateIds)
+			g.It("gets templates", func() {
+				Expect(err).To(BeNil())
+			})
+			for _, template := range templates {
+				ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, uploader.Url(sourceAsset, template, 0))
+				g.It("creates generated asset", func() {
+					Expect(err).To(BeNil())
+				})
+				err = gasm.Store(ga)
+				g.It("stores generated asset", func() {
+					Expect(err).To(BeNil())
+				})
+				log.Println(ga)
+			}
+
+			g.It("creates correct amount of generated assets", func() {
+				Expect(assertGeneratedAssetCount(sourceAssetId, gasm, common.GeneratedAssetStatusComplete, info.expectedCount)).To(BeTrue())
+			})
+
 		}
-	}
+	})
 }
 
 func assertGeneratedAssetCount(id string, generatedAssetStorageManager common.GeneratedAssetStorageManager, status string, expectedCount int) bool {
-	callback := make(chan bool)
-	go func() {
-		for {
-			generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
-			if err == nil {
-				count := 0
-				for _, generatedAsset := range generatedAssets {
-					if generatedAsset.Status == status {
-						count = count + 1
-					}
-				}
-				if count > 0 {
-					log.Println("Count is", count, "but wanted", expectedCount)
-				}
-				if count == expectedCount {
-					callback <- false
-				}
-			} else {
-				callback <- true
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
+	// This will get killed by the testing framework if it exceeds the timeout
 	for {
-		select {
-		case result := <-callback:
-			return result
-		case <-time.After(20 * time.Second):
-			generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
-			log.Println("Timed out. generatedAssets", generatedAssets, "err", err)
-			return true
+		generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
+		if err == nil {
+			count := 0
+			for _, generatedAsset := range generatedAssets {
+				if generatedAsset.Status == status {
+					count += 1
+				}
+			}
+			if count > 0 {
+				log.Println("Count is", count, "but wanted", expectedCount)
+			}
+			if count == expectedCount {
+				return true
+			}
+		} else {
+			return false
 		}
+		time.Sleep(1 * time.Second)
 	}
 }
 

@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func Test(t *testing.T) {
+func TestApi(t *testing.T) {
 	g := Goblin(t)
 	RegisterFailHandler(func(m string, _ ...int) {
 		g.Fail(m)
