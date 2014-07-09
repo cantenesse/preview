@@ -70,6 +70,10 @@ func NewRenderAgentManager(
 		agentManager.metrics[agent] = newRenderAgentMetrics(registry, agent, fileTypes)
 	}
 
+	for _, t := range templates {
+		agentManager.templateManager.Store(t)
+	}
+
 	agentManager.stop = make(chan (chan bool))
 	if workDispatcherEnabled {
 		go agentManager.run()

@@ -157,17 +157,6 @@ func (app *daemonContext) initStorage() error {
 	// and placed into the app context.
 
 	app.templateManager = common.NewTemplateManager()
-	for _, template := range app.config.Templates {
-		temp := new(common.Template)
-		temp.Id = template.Id
-		temp.RenderAgent = template.RenderAgent
-		temp.Group = template.Group
-		for k, v := range template.Attributes {
-			temp.AddAttribute(k, v)
-		}
-		app.templateManager.Store(temp)
-	}
-
 	switch app.config.Storage.Engine {
 	case "memory":
 		{

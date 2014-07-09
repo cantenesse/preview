@@ -10,6 +10,17 @@ import (
 
 func init() {
 	renderers["documentRenderAgent"] = newDocumentRenderer
+	localTemplates := []*common.Template{
+		&common.Template{
+			Id:          common.DocumentConversionTemplateId,
+			RenderAgent: "documentRenderAgent",
+			Group:       "A907",
+			Attributes: []common.Attribute{
+				common.Attribute{common.TemplateAttributeOutput, []string{"pdf"}},
+			},
+		},
+	}
+	templates = append(templates, localTemplates...)
 }
 
 type documentRenderer struct {
