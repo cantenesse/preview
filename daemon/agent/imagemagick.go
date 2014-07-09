@@ -109,6 +109,11 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		}
 	})
 
+	// Required because the return statements above return from the anonymous function, not this one
+	if err != nil {
+		return
+	}
+
 	log.Println("---- generated asset is at", destination, "can load file?", common.CanLoadFile(destination))
 
 	err = renderer.renderAgent.uploader.Upload(generatedAsset.Location, destination)

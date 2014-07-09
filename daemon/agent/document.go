@@ -90,11 +90,11 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 
 	renderer.renderAgent.metrics.convertTime.Time(func() {
 		err = createPdf(sourceFile.Path(), destination)
-		if err != nil {
-			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
-			return
-		}
 	})
+	if err != nil {
+		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
+		return
+	}
 
 	files, err := getRenderedFiles(destination)
 	if err != nil {
