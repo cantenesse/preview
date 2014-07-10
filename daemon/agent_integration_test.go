@@ -61,15 +61,17 @@ func TestAgents(t *testing.T) {
 
 	defer rm.Stop()
 
-	testListener := make(agent.RenderStatusChannel, 25)
-	rm.AddListener(testListener)
-
 	tests := make([]testInfo, 0)
 	tests = append(tests, testInfo{"Multipage.docx", "docx", []string{common.DocumentConversionTemplateId}, 13})
 	tests = append(tests, testInfo{"Multipage.pdf", "pdf", common.LegacyDefaultTemplates, 12})
+	tests = append(tests, testInfo{"wallpaper-641916.jpg", "jpg", common.LegacyDefaultTemplates, 4})
+	tests = append(tests, testInfo{"Animated.gif", "gif", common.LegacyDefaultTemplates, 4})
+	tests = append(tests, testInfo{"COW.png", "png", common.LegacyDefaultTemplates, 4})
+	tests = append(tests, testInfo{"ChefConf2014schedule.pdf", "pdf", common.LegacyDefaultTemplates, 4})
+	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
 
-	g.Describe("render agent", func() {
-		for _, info := range tests {
+	for _, info := range tests {
+		g.Describe(info.file, func() {
 			sourceAssetId, err := common.NewUuid()
 			if err != nil {
 				t.Errorf("Unexpected error returned: %s", err)
@@ -110,8 +112,8 @@ func TestAgents(t *testing.T) {
 				Expect(assertGeneratedAssetCount(sourceAssetId, gasm, common.GeneratedAssetStatusComplete, info.expectedCount)).To(BeTrue())
 			})
 
-		}
-	})
+		})
+	}
 }
 
 func assertGeneratedAssetCount(id string, generatedAssetStorageManager common.GeneratedAssetStorageManager, status string, expectedCount int) bool {
