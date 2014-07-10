@@ -13,26 +13,69 @@ import (
 	"time"
 )
 
-type testInfo struct {
-	file          string
-	fileType      string
-	templateIds   []string
-	expectedCount int
+type testEnvironment struct {
+	sasm       common.SourceAssetStorageManager
+	gasm       common.GeneratedAssetStorageManager
+	rm         *agent.RenderAgentManager
+	dm         *testutils.DirectoryManager
+	tfm        common.TemporaryFileManager
+	downloader common.Downloader
+	uploader   common.Uploader
+	registry   metrics.Registry
+	tm         common.TemplateManager
 }
 
-// TODO[JSH]: Find the proper way to do this. Integrating this with ginkgo right now is a bit of a hack
-var _ = It("Agent integration test", func() {
-	dm := testutils.NewDirectoryManager()
-	defer dm.Close()
+var _ = Describe("Agent integration test", func() {
+	env := new(testEnvironment)
 
-	tm := common.NewTemplateManager()
-	sasm := storage.NewSourceAssetStorageManager()
-	gasm := storage.NewGeneratedAssetStorageManager(tm)
+	BeforeEach(func() {
+		env.setup()
+	})
 
-	tfm := common.NewTemporaryFileManager()
-	downloader := newDownloader(dm.Path, dm.Path, tfm, false, []string{}, nil)
-	uploader := newLocalUploader(dm.Path)
-	registry := metrics.NewRegistry()
+	AfterEach(func() {
+		env.teardown()
+	})
+
+	// Put the phrase "Integration Test" somewhere in the It statement so that the test won't run on Travis
+	It("Integration Test - Renders a docx", func() {
+		runTest("ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5, env)
+	})
+
+	It("Integration Test - Renders a multipage docx", func() {
+		runTest("Multipage.docx", "docx", []string{common.DocumentConversionTemplateId}, 13, env)
+	})
+
+	It("Integration Test - Renders a pdf", func() {
+		runTest("ChefConf2014schedule.pdf", "pdf", common.LegacyDefaultTemplates, 4, env)
+	})
+
+	It("Integration Test - Renders a multipage pdf", func() {
+		runTest("Multipage.pdf", "pdf", common.LegacyDefaultTemplates, 12, env)
+	})
+
+	It("Integration Test - Renders a jpg", func() {
+		runTest("wallpaper-641916.jpg", "jpg", common.LegacyDefaultTemplates, 4, env)
+	})
+
+	It("Integration Test - Renders a gif", func() {
+		runTest("Animated.gif", "gif", common.LegacyDefaultTemplates, 4, env)
+	})
+
+	It("Integration Test - Renders a png", func() {
+		runTest("COW.png", "png", common.LegacyDefaultTemplates, 4, env)
+	})
+})
+
+func (env *testEnvironment) setup() {
+	env.dm = testutils.NewDirectoryManager()
+	env.tm = common.NewTemplateManager()
+	env.sasm = storage.NewSourceAssetStorageManager()
+	env.gasm = storage.NewGeneratedAssetStorageManager(env.tm)
+
+	env.tfm = common.NewTemporaryFileManager()
+	env.downloader = newDownloader(env.dm.Path, env.dm.Path, env.tfm, false, []string{}, nil)
+	env.uploader = newLocalUploader(env.dm.Path)
+	env.registry = metrics.NewRegistry()
 
 	agentFileTypes := make(map[string]map[string]int)
 	agentFileTypes["documentRenderAgent"] = map[string]int{
@@ -49,80 +92,75 @@ var _ = It("Agent integration test", func() {
 		"gif":  60,
 	}
 
-	rm := agent.NewRenderAgentManager(registry, sasm, gasm, tm, tfm, uploader, true, nil, agentFileTypes)
+	env.rm = agent.NewRenderAgentManager(env.registry, env.sasm, env.gasm, env.tm, env.tfm, env.uploader, true, nil, agentFileTypes)
 
 	for i := 0; i < 4; i++ {
-		rm.AddRenderAgent("documentRenderAgent", map[string]string{"tempFileBasePath": filepath.Join(dm.Path, "doc-cache")}, downloader, uploader, 5)
+		env.rm.AddRenderAgent("documentRenderAgent", map[string]string{"tempFileBasePath": filepath.Join(env.dm.Path, "doc-cache")}, env.downloader, env.uploader, 5)
 	}
 
 	for i := 0; i < 8; i++ {
-		rm.AddRenderAgent("imageMagickRenderAgent", map[string]string{"maxPages": "10"}, downloader, uploader, 5)
+		env.rm.AddRenderAgent("imageMagickRenderAgent", map[string]string{"maxPages": "10"}, env.downloader, env.uploader, 5)
+	}
+}
+
+func (env *testEnvironment) teardown() {
+	env.rm.Stop()
+	env.dm.Close()
+}
+
+func runTest(file, fileType string, templateIds []string, expectedCount int, env *testEnvironment) {
+	sourceAssetId, err := common.NewUuid()
+	Expect(err).To(BeNil())
+
+	sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
+	Expect(err).To(BeNil())
+
+	sourceAsset.AddAttribute(common.SourceAssetAttributeSize, []string{"12345"})
+	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", file)})
+	sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{fileType})
+
+	err = env.sasm.Store(sourceAsset)
+	Expect(err).To(BeNil())
+
+	templates, err := env.tm.FindByIds(templateIds)
+	Expect(err).To(BeNil())
+
+	// The current system leverages the rm's dispatchMoreWork() function running every 5 seconds
+	// This makes adding work here simple, but it means that the manager will have to wait 5 seconds before
+	// actually starting to render the document
+	// TODO[JSH]: Directly dispatch work to speed up tests
+	for _, template := range templates {
+		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, env.uploader.Url(sourceAsset, template, 0))
+		Expect(err).To(BeNil())
+
+		err = env.gasm.Store(ga)
+		Expect(err).To(BeNil())
+
+		log.Println(ga)
 	}
 
-	defer rm.Stop()
-
-	tests := make([]testInfo, 0)
-	tests = append(tests, testInfo{"Multipage.docx", "docx", []string{common.DocumentConversionTemplateId}, 13})
-	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
-	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
-	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
-	tests = append(tests, testInfo{"Multipage.pdf", "pdf", common.LegacyDefaultTemplates, 12})
-	tests = append(tests, testInfo{"wallpaper-641916.jpg", "jpg", common.LegacyDefaultTemplates, 4})
-	tests = append(tests, testInfo{"Animated.gif", "gif", common.LegacyDefaultTemplates, 4})
-	tests = append(tests, testInfo{"COW.png", "png", common.LegacyDefaultTemplates, 4})
-	tests = append(tests, testInfo{"ChefConf2014schedule.pdf", "pdf", common.LegacyDefaultTemplates, 4})
-	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
-
-	for _, info := range tests {
-		sourceAssetId, err := common.NewUuid()
-		Expect(err).To(BeNil())
-
-		sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
-		Expect(err).To(BeNil())
-
-		sourceAsset.AddAttribute(common.SourceAssetAttributeSize, []string{"12345"})
-		sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", info.file)})
-		sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{info.fileType})
-
-		err = sasm.Store(sourceAsset)
-		Expect(err).To(BeNil())
-
-		templates, err := tm.FindByIds(info.templateIds)
-		Expect(err).To(BeNil())
-
-		for _, template := range templates {
-			ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, uploader.Url(sourceAsset, template, 0))
-			Expect(err).To(BeNil())
-
-			err = gasm.Store(ga)
-			Expect(err).To(BeNil())
-
-			log.Println(ga)
-		}
-
-		// 1 minute timeout, 1 second update interval
-		Eventually(func() bool {
-			return isComplete(sourceAssetId, gasm, info.expectedCount)
-		}, 1*time.Minute, 1*time.Second).Should(BeTrue())
-	}
-})
+	// 1 minute timeout, 1 second update interval
+	Eventually(func() bool {
+		return isComplete(sourceAssetId, env.gasm, expectedCount)
+	}, 1*time.Minute, 1*time.Second).Should(BeTrue())
+}
 
 func isComplete(id string, generatedAssetStorageManager common.GeneratedAssetStorageManager, expectedCount int) bool {
 	generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
-	if err == nil {
-		count := 0
-		for _, generatedAsset := range generatedAssets {
-			if generatedAsset.Status == common.GeneratedAssetStatusComplete {
-				count += 1
-			}
+	Expect(err).To(BeNil())
+	count := 0
+	for _, generatedAsset := range generatedAssets {
+		if generatedAsset.Status == common.GeneratedAssetStatusComplete {
+			count += 1
 		}
-		if count == expectedCount {
-			return true
-		}
-		if count > 0 {
-			log.Println("Count is", count, "but wanted", expectedCount)
-			return false
-		}
+		Expect(generatedAsset.Status).ToNot(ContainSubstring(common.GeneratedAssetStatusFailed))
+	}
+	if count == expectedCount {
+		return true
+	}
+	if count > 0 {
+		log.Println("Count is", count, "but wanted", expectedCount)
+		return false
 	}
 	return false
 }
