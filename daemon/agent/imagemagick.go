@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/ngerakines/codederror"
 	"github.com/ngerakines/preview/common"
 	"log"
 	"strconv"
@@ -140,6 +141,8 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderDensity), nil}
 		return
 	}
+
+	var ce codederror.CodedError
 	renderer.renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ := getGeneratedAssetPage(generatedAsset)
@@ -152,17 +155,20 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 				// Create derived work for all pages but first one
 				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, common.Min(pages, renderer.maxPages))
 			}
-			err = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType])
+			ce = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType])
 		} else if fileType == "gif" {
-			err = firstGifFrame(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
+			ce = firstGifFrame(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
 		} else {
-			err = resize(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
+			ce = resize(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
 		}
-		if err != nil {
-			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
-			return
+		if ce != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(ce), nil}
 		}
 	})
+
+	if ce != nil {
+		return
+	}
 
 	log.Println("---- generated asset is at", destination, "can load file?", common.CanLoadFile(destination))
 

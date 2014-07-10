@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/ngerakines/codederror"
 	"github.com/ngerakines/preview/common"
 	"log"
 	"os"
@@ -103,13 +104,17 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
 
+	var ce codederror.CodedError
 	renderer.renderAgent.metrics.convertTime.Time(func() {
-		err = createPdf(sourceFile.Path(), destination, renderer.renderAgent.fileTypes[fileType])
-		if err != nil {
-			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
-			return
+		ce = createPdf(sourceFile.Path(), destination, renderer.renderAgent.fileTypes[fileType])
+		if ce != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(ce), nil}
 		}
 	})
+
+	if ce != nil {
+		return
+	}
 
 	files, err := getRenderedFiles(destination)
 	if err != nil {

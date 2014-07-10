@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"fmt"
+	"github.com/ngerakines/codederror"
 	"github.com/ngerakines/preview/common"
 	"image"
 	"image/jpeg"
@@ -38,7 +39,7 @@ func getPdfPageCount(file string) (int, error) {
 	return 0, nil
 }
 
-func executeConversionCommand(cmd *exec.Cmd, timeout int) error {
+func executeConversionCommand(cmd *exec.Cmd, timeout int) codederror.CodedError {
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
@@ -46,7 +47,7 @@ func executeConversionCommand(cmd *exec.Cmd, timeout int) error {
 	err := cmd.Start()
 	if err != nil {
 		log.Println("error running command", err)
-		return err
+		return common.ErrorCouldNotResizeImage
 	}
 
 	done := make(chan error)
@@ -65,7 +66,7 @@ func executeConversionCommand(cmd *exec.Cmd, timeout int) error {
 	case err := <-done:
 		if err != nil {
 			log.Printf("error running command", err)
-			return err
+			return common.ErrorCouldNotResizeImage
 		}
 	}
 	log.Println(buf.String())
@@ -73,11 +74,11 @@ func executeConversionCommand(cmd *exec.Cmd, timeout int) error {
 	return nil
 }
 
-func createPdf(source, destination string, timeout int) error {
+func createPdf(source, destination string, timeout int) codederror.CodedError {
 	_, err := exec.LookPath("soffice")
 	if err != nil {
 		log.Println("soffice command not found")
-		return err
+		return common.ErrorCouldNotResizeImage
 	}
 
 	// TODO: Make this path configurable.
@@ -87,11 +88,11 @@ func createPdf(source, destination string, timeout int) error {
 	return executeConversionCommand(cmd, timeout)
 }
 
-func imageFromPdf(source, destination string, size, page, density, timeout int) error {
+func imageFromPdf(source, destination string, size, page, density, timeout int) codederror.CodedError {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
-		return err
+		return common.ErrorCouldNotResizeImage
 	}
 
 	cmd := exec.Command("convert", "-density", strconv.Itoa(density), "-colorspace", "RGB", fmt.Sprintf("%s[%d]", source, page), "-resize", strconv.Itoa(size), "-flatten", "+adjoin", destination)
@@ -100,11 +101,11 @@ func imageFromPdf(source, destination string, size, page, density, timeout int) 
 	return executeConversionCommand(cmd, timeout)
 }
 
-func resize(source, destination string, size, timeout int) error {
+func resize(source, destination string, size, timeout int) codederror.CodedError {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
-		return err
+		return common.ErrorCouldNotResizeImage
 	}
 
 	cmd := exec.Command("convert", source, "-resize", strconv.Itoa(size), destination)
@@ -113,11 +114,11 @@ func resize(source, destination string, size, timeout int) error {
 	return executeConversionCommand(cmd, timeout)
 }
 
-func firstGifFrame(source, destination string, size, timeout int) error {
+func firstGifFrame(source, destination string, size, timeout int) codederror.CodedError {
 	_, err := exec.LookPath("convert")
 	if err != nil {
 		log.Println("convert command not found")
-		return err
+		return common.ErrorCouldNotResizeImage
 	}
 
 	cmd := exec.Command("convert", fmt.Sprintf("%s[0]", source), "-resize", strconv.Itoa(size), destination)
