@@ -6,5 +6,9 @@ go:
 install:
   - go get -d -v ./...
   - go get github.com/ngerakines/testutils
+  - go get github.com/onsi/gomega
+  - go get github.com/onsi/ginkgo/ginkgo
+  - export PATH=$PATH:$HOME/gopath/bin
 
-script: go test ./... -test.short
+
+script: $HOME/gopath/bin/ginkgo -r --skip="integration"

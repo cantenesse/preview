@@ -1,22 +1,14 @@
 package daemon
 
 import (
-	"testing"
-
-	. "github.com/franela/goblin"
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func TestConfig(t *testing.T) {
-	g := Goblin(t)
-	RegisterFailHandler(func(m string, _ ...int) {
-		g.Fail(m)
+var _ = Describe("Default config", func() {
+	appConfig, err := loadDaemonConfig("")
+	It("has valid syntax", func() {
+		Expect(err).To(BeNil())
+		Expect(appConfig).ToNot(BeNil())
 	})
-	g.Describe("default config", func() {
-		g.It("has valid syntax", func() {
-			conf, err := loadDaemonConfig("")
-			Expect(err).To(BeNil())
-			Expect(conf).ToNot(BeNil())
-		})
-	})
-}
+})
