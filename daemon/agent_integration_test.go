@@ -51,8 +51,11 @@ var _ = It("Agent integration test", func() {
 
 	rm := agent.NewRenderAgentManager(registry, sasm, gasm, tm, tfm, uploader, true, nil, agentFileTypes)
 
-	rm.AddRenderAgent("documentRenderAgent", map[string]string{"tempFileBasePath": filepath.Join(dm.Path, "doc-cache")}, downloader, uploader, 5)
 	for i := 0; i < 4; i++ {
+		rm.AddRenderAgent("documentRenderAgent", map[string]string{"tempFileBasePath": filepath.Join(dm.Path, "doc-cache")}, downloader, uploader, 5)
+	}
+
+	for i := 0; i < 8; i++ {
 		rm.AddRenderAgent("imageMagickRenderAgent", map[string]string{"maxPages": "10"}, downloader, uploader, 5)
 	}
 
@@ -60,6 +63,9 @@ var _ = It("Agent integration test", func() {
 
 	tests := make([]testInfo, 0)
 	tests = append(tests, testInfo{"Multipage.docx", "docx", []string{common.DocumentConversionTemplateId}, 13})
+	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
+	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
+	tests = append(tests, testInfo{"ChefConf2014schedule.docx", "docx", []string{common.DocumentConversionTemplateId}, 5})
 	tests = append(tests, testInfo{"Multipage.pdf", "pdf", common.LegacyDefaultTemplates, 12})
 	tests = append(tests, testInfo{"wallpaper-641916.jpg", "jpg", common.LegacyDefaultTemplates, 4})
 	tests = append(tests, testInfo{"Animated.gif", "gif", common.LegacyDefaultTemplates, 4})
@@ -93,46 +99,32 @@ var _ = It("Agent integration test", func() {
 
 			log.Println(ga)
 		}
-		fail := assertGeneratedAssetCount(sourceAssetId, gasm, common.GeneratedAssetStatusComplete, info.expectedCount)
-		Expect(fail).To(BeFalse())
+
+		// 1 minute timeout, 1 second update interval
+		Eventually(func() bool {
+			return isComplete(sourceAssetId, gasm, info.expectedCount)
+		}, 1*time.Minute, 1*time.Second).Should(BeTrue())
 	}
 })
 
-func assertGeneratedAssetCount(id string, generatedAssetStorageManager common.GeneratedAssetStorageManager, status string, expectedCount int) bool {
-	callback := make(chan bool)
-	go func() {
-		for {
-			generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
-			if err == nil {
-				count := 0
-				for _, generatedAsset := range generatedAssets {
-					if generatedAsset.Status == status {
-						count = count + 1
-					}
-				}
-				if count > 0 {
-					log.Println("Count is", count, "but wanted", expectedCount)
-				}
-				if count == expectedCount {
-					callback <- false
-				}
-			} else {
-				callback <- true
+func isComplete(id string, generatedAssetStorageManager common.GeneratedAssetStorageManager, expectedCount int) bool {
+	generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
+	if err == nil {
+		count := 0
+		for _, generatedAsset := range generatedAssets {
+			if generatedAsset.Status == common.GeneratedAssetStatusComplete {
+				count += 1
 			}
-			time.Sleep(1 * time.Second)
 		}
-	}()
-
-	for {
-		select {
-		case result := <-callback:
-			return result
-		case <-time.After(30 * time.Second):
-			generatedAssets, err := generatedAssetStorageManager.FindBySourceAssetId(id)
-			log.Println("Timed out. generatedAssets", generatedAssets, "err", err)
+		if count == expectedCount {
 			return true
 		}
+		if count > 0 {
+			log.Println("Count is", count, "but wanted", expectedCount)
+			return false
+		}
 	}
+	return false
 }
 
 func fileUrl(dir, file string) string {
