@@ -32,7 +32,11 @@ type videoRenderer struct {
 func newVideoRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(videoRenderer)
 	renderer.renderAgent = renderAgent
+	var ok bool
 	renderer.zencoderNotificationUrl = params["zencoderNotificationUrl"]
+	if !ok {
+		log.Fatal("Missing zencoderNotificationUrl parameter from videoRenderAgent")
+	}
 	return renderer
 }
 

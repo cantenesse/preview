@@ -31,7 +31,11 @@ type documentRenderer struct {
 func newDocumentRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(documentRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.tempFileBasePath = params["tempFileBasePath"]
+	var ok bool
+	renderer.tempFileBasePath, ok = params["tempFileBasePath"]
+	if !ok {
+		log.Fatal("Missing tempFileBasePath parameter from documentRenderAgent")
+	}
 
 	return renderer
 }

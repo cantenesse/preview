@@ -168,7 +168,7 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
 	    "pptx":60
          },
          "rendererParams":{
-             "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
+             "tempFileBasePath":"` + basePathFunc("documentRenderAgentTmp") + `"
          }
       },
       "videoRenderAgent":{

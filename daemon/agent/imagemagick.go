@@ -69,7 +69,11 @@ type imageMagickRenderer struct {
 func newImageMagickRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(imageMagickRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.maxPages, _ = strconv.Atoi(params["maxPages"])
+	maxPagesString, ok := params["maxPages"]
+	if !ok {
+		log.Fatal("Missing maxPages parameter from imageMagickRenderAgent")
+	}
+	renderer.maxPages, _ = strconv.Atoi(maxPagesString)
 
 	return renderer
 }
