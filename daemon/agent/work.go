@@ -370,13 +370,13 @@ func (agentManager *RenderAgentManager) run() {
 			}
 		case <-time.After(5 * time.Second):
 			{
-				agentManager.dispatchMoreWork()
+				agentManager.DispatchMoreWork()
 			}
 		}
 	}
 }
 
-func (agentManager *RenderAgentManager) dispatchMoreWork() {
+func (agentManager *RenderAgentManager) DispatchMoreWork() {
 	agentManager.mu.Lock()
 	defer agentManager.mu.Unlock()
 

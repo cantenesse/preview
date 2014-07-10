@@ -125,10 +125,6 @@ func runTest(file, fileType string, templateIds []string, expectedCount int, env
 	templates, err := env.tm.FindByIds(templateIds)
 	Expect(err).To(BeNil())
 
-	// The current system leverages the rm's dispatchMoreWork() function running every 5 seconds
-	// This makes adding work here simple, but it means that the manager will have to wait 5 seconds before
-	// actually starting to render the document
-	// TODO[JSH]: Directly dispatch work to speed up tests
 	for _, template := range templates {
 		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, env.uploader.Url(sourceAsset, template, 0))
 		Expect(err).To(BeNil())
@@ -138,6 +134,8 @@ func runTest(file, fileType string, templateIds []string, expectedCount int, env
 
 		log.Println(ga)
 	}
+
+	env.rm.DispatchMoreWork()
 
 	// 1 minute timeout, 1 second update interval
 	Eventually(func() bool {
