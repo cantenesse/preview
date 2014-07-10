@@ -55,28 +55,23 @@ The "storage" group has the following keys:
 * "cassandraNodes" - An array of strings representing cassandra nodes to interact with. Only available when the engine is "cassandra".
 * "cassandraKeyspace" - The cassandra keyspace that queries are executed against. Only available when the engine is "cassandra".
 
-The "documentRenderAgent" group has the following keys:
+The "renderAgents" group contains three subgroups, each of which corresponds to a particular render agent. The subgroups share a common format with the following keys:
 
-* "enabled" - Used to determine if the document rendering agent should be started with the application.
+* "enabled" - Used to determine if the render agent should be started with the application.
 * "count" - The number of agents to run concurrently.
-* "basePath" - The path of the temporary directory to be used by the agent.
-* "supportedFileTypes" - An array of strings corresponding to file types to be supported by this render agent.
+* "fileTypes" - A map of file types to be supported by the render agent to the maximum time to be spent rendering a single file of that type.
+* "rendererParams" - A group containing special parameters unique to each type of renderAgent.
 
-The "videoRenderAgent" group has the following keys:
+The supported subgroups, along with their special parameters, are:
 
-* "enabled" - Used to determine if the document rendering agent should be started with the application.
-* "count" - The number of agents to run concurrently.
-* "basePath" - The path of the temporary directory to be used by the agent.
-* "zencoderKey" - The Zencoder API key of an account to be used for the transcoding process.
-* "zencoderNotificationUrl" - The URL of the server to listen for updates from Zencoder.
-* "zencoderS3Bucket" - The S3 bucket for Zencoder to use as output.
-* "supportedFileTypes" - An array of strings corresponding to file types to be supported by this render agent.
+* "imageMagickRenderAgent"
+  * "maxPages" - The maximum number of pages to convert when processing PDFs. Documents longer than this will be truncated.
 
-The "imageMagickRenderAgent" group has the following keys:
+* "documentRenderAgent"
+  * "tempFileBasePath" - The location of a temporary directory to store files during the document conversion process.
 
-* "enabled" - Used to determine if the image magick rendering agent should be started with the application.
-* "count" - The number of agents to run concurrently.
-* "supportedFileTypes" - An array of strings corresponding to file types to be supported by this render agent.
+* "videoRenderAgent"
+  * "zencoderNotificationUrl" - The URL of the server to receive updates from Zencoder.
 
 The "simpleApi" group has the following keys:
 
