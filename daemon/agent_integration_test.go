@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rcrowley/go-metrics"
-	"log"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -131,30 +130,11 @@ func runTest(file, fileType string, templateIds []string, status string, expecte
 	sourceAssetId, err := common.NewUuid()
 	Expect(err).To(BeNil())
 
-	sourceAsset, err := common.NewSourceAsset(sourceAssetId, common.SourceAssetTypeOrigin)
-	Expect(err).To(BeNil())
+	attributes := make(map[string][]string)
+	attributes[common.SourceAssetAttributeSize] = []string{"12345"}
+	attributes[common.SourceAssetAttributeType] = []string{fileType}
 
-	sourceAsset.AddAttribute(common.SourceAssetAttributeSize, []string{"12345"})
-	sourceAsset.AddAttribute(common.SourceAssetAttributeSource, []string{fileUrl("test-data", file)})
-	sourceAsset.AddAttribute(common.SourceAssetAttributeType, []string{fileType})
-
-	err = env.sasm.Store(sourceAsset)
-	Expect(err).To(BeNil())
-
-	templates, err := env.tm.FindByIds(templateIds)
-	Expect(err).To(BeNil())
-
-	for _, template := range templates {
-		ga, err := common.NewGeneratedAssetFromSourceAsset(sourceAsset, template.Id, env.uploader.Url(sourceAsset, template, 0))
-		Expect(err).To(BeNil())
-
-		err = env.gasm.Store(ga)
-		Expect(err).To(BeNil())
-
-		log.Println(ga)
-	}
-
-	env.rm.DispatchMoreWork()
+	env.rm.CreateWorkFromTemplates(sourceAssetId, fileUrl("test-data", file), attributes, templateIds)
 
 	// 1 minute timeout, 1 second update interval
 	Eventually(func() bool {
