@@ -29,9 +29,7 @@ The configuration object has the following top level sections:
 * common
 * http
 * storage
-* imageMagickRenderAgent
-* documentRenderAgent
-* videoRenderAgent
+* renderAgents
 * simpleApi
 * assetApi
 * uploader
@@ -109,13 +107,13 @@ By default, the application will use the following configuration json:
 ```json
 {
    "common": {
-      "placeholderBasePath":"/var/preview/placeholders",
+      "placeholderBasePath":"$GOPATH/src/github.com/ngerakines/preview/.cache/placeholders",
       "placeholderGroups": {
          "image":["jpg", "jpeg", "png", "gif", "pdf"],
          "document":["doc", "docx"],
          "video":["mp4"]
       },
-      "localAssetStoragePath":"/var/preview/assets",
+      "localAssetStoragePath":"$GOPATH/src/github.com/ngerakines/preview/.cache/assets",
       "nodeId":"E876F147E331",
       "workDispatcherEnabled":true
    },
@@ -129,24 +127,38 @@ By default, the application will use the following configuration json:
       "documentRenderAgent":{
          "enabled":true,
          "count":16,
-         "supportedFileTypes":["doc", "docx", "ppt", "pptx"],
+         "fileTypes":{
+            "doc":60,
+            "docx":60,
+	        "ppt":60,
+	        "pptx":60
+         },
          "rendererParams":{
-             "basePath":"/var/preview/tmp/document"
+             "tempFileBasePath":"$GOPATH/go/src/github.com/ngerakines/preview/.cache/documentRenderAgentTmp"
          }
       },
       "videoRenderAgent":{
          "enabled":false,
          "count":16,
-         "supportedFileTypes":["mp4"],
-         "engine":"zencoder",
+         "fileTypes":{
+             "mp4":0
+         },
          "rendererParams":{
-         }         
+            "zencoderNotificationUrl":"http://zencoderfetcher"
+         }
       },
       "imageMagickRenderAgent":{
          "enabled":true,
          "count":16,
-         "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"],
+         "fileTypes":{
+	    "pdf":60,
+	    "jpg":60,
+	    "jpeg":60,
+	    "png":60,
+	    "gif":60
+         },
          "rendererParams":{
+            "maxPages":"10"
          }
       }
    },
@@ -166,73 +178,9 @@ By default, the application will use the following configuration json:
       "engine":"local"
    },
    "downloader":{
-      "basePath":"/var/preview/tmp/download",
+      "basePath":"$GOPATH/src/github.com/ngerakines/preview/.cache/cache",
       "tramEnabled": false
-   },
-   "templates": [
-        {
-            "id":"04a2c710-8872-4c88-9c75-a67175d3a8e7",
-            "renderAgent":"imageMagickRenderAgent",
-            "group":"4C96",
-            "attributes":{
-                "width":["1040"],
-                "height":["780"],
-                "output":["jpg"],
-                "placeholderSize":["jumbo"]
-            }
-        },
-	{
-            "id":"2eee7c27-75e2-4682-9920-9a4e14caa433",
-            "renderAgent":"imageMagickRenderAgent",
-            "group":"4C96",
-            "attributes":{
-                "width":["520"],
-                "height":["390"],
-                "output":["jpg"],
-                "placeholderSize":["large"]
-            }
-        },
-	{
-            "id":"a89a6a0d-51d9-4d99-b278-0c5dfc538984",
-            "renderAgent":"imageMagickRenderAgent",
-            "group":"4C96",
-            "attributes":{
-                "width":["500"],
-                "height":["376"],
-                "output":["jpg"],
-                "placeholderSize":["medium"]
-            }
-        },
-	{
-            "id":"eaa7be0e-354f-482c-ac75-75cbdafecb6e",
-            "renderAgent":"imageMagickRenderAgent",
-            "group":"4C96",
-            "attributes":{
-                "width":["250"],
-                "height":["188"],
-                "output":["jpg"],
-                "placeholderSize":["small"]
-            }
-        },
-	{
-            "id":"9B17C6CE-7B09-4FD5-92AD-D85DD218D6D7",
-            "renderAgent":"documentRenderAgent",
-            "group":"A907",
-            "attributes":{
-                "output":["pdf"]
-            }
-        },
-	{
-            "id":"4128966B-9F69-4E56-AD5C-1FDB3C24F910",
-            "renderAgent":"videoRenderAgent",
-            "group":"7A96",
-            "attributes":{
-                "output":["m3u8"],
-		"forceS3Location":["s3://YOUR_BUCKET"],
-                "zencoderNotificationUrl":["http://example.com/zencoderhandler"]
-            }
-        }
-    ]
+   }
 }
 ```
 
