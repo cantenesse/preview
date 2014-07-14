@@ -30,6 +30,7 @@ The configuration object has the following top level sections:
 * http
 * storage
 * renderAgents
+* zencoder
 * simpleApi
 * assetApi
 * uploader
@@ -70,6 +71,11 @@ The supported subgroups, along with their special parameters, are:
 
 * "videoRenderAgent"
   * "zencoderNotificationUrl" - The URL of the server to receive updates from Zencoder.
+
+The "zencoder" group has the following keys:
+
+* "enabled" - If enabled, Zencoder will be available. Must be enabled in order for the video render agent to work.
+* "key" - The Zencoder API key to be used.
 
 The "simpleApi" group has the following keys:
 
@@ -134,7 +140,7 @@ By default, the application will use the following configuration json:
 	        "pptx":60
          },
          "rendererParams":{
-             "tempFileBasePath":"$GOPATH/go/src/github.com/ngerakines/preview/.cache/documentRenderAgentTmp"
+             "tempFileBasePath":"$GOPATH/src/github.com/ngerakines/preview/.cache/documentRenderAgentTmp"
          }
       },
       "videoRenderAgent":{
