@@ -204,14 +204,22 @@ func (app *daemonContext) initRenderers() error {
 	// are configured and enabled through it.
 	fileTypes := make(map[string]map[string]int)
 	for k, v := range app.config.RenderAgents {
-		fileTypes[k] = v.FileTypes
+		if v.Enabled {
+			fileTypes[k] = v.FileTypes
+		}
 	}
-	app.agentManager = agent.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.config.Common.WorkDispatcherEnabled, app.zencoder, fileTypes)
+	rendererParams := make(map[string]map[string]string)
+	for k, v := range app.config.RenderAgents {
+		if v.Enabled {
+			rendererParams[k] = v.RendererParams
+		}
+	}
+	app.agentManager = agent.NewRenderAgentManager(app.registry, app.sourceAssetStorageManager, app.generatedAssetStorageManager, app.templateManager, app.temporaryFileManager, app.uploader, app.config.Common.WorkDispatcherEnabled, app.zencoder, fileTypes, rendererParams)
 	for k, v := range app.config.RenderAgents {
 		app.agentManager.SetRenderAgentInfo(k, v.Enabled, v.Count)
 		if v.Enabled {
 			for i := 0; i < v.Count; i++ {
-				app.agentManager.AddRenderAgent(k, v.RendererParams, app.downloader, app.uploader, 5)
+				app.agentManager.AddRenderAgent(k, app.downloader, app.uploader, 5)
 			}
 		}
 	}

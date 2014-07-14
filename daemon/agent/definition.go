@@ -9,11 +9,11 @@ import (
 )
 
 func init() {
-	renderers = make(map[string]rendererConstructor)
+	rendererConstructors = make(map[string]rendererConstructor)
 	templates = make([]*common.Template, 0)
 }
 
-var renderers map[string]rendererConstructor
+var rendererConstructors map[string]rendererConstructor
 var templates []*common.Template
 
 type RenderAgentWorkChannel chan string
@@ -32,10 +32,10 @@ type generatedAssetUpdate struct {
 }
 
 type Renderer interface {
-	renderGeneratedAsset(id string)
+	renderGeneratedAsset(string, *genericRenderAgent)
 }
 
-type rendererConstructor func(*genericRenderAgent, map[string]string) Renderer
+type rendererConstructor func(map[string]string) Renderer
 
 type RenderAgentMetrics struct {
 	workProcessed metrics.Meter
@@ -80,7 +80,7 @@ func newRenderAgentMetrics(registry metrics.Registry, name string, fileTypes map
 
 func newGenericRenderAgent(
 	name string,
-	params map[string]string,
+	renderer Renderer,
 	fileTypes map[string]int,
 	metrics *RenderAgentMetrics,
 	agentManager *RenderAgentManager,
@@ -94,6 +94,7 @@ func newGenericRenderAgent(
 
 	renderAgent := new(genericRenderAgent)
 	renderAgent.name = name
+	renderAgent.renderer = renderer
 	renderAgent.metrics = metrics
 	renderAgent.fileTypes = fileTypes
 	renderAgent.agentManager = agentManager
@@ -106,7 +107,6 @@ func newGenericRenderAgent(
 	renderAgent.workChannel = workChannel
 	renderAgent.statusListeners = make([]RenderStatusChannel, 0, 0)
 	renderAgent.stop = make(chan (chan bool))
-	renderAgent.renderer = renderers[name](renderAgent, params)
 
 	go renderAgent.start()
 
@@ -156,7 +156,7 @@ func (renderAgent *genericRenderAgent) Dispatch() RenderAgentWorkChannel {
 }
 
 func (renderAgent *genericRenderAgent) renderGeneratedAsset(id string) {
-	renderAgent.renderer.renderGeneratedAsset(id)
+	renderAgent.renderer.renderGeneratedAsset(id, renderAgent)
 }
 
 func (renderAgent *genericRenderAgent) commitStatus(id string, existingAttributes []common.Attribute) chan generatedAssetUpdate {

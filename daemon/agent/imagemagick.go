@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	renderers["imageMagickRenderAgent"] = newImageMagickRenderer
+	rendererConstructors["imageMagickRenderAgent"] = newImageMagickRenderer
 	localTemplates := []*common.Template{
 		&common.Template{
 			Id:          "04a2c710-8872-4c88-9c75-a67175d3a8e7",
@@ -63,13 +63,11 @@ func init() {
 }
 
 type imageMagickRenderer struct {
-	renderAgent *genericRenderAgent
-	maxPages    int
+	maxPages int
 }
 
-func newImageMagickRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
+func newImageMagickRenderer(params map[string]string) Renderer {
 	renderer := new(imageMagickRenderer)
-	renderer.renderAgent = renderAgent
 	maxPagesString, ok := params["maxPages"]
 	if !ok {
 		log.Fatal("Missing maxPages parameter from imageMagickRenderAgent")
@@ -79,22 +77,22 @@ func newImageMagickRenderer(renderAgent *genericRenderAgent, params map[string]s
 	return renderer
 }
 
-func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
-	renderer.renderAgent.metrics.workProcessed.Mark(1)
+func (renderer *imageMagickRenderer) renderGeneratedAsset(id string, renderAgent *genericRenderAgent) {
+	renderAgent.metrics.workProcessed.Mark(1)
 
-	generatedAsset, err := renderer.renderAgent.gasm.FindById(id)
+	generatedAsset, err := renderAgent.gasm.FindById(id)
 	if err != nil {
 		log.Println("No Generated Asset with that ID can be retreived from storage: ", id)
 		return
 	}
 
-	statusCallback := renderer.renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
+	statusCallback := renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
 	generatedAsset.Status = common.GeneratedAssetStatusProcessing
-	renderer.renderAgent.gasm.Update(generatedAsset)
+	renderAgent.gasm.Update(generatedAsset)
 
-	sourceAsset, err := renderer.renderAgent.getSourceAsset(generatedAsset)
+	sourceAsset, err := renderAgent.getSourceAsset(generatedAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
 		return
@@ -105,9 +103,9 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
 		return
 	}
-	renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
+	renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
-	templates, err := renderer.renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})
+	templates, err := renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindTemplatesById), nil}
 		return
@@ -119,7 +117,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	template := templates[0]
 
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
-	sourceFile, err := renderer.renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
+	sourceFile, err := renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNoDownloadUrlsWork), nil}
 		return
@@ -127,7 +125,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	defer sourceFile.Release()
 
 	destination := sourceFile.Path() + "-" + template.Id + ".jpg"
-	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
+	destinationTemporaryFile := renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
 
 	size, err := getSize(template)
@@ -143,7 +141,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 	}
 
 	var ce codederror.CodedError
-	renderer.renderAgent.metrics.convertTime.Time(func() {
+	renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ := getGeneratedAssetPage(generatedAsset)
 			if page == 0 {
@@ -153,13 +151,13 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 					return
 				}
 				// Create derived work for all pages but first one
-				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, common.Min(pages, renderer.maxPages))
+				renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, common.Min(pages, renderer.maxPages))
 			}
-			ce = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType])
+			ce = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderAgent.fileTypes[fileType])
 		} else if fileType == "gif" {
-			ce = firstGifFrame(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
+			ce = firstGifFrame(sourceFile.Path(), destination, size, renderAgent.fileTypes[fileType])
 		} else {
-			ce = resize(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
+			ce = resize(sourceFile.Path(), destination, size, renderAgent.fileTypes[fileType])
 		}
 		if ce != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(ce), nil}
@@ -172,7 +170,7 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 
 	log.Println("---- generated asset is at", destination, "can load file?", common.CanLoadFile(destination))
 
-	err = renderer.renderAgent.uploader.Upload(generatedAsset.Location, destination)
+	err = renderAgent.uploader.Upload(generatedAsset.Location, destination)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotUploadAsset), nil}
 		return

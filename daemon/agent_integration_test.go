@@ -109,15 +109,18 @@ func (env *testEnvironment) setup(timeout, maxPages int) {
 		"pdf":  timeout,
 		"gif":  timeout,
 	}
+	rendererParams := make(map[string]map[string]string)
+	rendererParams["documentRenderAgent"] = map[string]string{"tempFileBasePath": filepath.Join(env.dm.Path, "doc-cache")}
+	rendererParams["imageMagickRenderAgent"] = map[string]string{"maxPages": strconv.Itoa(maxPages)}
 
-	env.rm = agent.NewRenderAgentManager(env.registry, env.sasm, env.gasm, env.tm, env.tfm, env.uploader, true, nil, agentFileTypes)
+	env.rm = agent.NewRenderAgentManager(env.registry, env.sasm, env.gasm, env.tm, env.tfm, env.uploader, true, nil, agentFileTypes, rendererParams)
 
 	for i := 0; i < 4; i++ {
-		env.rm.AddRenderAgent("documentRenderAgent", map[string]string{"tempFileBasePath": filepath.Join(env.dm.Path, "doc-cache")}, env.downloader, env.uploader, 5)
+		env.rm.AddRenderAgent("documentRenderAgent", env.downloader, env.uploader, 5)
 	}
 
 	for i := 0; i < 8; i++ {
-		env.rm.AddRenderAgent("imageMagickRenderAgent", map[string]string{"maxPages": strconv.Itoa(maxPages)}, env.downloader, env.uploader, 5)
+		env.rm.AddRenderAgent("imageMagickRenderAgent", env.downloader, env.uploader, 5)
 	}
 }
 
