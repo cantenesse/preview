@@ -63,7 +63,7 @@ func init() {
 }
 
 type imageMagickRenderer struct {
-	maxPages    int
+	maxPages int
 }
 
 func newImageMagickRenderer(params map[string]string) Renderer {

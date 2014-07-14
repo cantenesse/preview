@@ -21,7 +21,7 @@ type RenderAgentManager struct {
 	workStatus                   RenderStatusChannel
 	workChannels                 map[string]RenderAgentWorkChannel
 	renderAgents                 map[string][]*genericRenderAgent
-	renderers map[string]Renderer
+	renderers                    map[string]Renderer
 	activeWork                   map[string][]string
 	maxWork                      map[string]int
 	enabledRenderAgents          map[string]bool
