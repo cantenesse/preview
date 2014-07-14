@@ -13,7 +13,7 @@ if platform?("redhat", "centos", "fedora")
 
 	if node[:preview][:libreoffice][:create_yum]
 
-		remote_file "#{Chef::Config[:file_cache_path]}/LibreOffice_4.2.4_Linux_x86-64_rpm.tar.gz" do
+		remote_file "#{Chef::Config[:file_cache_path]}/LibreOffice_4.2.5_Linux_x86-64_rpm.tar.gz" do
 			source node[:preview][:libreoffice][:rpm_source]
 		end
 
@@ -30,7 +30,7 @@ if platform?("redhat", "centos", "fedora")
 		bash 'unpack libreoffice' do
 			cwd '/opt/yum/libreoffice/'
 			code <<-EOH
-			tar zxvf #{Chef::Config[:file_cache_path]}/LibreOffice_4.2.4_Linux_x86-64_rpm.tar.gz
+			tar zxvf #{Chef::Config[:file_cache_path]}/LibreOffice_4.2.5_Linux_x86-64_rpm.tar.gz
 			createrepo .
 			EOH
 		end
