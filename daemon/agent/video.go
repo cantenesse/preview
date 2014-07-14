@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	renderers["videoRenderAgent"] = newVideoRenderer
+	rendererConstructors["videoRenderAgent"] = newVideoRenderer
 	localTemplates := []*common.Template{
 		&common.Template{
 			Id:          common.VideoConversionTemplateId,
@@ -25,13 +25,11 @@ func init() {
 }
 
 type videoRenderer struct {
-	renderAgent             *genericRenderAgent
 	zencoderNotificationUrl string
 }
 
-func newVideoRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
+func newVideoRenderer(params map[string]string) Renderer {
 	renderer := new(videoRenderer)
-	renderer.renderAgent = renderAgent
 	var ok bool
 	renderer.zencoderNotificationUrl = params["zencoderNotificationUrl"]
 	if !ok {
@@ -40,10 +38,10 @@ func newVideoRenderer(renderAgent *genericRenderAgent, params map[string]string)
 	return renderer
 }
 
-func (renderer *videoRenderer) renderGeneratedAsset(id string) {
-	renderer.renderAgent.metrics.workProcessed.Mark(1)
+func (renderer *videoRenderer) renderGeneratedAsset(id string, renderAgent *genericRenderAgent) {
+	renderAgent.metrics.workProcessed.Mark(1)
 
-	generatedAsset, err := renderer.renderAgent.gasm.FindById(id)
+	generatedAsset, err := renderAgent.gasm.FindById(id)
 	if err != nil {
 		log.Println("No Generated Asset with that ID can be retreived from storage: ", id)
 		return
@@ -51,12 +49,12 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 
 	surl := fmt.Sprintf("%s/%s.m3u8", generatedAsset.Location, id)
 	generatedAsset.AddAttribute("streamingUrl", []string{common.S3ToHttps(surl)})
-	statusCallback := renderer.renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
+	statusCallback := renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
 	generatedAsset.Status = common.GeneratedAssetStatusProcessing
-	renderer.renderAgent.gasm.Update(generatedAsset)
-	sourceAsset, err := renderer.renderAgent.getSourceAsset(generatedAsset)
+	renderAgent.gasm.Update(generatedAsset)
+	sourceAsset, err := renderAgent.getSourceAsset(generatedAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
 		return
@@ -67,12 +65,12 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
 		return
 	}
-	renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
+	renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
 	input := urls[0]
 
-	templates, err := renderer.renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})
+	templates, err := renderAgent.templateManager.FindByIds([]string{generatedAsset.TemplateId})
 	if err != nil || !templates[0].HasAttribute("zencoderNotificationUrl") {
 		log.Println("Could not retrieve notification URL from template")
 		return
@@ -82,7 +80,7 @@ func (renderer *videoRenderer) renderGeneratedAsset(id string) {
 	settings := common.BuildZencoderSettings(input, generatedAsset.Location, generatedAsset.Id, renderer.zencoderNotificationUrl)
 	arr, _ := json.MarshalIndent(settings, "", "	")
 	log.Println(string(arr))
-	job, err := renderer.renderAgent.agentManager.zencoder.CreateJob(settings)
+	job, err := renderAgent.agentManager.zencoder.CreateJob(settings)
 	if err != nil {
 		log.Println("Zencoder error:", err)
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}

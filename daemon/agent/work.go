@@ -21,6 +21,7 @@ type RenderAgentManager struct {
 	workStatus                   RenderStatusChannel
 	workChannels                 map[string]RenderAgentWorkChannel
 	renderAgents                 map[string][]*genericRenderAgent
+	renderers map[string]Renderer
 	activeWork                   map[string][]string
 	maxWork                      map[string]int
 	enabledRenderAgents          map[string]bool
@@ -42,7 +43,8 @@ func NewRenderAgentManager(
 	uploader common.Uploader,
 	workDispatcherEnabled bool,
 	zencoder *zencoder.Zencoder,
-	agentFileTypes map[string]map[string]int) *RenderAgentManager {
+	agentFileTypes map[string]map[string]int,
+	rendererParams map[string]map[string]string) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
 	agentManager.sourceAssetStorageManager = sourceAssetStorageManager
@@ -57,6 +59,7 @@ func NewRenderAgentManager(
 		agentManager.workChannels[agent] = make(RenderAgentWorkChannel, 200)
 	}
 	agentManager.renderAgents = make(map[string][]*genericRenderAgent)
+	agentManager.renderers = make(map[string]Renderer)
 	agentManager.activeWork = make(map[string][]string)
 	agentManager.maxWork = make(map[string]int)
 	agentManager.enabledRenderAgents = make(map[string]bool)
@@ -68,6 +71,7 @@ func NewRenderAgentManager(
 	agentManager.metrics = make(map[string]*RenderAgentMetrics)
 	for agent, fileTypes := range agentFileTypes {
 		agentManager.metrics[agent] = newRenderAgentMetrics(registry, agent, fileTypes)
+		agentManager.renderers[agent] = rendererConstructors[agent](rendererParams[agent])
 	}
 
 	for _, t := range templates {
@@ -325,8 +329,8 @@ func (agentManager *RenderAgentManager) Stop() {
 	close(agentManager.stop)
 }
 
-func (agentManager *RenderAgentManager) AddRenderAgent(name string, params map[string]string, downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) {
-	renderAgent := newGenericRenderAgent(name, params, agentManager.agentFileTypes[name], agentManager.metrics[name], agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[name])
+func (agentManager *RenderAgentManager) AddRenderAgent(name string, downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) {
+	renderAgent := newGenericRenderAgent(name, agentManager.renderers[name], agentManager.agentFileTypes[name], agentManager.metrics[name], agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[name])
 	renderAgent.AddStatusListener(agentManager.workStatus)
 
 	agentManager.mu.Lock()

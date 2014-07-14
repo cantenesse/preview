@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	renderers["documentRenderAgent"] = newDocumentRenderer
+	rendererConstructors["documentRenderAgent"] = newDocumentRenderer
 	localTemplates := []*common.Template{
 		&common.Template{
 			Id:          common.DocumentConversionTemplateId,
@@ -25,13 +25,11 @@ func init() {
 }
 
 type documentRenderer struct {
-	renderAgent      *genericRenderAgent
 	tempFileBasePath string
 }
 
-func newDocumentRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
+func newDocumentRenderer(params map[string]string) Renderer {
 	renderer := new(documentRenderer)
-	renderer.renderAgent = renderAgent
 	var ok bool
 	renderer.tempFileBasePath, ok = params["tempFileBasePath"]
 	if !ok {
@@ -54,24 +52,24 @@ func newDocumentRenderer(renderAgent *genericRenderAgent, params map[string]stri
 10. For each page in the pdf, create a generated asset record for each of the default templates.
 11. Update the status of the generated asset as complete.
 */
-func (renderer *documentRenderer) renderGeneratedAsset(id string) {
-	renderer.renderAgent.metrics.workProcessed.Mark(1)
+func (renderer *documentRenderer) renderGeneratedAsset(id string, renderAgent *genericRenderAgent) {
+	renderAgent.metrics.workProcessed.Mark(1)
 
 	// 1. Get the generated asset
-	generatedAsset, err := renderer.renderAgent.gasm.FindById(id)
+	generatedAsset, err := renderAgent.gasm.FindById(id)
 	if err != nil {
 		log.Println("No Generated Asset with that ID can be retreived from storage: ", id)
 		return
 	}
 
-	statusCallback := renderer.renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
+	statusCallback := renderAgent.commitStatus(generatedAsset.Id, generatedAsset.Attributes)
 	defer func() { close(statusCallback) }()
 
 	generatedAsset.Status = common.GeneratedAssetStatusProcessing
-	renderer.renderAgent.gasm.Update(generatedAsset)
+	renderAgent.gasm.Update(generatedAsset)
 
 	// 2. Get the source asset
-	sourceAsset, err := renderer.renderAgent.getSourceAsset(generatedAsset)
+	sourceAsset, err := renderAgent.getSourceAsset(generatedAsset)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorUnableToFindSourceAssetsById), nil}
 		return
@@ -82,13 +80,13 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineFileType), nil}
 		return
 	}
-	renderer.renderAgent.metrics.fileTypeCount[fileType].Inc(1)
+	renderAgent.metrics.fileTypeCount[fileType].Inc(1)
 
 	// 3. Get the template... not needed yet
 
 	// 4. Fetch the source asset file
 	urls := sourceAsset.GetAttribute(common.SourceAssetAttributeSource)
-	sourceFile, err := renderer.renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
+	sourceFile, err := renderAgent.tryDownload(urls, common.SourceAssetSource(sourceAsset))
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNoDownloadUrlsWork), nil}
 		return
@@ -101,12 +99,12 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
-	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
+	destinationTemporaryFile := renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
 
 	var ce codederror.CodedError
-	renderer.renderAgent.metrics.convertTime.Time(func() {
-		ce = createPdf(sourceFile.Path(), destination, renderer.renderAgent.fileTypes[fileType])
+	renderAgent.metrics.convertTime.Time(func() {
+		ce = createPdf(sourceFile.Path(), destination, renderAgent.fileTypes[fileType])
 		if ce != nil {
 			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(ce), nil}
 		}
@@ -132,7 +130,7 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 		return
 	}
 
-	err = renderer.renderAgent.uploader.Upload(generatedAsset.Location, files[0])
+	err = renderAgent.uploader.Upload(generatedAsset.Location, files[0])
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotUploadAsset), nil}
 		return
@@ -157,14 +155,14 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	// TODO: Add support for the expiration attribute.
 
 	log.Println("pdfSourceAsset", pdfSourceAsset)
-	renderer.renderAgent.sasm.Store(pdfSourceAsset)
-	legacyDefaultTemplates, err := renderer.renderAgent.templateManager.FindByIds(common.LegacyDefaultTemplates)
+	renderAgent.sasm.Store(pdfSourceAsset)
+	legacyDefaultTemplates, err := renderAgent.templateManager.FindByIds(common.LegacyDefaultTemplates)
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorNotImplemented), nil}
 		return
 	}
 	// Only process first page because imageMagickRenderAgent will automatically create derived work for the other pages
-	renderer.renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, 1)
+	renderAgent.agentManager.CreateDerivedWork(pdfSourceAsset, legacyDefaultTemplates, 0, 1)
 
 	statusCallback <- generatedAssetUpdate{common.GeneratedAssetStatusComplete, nil}
 }
