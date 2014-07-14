@@ -15,8 +15,8 @@ type imageMagickRenderer struct {
 	maxPages int
 }
 
-func (renderer *imageMagickRenderer) generateTemplates() {
-	localTemplates := []*common.Template{
+func (renderer *imageMagickRenderer) getTemplates() []*common.Template {
+	templates := []*common.Template{
 		&common.Template{
 			Id:          "04a2c710-8872-4c88-9c75-a67175d3a8e7",
 			RenderAgent: "imageMagickRenderAgent",
@@ -66,7 +66,7 @@ func (renderer *imageMagickRenderer) generateTemplates() {
 			},
 		},
 	}
-	templates = append(templates, localTemplates...)
+	return templates
 }
 
 func newImageMagickRenderer(params map[string]string) Renderer {
@@ -76,8 +76,6 @@ func newImageMagickRenderer(params map[string]string) Renderer {
 		log.Fatal("Missing maxPages parameter from imageMagickRenderAgent")
 	}
 	renderer.maxPages, _ = strconv.Atoi(maxPagesString)
-
-	renderer.generateTemplates()
 
 	return renderer
 }

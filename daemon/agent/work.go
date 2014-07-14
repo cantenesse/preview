@@ -69,9 +69,13 @@ func NewRenderAgentManager(
 
 	agentManager.agentFileTypes = agentFileTypes
 	agentManager.metrics = make(map[string]*RenderAgentMetrics)
+
+	templates := make([]*common.Template, 0)
+
 	for agent, fileTypes := range agentFileTypes {
 		agentManager.metrics[agent] = newRenderAgentMetrics(registry, agent, fileTypes)
 		agentManager.renderers[agent] = rendererConstructors[agent](rendererParams[agent])
+		templates = append(templates, agentManager.renderers[agent].getTemplates()...)
 	}
 
 	for _, t := range templates {

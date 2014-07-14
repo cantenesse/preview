@@ -10,7 +10,6 @@ import (
 
 func init() {
 	rendererConstructors = make(map[string]rendererConstructor)
-	templates = make([]*common.Template, 0)
 }
 
 var rendererConstructors map[string]rendererConstructor
@@ -33,6 +32,7 @@ type generatedAssetUpdate struct {
 
 type Renderer interface {
 	renderGeneratedAsset(string, *genericRenderAgent)
+	getTemplates() []*common.Template
 }
 
 type rendererConstructor func(map[string]string) Renderer

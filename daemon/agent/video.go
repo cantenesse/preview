@@ -16,20 +16,19 @@ type videoRenderer struct {
 	zencoderS3Bucket        string
 }
 
-func (renderer *videoRenderer) generateTemplates(zencoderS3Bucket string) {
-	localTemplates := []*common.Template{
+func (renderer *videoRenderer) getTemplates() []*common.Template {
+	templates := []*common.Template{
 		&common.Template{
 			Id:          common.VideoConversionTemplateId,
 			RenderAgent: "videoRenderAgent",
 			Group:       "7A96",
 			Attributes: []common.Attribute{
 				common.Attribute{common.TemplateAttributeOutput, []string{"m3u8"}},
-				// TODO[JSH]: Load this from config/define it not in the template
 				common.Attribute{"forceS3Location", []string{renderer.zencoderS3Bucket}},
 			},
 		},
 	}
-	templates = append(templates, localTemplates...)
+	return templates
 }
 
 func newVideoRenderer(params map[string]string) Renderer {
@@ -43,8 +42,6 @@ func newVideoRenderer(params map[string]string) Renderer {
 	if !ok {
 		log.Fatal("Missing zencoderS3Bucket parameter from videoRenderAgent")
 	}
-
-	renderer.generateTemplates(renderer.zencoderS3Bucket)
 
 	return renderer
 }

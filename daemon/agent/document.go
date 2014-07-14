@@ -17,8 +17,8 @@ type documentRenderer struct {
 	tempFileBasePath string
 }
 
-func (renderer *documentRenderer) generateTemplates() {
-	localTemplates := []*common.Template{
+func (renderer *documentRenderer) getTemplates() []*common.Template {
+	templates := []*common.Template{
 		&common.Template{
 			Id:          common.DocumentConversionTemplateId,
 			RenderAgent: "documentRenderAgent",
@@ -28,7 +28,7 @@ func (renderer *documentRenderer) generateTemplates() {
 			},
 		},
 	}
-	templates = append(templates, localTemplates...)
+	return templates
 }
 
 func newDocumentRenderer(params map[string]string) Renderer {
@@ -38,8 +38,6 @@ func newDocumentRenderer(params map[string]string) Renderer {
 	if !ok {
 		log.Fatal("Missing tempFileBasePath parameter from documentRenderAgent")
 	}
-
-	renderer.generateTemplates()
 
 	return renderer
 }
