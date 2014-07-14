@@ -9,6 +9,13 @@ import (
 
 func init() {
 	rendererConstructors["imageMagickRenderAgent"] = newImageMagickRenderer
+}
+
+type imageMagickRenderer struct {
+	maxPages int
+}
+
+func (renderer *imageMagickRenderer) generateTemplates() {
 	localTemplates := []*common.Template{
 		&common.Template{
 			Id:          "04a2c710-8872-4c88-9c75-a67175d3a8e7",
@@ -62,10 +69,6 @@ func init() {
 	templates = append(templates, localTemplates...)
 }
 
-type imageMagickRenderer struct {
-	maxPages int
-}
-
 func newImageMagickRenderer(params map[string]string) Renderer {
 	renderer := new(imageMagickRenderer)
 	maxPagesString, ok := params["maxPages"]
@@ -73,6 +76,8 @@ func newImageMagickRenderer(params map[string]string) Renderer {
 		log.Fatal("Missing maxPages parameter from imageMagickRenderAgent")
 	}
 	renderer.maxPages, _ = strconv.Atoi(maxPagesString)
+
+	renderer.generateTemplates()
 
 	return renderer
 }

@@ -9,6 +9,14 @@ import (
 
 func init() {
 	rendererConstructors["videoRenderAgent"] = newVideoRenderer
+}
+
+type videoRenderer struct {
+	zencoderNotificationUrl string
+	zencoderS3Bucket        string
+}
+
+func (renderer *videoRenderer) generateTemplates(zencoderS3Bucket string) {
 	localTemplates := []*common.Template{
 		&common.Template{
 			Id:          common.VideoConversionTemplateId,
@@ -17,24 +25,27 @@ func init() {
 			Attributes: []common.Attribute{
 				common.Attribute{common.TemplateAttributeOutput, []string{"m3u8"}},
 				// TODO[JSH]: Load this from config/define it not in the template
-				common.Attribute{"forceS3Location", []string{"YOUR_S3_BUCKET"}},
+				common.Attribute{"forceS3Location", []string{renderer.zencoderS3Bucket}},
 			},
 		},
 	}
 	templates = append(templates, localTemplates...)
 }
 
-type videoRenderer struct {
-	zencoderNotificationUrl string
-}
-
 func newVideoRenderer(params map[string]string) Renderer {
 	renderer := new(videoRenderer)
 	var ok bool
-	renderer.zencoderNotificationUrl = params["zencoderNotificationUrl"]
+	renderer.zencoderNotificationUrl, ok = params["zencoderNotificationUrl"]
 	if !ok {
 		log.Fatal("Missing zencoderNotificationUrl parameter from videoRenderAgent")
 	}
+	renderer.zencoderS3Bucket, ok = params["zencoderS3Bucket"]
+	if !ok {
+		log.Fatal("Missing zencoderS3Bucket parameter from videoRenderAgent")
+	}
+
+	renderer.generateTemplates(renderer.zencoderS3Bucket)
+
 	return renderer
 }
 
