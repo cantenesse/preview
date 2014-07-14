@@ -37,10 +37,10 @@ type daemonConfig struct {
 	} `json:"storage"`
 
 	RenderAgents map[string]struct {
-		Enabled            bool              `json:"enabled"`
-		Count              int               `json:"count"`
-		SupportedFileTypes []string          `json:"supportedFileTypes"`
-		RendererParams     map[string]string `json:"rendererParams"`
+		Enabled        bool              `json:"enabled"`
+		Count          int               `json:"count"`
+		FileTypes      map[string]int    `json:"fileTypes"`
+		RendererParams map[string]string `json:"rendererParams"`
 	} `json:"renderAgents"`
 
 	Zencoder struct {
@@ -161,25 +161,38 @@ func buildDefaultDaemonConfig(basePathFunc configBasePath) []byte {
       "documentRenderAgent":{
          "enabled":true,
          "count":16,
-         "supportedFileTypes":["doc", "docx", "ppt", "pptx"],
+         "fileTypes":{
+	    "doc":60,
+            "docx":60,
+	    "ppt":60,
+	    "pptx":60
+         },
          "rendererParams":{
-             "basePath":"` + basePathFunc("documentRenderAgentTmp") + `"
+             "tempFileBasePath":"` + basePathFunc("documentRenderAgentTmp") + `"
          }
       },
       "videoRenderAgent":{
          "enabled":false,
          "count":16,
-         "supportedFileTypes":["mp4"],
-         "engine":"zencoder",
+         "fileTypes":{
+             "mp4":0
+         },
          "rendererParams":{
-               "zencoderNotificationUrl":"http://zencoderfetcher"
-          }         
+            "zencoderNotificationUrl":"http://zencoderfetcher"
+         }         
       },
       "imageMagickRenderAgent":{
          "enabled":true,
          "count":16,
-         "supportedFileTypes":["jpg", "jpeg", "png", "gif", "pdf"],
+         "fileTypes":{
+	    "pdf":60,
+	    "jpg":60,
+	    "jpeg":60,
+	    "png":60,
+	    "gif":60
+         },
          "rendererParams":{
+            "maxPages":"10"
          }
       }
    },

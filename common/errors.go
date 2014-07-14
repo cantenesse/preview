@@ -36,6 +36,7 @@ var (
 	ErrorCouldNotSerializeSourceAssets    = codederror.NewCodedError([]string{"PRV", "COM"}, 29, "Could not serialze source assets.")
 	ErrorCouldNotSerializeGeneratedAssets = codederror.NewCodedError([]string{"PRV", "COM"}, 30, "Could not serialze generated assets.")
 	ErrorCouldNotDetermineRenderDensity   = codederror.NewCodedError([]string{"PRV", "COM"}, 31, "Could not determine density from template")
+	ErrorRenderingTimedOut                = codederror.NewCodedError([]string{"PRV", "COM"}, 32, "Rendering the asset took too long.")
 
 	AllErrors = []codederror.CodedError{
 		ErrorNotImplemented,
@@ -68,6 +69,7 @@ var (
 		ErrorCouldNotSerializeSourceAssets,
 		ErrorCouldNotSerializeGeneratedAssets,
 		ErrorCouldNotDetermineRenderDensity,
+		ErrorRenderingTimedOut,
 	}
 )
 

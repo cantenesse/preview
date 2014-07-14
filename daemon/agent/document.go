@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/ngerakines/codederror"
 	"github.com/ngerakines/preview/common"
 	"log"
 	"os"
@@ -31,7 +32,11 @@ type documentRenderer struct {
 func newDocumentRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(documentRenderer)
 	renderer.renderAgent = renderAgent
-	renderer.tempFileBasePath = params["tempFileBasePath"]
+	var ok bool
+	renderer.tempFileBasePath, ok = params["tempFileBasePath"]
+	if !ok {
+		log.Fatal("Missing tempFileBasePath parameter from documentRenderAgent")
+	}
 
 	return renderer
 }
@@ -99,11 +104,19 @@ func (renderer *documentRenderer) renderGeneratedAsset(id string) {
 	destinationTemporaryFile := renderer.renderAgent.temporaryFileManager.Create(destination)
 	defer destinationTemporaryFile.Release()
 
+	var ce codederror.CodedError
 	renderer.renderAgent.metrics.convertTime.Time(func() {
-		err = createPdf(sourceFile.Path(), destination)
+		ce = createPdf(sourceFile.Path(), destination, renderer.renderAgent.fileTypes[fileType])
+		if ce != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(ce), nil}
+		}
 	})
 	if err != nil {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
+		return
+	}
+
+	if ce != nil {
 		return
 	}
 

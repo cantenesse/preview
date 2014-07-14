@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/ngerakines/codederror"
 	"github.com/ngerakines/preview/common"
 	"log"
 	"strconv"
@@ -75,11 +76,17 @@ func init() {
 
 type imageMagickRenderer struct {
 	renderAgent *genericRenderAgent
+	maxPages    int
 }
 
 func newImageMagickRenderer(renderAgent *genericRenderAgent, params map[string]string) Renderer {
 	renderer := new(imageMagickRenderer)
 	renderer.renderAgent = renderAgent
+	maxPagesString, ok := params["maxPages"]
+	if !ok {
+		log.Fatal("Missing maxPages parameter from imageMagickRenderAgent")
+	}
+	renderer.maxPages, _ = strconv.Atoi(maxPagesString)
 
 	return renderer
 }
@@ -146,8 +153,11 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 		statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotDetermineRenderDensity), nil}
 		return
 	}
+
 	pages := 0
 	page := 0
+
+	var ce codederror.CodedError
 	renderer.renderAgent.metrics.convertTime.Time(func() {
 		if fileType == "pdf" {
 			page, _ = getGeneratedAssetPage(generatedAsset)
@@ -158,22 +168,20 @@ func (renderer *imageMagickRenderer) renderGeneratedAsset(id string) {
 					return
 				}
 				// Create derived work for all pages but first one
-				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, pages)
+				renderer.renderAgent.agentManager.CreateDerivedWork(sourceAsset, templates, 1, common.Min(pages, renderer.maxPages))
 			}
-			err = imageFromPdf(sourceFile.Path(), destination, size, page, density)
+			ce = imageFromPdf(sourceFile.Path(), destination, size, page, density, renderer.renderAgent.fileTypes[fileType])
 		} else if fileType == "gif" {
-			err = firstGifFrame(sourceFile.Path(), destination, size)
+			ce = firstGifFrame(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
 		} else {
-			err = resize(sourceFile.Path(), destination, size)
+			ce = resize(sourceFile.Path(), destination, size, renderer.renderAgent.fileTypes[fileType])
 		}
-		if err != nil {
-			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(common.ErrorCouldNotResizeImage), nil}
-			return
+		if ce != nil {
+			statusCallback <- generatedAssetUpdate{common.NewGeneratedAssetError(ce), nil}
 		}
 	})
 
-	// Required because the return statements above return from the anonymous function, not this one
-	if err != nil {
+	if ce != nil {
 		return
 	}
 

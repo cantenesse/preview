@@ -25,7 +25,7 @@ type RenderAgentManager struct {
 	maxWork                      map[string]int
 	enabledRenderAgents          map[string]bool
 	renderAgentCount             map[string]int
-	supportedFileTypes           map[string][]string
+	agentFileTypes               map[string]map[string]int
 	metrics                      map[string]*RenderAgentMetrics
 	stop                         chan (chan bool)
 	mu                           sync.Mutex
@@ -42,7 +42,7 @@ func NewRenderAgentManager(
 	uploader common.Uploader,
 	workDispatcherEnabled bool,
 	zencoder *zencoder.Zencoder,
-	supportedFileTypes map[string][]string) *RenderAgentManager {
+	agentFileTypes map[string]map[string]int) *RenderAgentManager {
 
 	agentManager := new(RenderAgentManager)
 	agentManager.sourceAssetStorageManager = sourceAssetStorageManager
@@ -53,8 +53,8 @@ func NewRenderAgentManager(
 	agentManager.temporaryFileManager = temporaryFileManager
 	agentManager.workStatus = make(RenderStatusChannel, 100)
 	agentManager.workChannels = make(map[string]RenderAgentWorkChannel)
-	for k := range supportedFileTypes {
-		agentManager.workChannels[k] = make(RenderAgentWorkChannel, 200)
+	for agent := range agentFileTypes {
+		agentManager.workChannels[agent] = make(RenderAgentWorkChannel, 200)
 	}
 	agentManager.renderAgents = make(map[string][]*genericRenderAgent)
 	agentManager.activeWork = make(map[string][]string)
@@ -64,10 +64,10 @@ func NewRenderAgentManager(
 
 	agentManager.zencoder = zencoder
 
-	agentManager.supportedFileTypes = supportedFileTypes
+	agentManager.agentFileTypes = agentFileTypes
 	agentManager.metrics = make(map[string]*RenderAgentMetrics)
-	for k, v := range supportedFileTypes {
-		agentManager.metrics[k] = newRenderAgentMetrics(registry, k, v)
+	for agent, fileTypes := range agentFileTypes {
+		agentManager.metrics[agent] = newRenderAgentMetrics(registry, agent, fileTypes)
 	}
 
 	for _, t := range templates {
@@ -245,11 +245,11 @@ func (agentManager *RenderAgentManager) CreateDerivedWork(derivedSourceAsset *co
 func (agentManager *RenderAgentManager) whichRenderAgent(fileType string) ([]*common.Template, string, error) {
 	fileType = strings.ToLower(fileType)
 	var templateIds []string
-	if common.Contains(agentManager.supportedFileTypes["documentRenderAgent"], fileType) {
+	if _, ok := agentManager.agentFileTypes["documentRenderAgent"][fileType]; ok {
 		templateIds = []string{common.DocumentConversionTemplateId}
-	} else if common.Contains(agentManager.supportedFileTypes["videoRenderAgent"], fileType) {
+	} else if _, ok := agentManager.agentFileTypes["videoRenderAgent"][fileType]; ok {
 		templateIds = []string{common.VideoConversionTemplateId}
-	} else if common.Contains(agentManager.supportedFileTypes["imageMagickRenderAgent"], fileType) {
+	} else if _, ok := agentManager.agentFileTypes["imageMagickRenderAgent"][fileType]; ok {
 		if fileType == "pdf" {
 			templateIds = []string{common.OptimizedJumboTemplateId}
 		} else {
@@ -330,7 +330,7 @@ func (agentManager *RenderAgentManager) Stop() {
 }
 
 func (agentManager *RenderAgentManager) AddRenderAgent(name string, params map[string]string, downloader common.Downloader, uploader common.Uploader, maxWorkIncrease int) {
-	renderAgent := newGenericRenderAgent(name, params, agentManager.metrics[name], agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[name])
+	renderAgent := newGenericRenderAgent(name, params, agentManager.agentFileTypes[name], agentManager.metrics[name], agentManager, agentManager.sourceAssetStorageManager, agentManager.generatedAssetStorageManager, agentManager.templateManager, agentManager.temporaryFileManager, downloader, uploader, agentManager.workChannels[name])
 	renderAgent.AddStatusListener(agentManager.workStatus)
 
 	agentManager.mu.Lock()
