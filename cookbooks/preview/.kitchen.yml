@@ -16,5 +16,3 @@ suites:
     run_list:
       - recipe[preview::default]
     attributes:
-      preview:
-        archive_source: "https://zentestht.s3.amazonaws.com/preview-linux-amd64.zip"
